@@ -15,7 +15,6 @@ transactions
 * amount numeric
 * status enum
 * balance numeric
-* amount_id => amounts
 * source => accounts
 * destination => accounts
 
