@@ -34,3 +34,16 @@ type Cashier interface {
 }
 
 ```
+
+## shop
+
+```golang
+
+type Shop interface {
+	// Invocie returns the invoice for payment.
+	Invoice(orderID string, amount int64) (*Invoice, error)
+
+	// Pay payment of invoice.
+	Pay(invoiceID, sourceID int64) error
+}
+```
