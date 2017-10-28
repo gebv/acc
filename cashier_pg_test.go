@@ -1,4 +1,4 @@
-package acc
+package acca
 
 import "testing"
 import "github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ func TestCashier_successAccept(t *testing.T) {
 	// TODO: more checks
 	d := dumpFromInvoice(1)
 	assert.True(t, d.i.Paid, "invoice - paid=true")
-	assert.EqualValues(t, 0, d.FindAccount(d.i.SourceID).Balance, "check balance of acccount=%d", d.i.SourceID)
+	assert.EqualValues(t, 0, d.FindAccount(d.i.SourceIDOrZero()).Balance, "check balance of acccount=%d", d.i.SourceID)
 	assert.EqualValues(t, 1100, d.FindAccount(d.i.DestinationID).Balance)
 }
 
@@ -36,6 +36,6 @@ func TestCashier_successReject(t *testing.T) {
 
 	d := dumpFromInvoice(1)
 	assert.False(t, d.i.Paid, "invoice - paid=false")
-	assert.EqualValues(t, 100, d.FindAccount(d.i.SourceID).Balance)
+	assert.EqualValues(t, 100, d.FindAccount(d.i.SourceIDOrZero()).Balance)
 	assert.EqualValues(t, 1000, d.FindAccount(d.i.DestinationID).Balance)
 }

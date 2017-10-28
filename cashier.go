@@ -1,4 +1,4 @@
-package acc
+package acca
 
 type Cashier interface {
 	// Hold first phase of payment - hold amount of invoice.

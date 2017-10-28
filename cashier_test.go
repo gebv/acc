@@ -1,4 +1,4 @@
-package acc
+package acca
 
 import (
 	"database/sql"
@@ -45,10 +45,16 @@ func setupFixtures() {
 	(4, 'c0', 'customer', 0)`)
 	log.Println("fixture: account", err)
 
-	_, err = db.Exec(`INSERT INTO invoices(invoice_id, order_id, destination_id, source_id, amount, created_at) VALUES 
-    (1, 'o1', 1, 2, 100, now()),
-    (2, 'o2', 1, 2, 1000, now()),
-	(3, 'o3', 1, 2, 10, now())`)
+	// _, err = db.Exec(`INSERT INTO invoices(invoice_id, order_id, destination_id, source_id, amount, created_at) VALUES
+	// (1, 'o1', 1, 2, 100, now()),
+	// (2, 'o2', 1, 2, 1000, now()),
+	// (3, 'o3', 1, 2, 10, now())`)
+	// log.Println("fixture: invoices", err)
+
+	_, err = db.Exec(`INSERT INTO invoices(invoice_id, order_id, destination_id, amount, created_at) VALUES 
+    (1, 'o1', 1, 100, now()),
+    (2, 'o2', 1, 1000, now()),
+	(3, 'o3', 1, 10, now())`)
 	log.Println("fixture: invoices", err)
 }
 

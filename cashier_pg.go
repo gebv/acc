@@ -1,4 +1,4 @@
-package acc
+package acca
 
 import (
 	"errors"
@@ -101,7 +101,7 @@ func (c *CashierPostgres) Reject(txID int64) (err error) {
 		return
 	}
 
-	src, _ := c.findAccount(dbtx, i.SourceID)
+	src, _ := c.findAccount(dbtx, i.SourceIDOrZero())
 	if err != nil {
 		log.Println("ERR: find source account of invoice", i.SourceID, err)
 		return err
@@ -143,7 +143,7 @@ func (c *CashierPostgres) Hold(sourceID, invoiceID int64) (txID int64, err error
 		return
 	}
 
-	i.SourceID = sourceID //
+	i.SetSourceID(sourceID)
 	if err = tx.UpdateColumns(i, "source_id"); err != nil {
 		log.Println("ERR: update invocie - set source_id", err)
 		return
