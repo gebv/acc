@@ -4,7 +4,7 @@ CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer');
 CREATE TABLE finances.accounts (
     account_id bigserial PRIMARY KEY,
     customer_id text NOT NULL,
-    _type finances.account_type NOT NULL DEFAULT 'customer',
+    account_type finances.account_type NOT NULL DEFAULT 'customer',
     balance bigint NOT NULL DEFAULT 0 CHECK (balance >= 0),
     updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
@@ -36,7 +36,7 @@ CREATE TABLE finances.balance_changes (
     change_id bigserial PRIMARY KEY,
     account_id bigint NOT NULL REFERENCES finances.accounts(account_id),
     transaction_id bigint NOT NULL REFERENCES finances.transactions(transaction_id),
-    _type finances.bc_type NOT NULL DEFAULT 'hold',
+    tx_type finances.bc_type NOT NULL DEFAULT 'hold',
     amount bigint NOT NULL CHECK (amount <> 0),
     balance bigint NOT NULL CHECK(balance >= 0),
     created_at timestamp with time zone NOT NULL

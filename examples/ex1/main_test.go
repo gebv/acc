@@ -39,7 +39,7 @@ func resetFixtures() {
 
 func setupFixtures() {
 	var err error
-	_, err = db.Exec(`INSERT INTO finances.accounts(account_id, customer_id, _type, balance) VALUES
+	_, err = db.Exec(`INSERT INTO finances.accounts(account_id, customer_id, account_type, balance) VALUES
     (1, 's1000', 'system', 1000),
     (2, 'c100', 'customer', 100),
     (3, 'c10', 'customer', 10),

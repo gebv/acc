@@ -27,7 +27,7 @@ func (v *accountTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *accountTableType) Columns() []string {
-	return []string{"account_id", "customer_id", "_type", "balance", "updated_at"}
+	return []string{"account_id", "customer_id", "account_type", "balance", "updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,7 +47,7 @@ func (v *accountTableType) PKColumnIndex() uint {
 
 // AccountTable represents accounts view or table in SQL database.
 var AccountTable = &accountTableType{
-	s: parse.StructInfo{Type: "Account", SQLSchema: "finances", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", PKType: "int64", Column: "account_id"}, {Name: "CustomerID", PKType: "", Column: "customer_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "UpdatedAt", PKType: "", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Account", SQLSchema: "finances", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", PKType: "int64", Column: "account_id"}, {Name: "CustomerID", PKType: "", Column: "customer_id"}, {Name: "Type", PKType: "", Column: "account_type"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "UpdatedAt", PKType: "", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(Account).Values(),
 }
 

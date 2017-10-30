@@ -17,7 +17,7 @@ var (
 type Account struct {
 	AccountID  int64       `reform:"account_id,pk"`
 	CustomerID string      `reform:"customer_id"`
-	Type       AccountType `reform:"_type"`
+	Type       AccountType `reform:"account_type"`
 	Balance    int64       `reform:"balance"`
 	UpdatedAt  time.Time   `reform:"updated_at"`
 }

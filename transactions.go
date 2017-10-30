@@ -41,7 +41,7 @@ type BalanceChanges struct {
 	AccountID     int64 `reform:"account_id"`
 	TransactionID int64 `reform:"transaction_id"`
 
-	Type BalanceChangesType `reform:"_type"`
+	Type BalanceChangesType `reform:"tx_type"`
 
 	Amount  int64 `reform:"amount"`
 	Balance int64 `reform:"balance"`

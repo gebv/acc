@@ -157,7 +157,7 @@ func (v *balanceChangesTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *balanceChangesTableType) Columns() []string {
-	return []string{"change_id", "account_id", "transaction_id", "_type", "amount", "balance", "created_at"}
+	return []string{"change_id", "account_id", "transaction_id", "tx_type", "amount", "balance", "created_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -177,7 +177,7 @@ func (v *balanceChangesTableType) PKColumnIndex() uint {
 
 // BalanceChangesTable represents balance_changes view or table in SQL database.
 var BalanceChangesTable = &balanceChangesTableType{
-	s: parse.StructInfo{Type: "BalanceChanges", SQLSchema: "finances", SQLName: "balance_changes", Fields: []parse.FieldInfo{{Name: "ChangeID", PKType: "int64", Column: "change_id"}, {Name: "AccountID", PKType: "", Column: "account_id"}, {Name: "TransactionID", PKType: "", Column: "transaction_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "BalanceChanges", SQLSchema: "finances", SQLName: "balance_changes", Fields: []parse.FieldInfo{{Name: "ChangeID", PKType: "int64", Column: "change_id"}, {Name: "AccountID", PKType: "", Column: "account_id"}, {Name: "TransactionID", PKType: "", Column: "transaction_id"}, {Name: "Type", PKType: "", Column: "tx_type"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(BalanceChanges).Values(),
 }
 
