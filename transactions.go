@@ -12,7 +12,7 @@ var (
 	Rejected      TransactionStatus = "rejected"      // транзакция отменена
 )
 
-//reform:transactions
+//reform:finances.transactions
 type Transaction struct {
 	TransactionID int64 `reform:"transaction_id,pk"`
 	InvoiceID     int64 `reform:"invoice_id"`
@@ -35,7 +35,7 @@ var (
 	Complete BalanceChangesType = "complete" // средства доставляются
 )
 
-//reform:balance_changes
+//reform:finances.balance_changes
 type BalanceChanges struct {
 	ChangeID      int64 `reform:"change_id,pk"`
 	AccountID     int64 `reform:"account_id"`

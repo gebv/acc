@@ -1,16 +1,22 @@
-package acca
+package ex1
 
 import "testing"
 import "github.com/stretchr/testify/assert"
+import "github.com/gebv/acca"
+
+func TestCashier_closedTreansfer(t *testing.T) {
+	_t := &Transfer{nil, 1}
+	_, err := _t.Hold(1, 1)
+	assert.Error(t, err, acca.ErrOrderClosed)
+}
 
 func TestCashier_successAccept(t *testing.T) {
 	resetFixtures()
 
-	c := &CashierPostgres{db}
-	txID, err := c.Hold(2, 1)
+	txID, err := NewTrnasfer(db).Hold(2, 1)
 	assert.NoError(t, err, "hold")
 	if assert.NotNil(t, txID, "tx ID") {
-		err = c.Accept(txID)
+		err = NewTrnasfer(db).Accept(txID)
 		assert.NoError(t, err, "accept")
 	}
 
@@ -24,11 +30,10 @@ func TestCashier_successAccept(t *testing.T) {
 func TestCashier_successReject(t *testing.T) {
 	resetFixtures()
 
-	c := &CashierPostgres{db}
-	txID, err := c.Hold(2, 1)
+	txID, err := NewTrnasfer(db).Hold(2, 1)
 	assert.NoError(t, err, "hold")
 	if assert.NotNil(t, txID, "tx ID") {
-		err = c.Reject(txID)
+		err = NewTrnasfer(db).Reject(txID)
 		assert.NoError(t, err, "reject")
 	}
 

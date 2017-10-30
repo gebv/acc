@@ -13,7 +13,7 @@ var (
 	Customer       AccountType = "customer"
 )
 
-//reform:accounts
+//reform:finances.accounts
 type Account struct {
 	AccountID  int64       `reform:"account_id,pk"`
 	CustomerID string      `reform:"customer_id"`

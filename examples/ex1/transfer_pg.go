@@ -1,61 +1,78 @@
-package acca
+package ex1
 
 import (
 	"errors"
 	"log"
+	"sync/atomic"
 	"time"
 
+	"github.com/gebv/acca"
 	reform "gopkg.in/reform.v1"
 )
 
-var _ Cashier = (*CashierPostgres)(nil)
+var ErrTransferClosed = errors.New("transfer closed")
 
-type CashierPostgres struct {
-	db *reform.DB
+var _ acca.Transfer = (*Transfer)(nil)
+
+func NewTrnasfer(db *reform.DB) *Transfer {
+	tx, err := db.Begin()
+	if err != nil {
+		panic(err)
+	}
+	return &Transfer{tx, 0}
+}
+
+type Transfer struct {
+	tx   *reform.TX
+	once uint32
 }
 
 // Accept подтверждает транзакцию
 // Успешно закрывается операция.
-func (c *CashierPostgres) Accept(txID int64) (err error) {
-	dbtx, _ := c.db.Begin()
+func (c *Transfer) Accept(txID int64) (err error) {
+	if c.once > 0 {
+		return ErrTransferClosed
+	}
+	defer atomic.AddUint32(&c.once, 1)
+
 	defer func() {
 		if err != nil {
-			dbtx.Rollback()
+			err = c.tx.Rollback()
 			return
 		}
 
-		dbtx.Commit()
+		err = c.tx.Commit()
 	}()
 
-	tx, err := c.findTransaction(dbtx, txID)
+	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
 		log.Println("ERR: find transaction", txID, err)
 		return err
 	}
 
-	if tx.Status != Authorization {
+	if tx.Status != acca.Authorization {
 		err = errors.New("transaction has closed")
 		return
 	}
 
-	i, err := c.findInvoice(dbtx, tx.InvoiceID)
+	i, err := c.findInvoice(c.tx, tx.InvoiceID)
 	if err != nil {
 		log.Println("ERR: find invoice", tx.InvoiceID, err)
 		return err
 	}
 	if i.Paid {
-		err = ErrInvoiceHasBeenPaid
+		err = acca.ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
 
-	dst, err := c.findAccount(dbtx, i.DestinationID)
+	dst, err := c.findAccount(c.tx, i.DestinationID)
 	if err != nil {
 		log.Println("ERR: find destination account of invoice", i.DestinationID, err)
 		return err
 	}
 
-	ch, err := c.accept(dbtx, tx, i, dst)
+	ch, err := c.accept(c.tx, tx, i, dst)
 	if err != nil {
 		log.Println("ERR: accept", err)
 		return
@@ -68,46 +85,50 @@ func (c *CashierPostgres) Accept(txID int64) (err error) {
 
 // Reject отклоняет транзакцию.
 // Откатывается вся операция.
-func (c *CashierPostgres) Reject(txID int64) (err error) {
-	dbtx, _ := c.db.Begin()
+func (c *Transfer) Reject(txID int64) (err error) {
+	if c.once > 0 {
+		return ErrTransferClosed
+	}
+	defer atomic.AddUint32(&c.once, 1)
+
 	defer func() {
 		if err != nil {
-			dbtx.Rollback()
+			err = c.tx.Rollback()
 			return
 		}
 
-		dbtx.Commit()
+		err = c.tx.Commit()
 	}()
 
-	tx, err := c.findTransaction(dbtx, txID)
+	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
 		log.Println("ERR: find transaction", txID, err)
 		return err
 	}
 
-	if tx.Status != Authorization {
+	if tx.Status != acca.Authorization {
 		err = errors.New("transaction has closed")
 		return
 	}
 
-	i, err := c.findInvoice(dbtx, tx.InvoiceID)
+	i, err := c.findInvoice(c.tx, tx.InvoiceID)
 	if err != nil {
 		log.Println("ERR: find invoice", tx.InvoiceID, err)
 		return err
 	}
 	if i.Paid {
-		err = ErrInvoiceHasBeenPaid
+		err = acca.ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
 
-	src, _ := c.findAccount(dbtx, i.SourceIDOrZero())
+	src, _ := c.findAccount(c.tx, i.SourceIDOrZero())
 	if err != nil {
 		log.Println("ERR: find source account of invoice", i.SourceID, err)
 		return err
 	}
 
-	ch, err := c.reject(dbtx, tx, i, src)
+	ch, err := c.reject(c.tx, tx, i, src)
 	if err != nil {
 		log.Println("ERR: reject", err)
 		return
@@ -121,42 +142,46 @@ func (c *CashierPostgres) Reject(txID int64) (err error) {
 // Hold замораживаются средства
 // Средства становятся доступны адресату после подвтерждения транзакции
 // В противном случае средства возвращаются
-func (c *CashierPostgres) Hold(sourceID, invoiceID int64) (txID int64, err error) {
-	tx, _ := c.db.Begin()
+func (c *Transfer) Hold(sourceID, invoiceID int64) (txID int64, err error) {
+	if c.once > 0 {
+		return 0, ErrTransferClosed
+	}
+	defer atomic.AddUint32(&c.once, 1)
+
 	defer func() {
 		if err != nil {
-			tx.Rollback()
+			err = c.tx.Rollback()
 			return
 		}
 
-		tx.Commit()
+		c.tx.Commit()
 	}()
 
-	i, err := c.findInvoice(tx, invoiceID)
+	i, err := c.findInvoice(c.tx, invoiceID)
 	if err != nil {
 		log.Println("ERR: find invoice account", sourceID, err)
 		return
 	}
 	if i.Paid {
-		err = ErrInvoiceHasBeenPaid
+		err = acca.ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
 
 	i.SetSourceID(sourceID)
-	if err = tx.UpdateColumns(i, "source_id"); err != nil {
+	if err = c.tx.UpdateColumns(i, "source_id"); err != nil {
 		log.Println("ERR: update invocie - set source_id", err)
 		return
 	}
 
-	s, _ := c.findAccount(tx, sourceID)
+	s, _ := c.findAccount(c.tx, sourceID)
 	if err != nil {
 		log.Println("ERR: find source account", sourceID, err)
 		return
 	}
 	// d, _ := c.findAccount(tx, i.DestinationID) // TODO: проверка возможности перевода средств с SourceID -> DestinationID
 
-	ch, holdTx, err := c.hold(tx, i, s)
+	ch, holdTx, err := c.hold(c.tx, i, s)
 	if err != nil {
 		return 0, err
 	}
@@ -166,17 +191,17 @@ func (c *CashierPostgres) Hold(sourceID, invoiceID int64) (txID int64, err error
 	return holdTx.TransactionID, nil
 }
 
-func (s *CashierPostgres) hold(
+func (s *Transfer) hold(
 	tx *reform.TX,
-	i *Invoice,
-	src *Account, // source
-) (hold *BalanceChanges, holdTx *Transaction, err error) {
-	holdTx = &Transaction{
+	i *acca.Invoice,
+	src *acca.Account, // source
+) (hold *acca.BalanceChanges, holdTx *acca.Transaction, err error) {
+	holdTx = &acca.Transaction{
 		InvoiceID:   i.InvoiceID,
 		Amount:      i.Amount,
 		Source:      src.AccountID,
 		Destination: i.DestinationID,
-		Status:      Authorization,
+		Status:      acca.Authorization,
 		CreatedAt:   time.Now(),
 	}
 
@@ -190,17 +215,17 @@ func (s *CashierPostgres) hold(
 
 	if src.Balance < 0 {
 		log.Println("ERR: не достаточно средств на счете", src.AccountID)
-		return nil, nil, ErrInsufficientFunds
+		return nil, nil, acca.ErrInsufficientFunds
 	}
 
 	if err = tx.UpdateColumns(src, "balance", "updated_at"); err != nil {
 		log.Println("ERR: update account", src.AccountID, err)
 		return nil, nil, err
 	}
-	hold = &BalanceChanges{
+	hold = &acca.BalanceChanges{
 		AccountID:     src.AccountID,
 		TransactionID: holdTx.TransactionID,
-		Type:          Hold,
+		Type:          acca.Hold,
 		Amount:        -i.Amount,
 		Balance:       src.Balance,
 		CreatedAt:     time.Now(),
@@ -213,13 +238,13 @@ func (s *CashierPostgres) hold(
 	return hold, holdTx, nil
 }
 
-func (s *CashierPostgres) accept(
+func (s *Transfer) accept(
 	dbtx *reform.TX,
-	tx *Transaction,
-	i *Invoice,
-	dst *Account, // destination
-) (change *BalanceChanges, err error) {
-	tx.Status = Accepted
+	tx *acca.Transaction,
+	i *acca.Invoice,
+	dst *acca.Account, // destination
+) (change *acca.BalanceChanges, err error) {
+	tx.Status = acca.Accepted
 	tx.ClosedAt = time.Now()
 
 	if err = dbtx.UpdateColumns(tx, "status", "closed_at"); err != nil {
@@ -235,10 +260,10 @@ func (s *CashierPostgres) accept(
 		return nil, err
 	}
 
-	change = &BalanceChanges{
+	change = &acca.BalanceChanges{
 		AccountID:     dst.AccountID,
 		TransactionID: tx.TransactionID,
-		Type:          Complete,
+		Type:          acca.Complete,
 		Amount:        i.Amount,
 		Balance:       dst.Balance,
 		CreatedAt:     time.Now(),
@@ -257,13 +282,13 @@ func (s *CashierPostgres) accept(
 	return
 }
 
-func (s *CashierPostgres) reject(
+func (s *Transfer) reject(
 	dbtx *reform.TX,
-	tx *Transaction,
-	i *Invoice,
-	src *Account, // destination
-) (change *BalanceChanges, err error) {
-	tx.Status = Rejected
+	tx *acca.Transaction,
+	i *acca.Invoice,
+	src *acca.Account, // destination
+) (change *acca.BalanceChanges, err error) {
+	tx.Status = acca.Rejected
 	tx.ClosedAt = time.Now()
 
 	if err = dbtx.UpdateColumns(tx, "status", "closed_at"); err != nil {
@@ -279,10 +304,10 @@ func (s *CashierPostgres) reject(
 		return nil, err
 	}
 
-	change = &BalanceChanges{
+	change = &acca.BalanceChanges{
 		AccountID:     src.AccountID,
 		TransactionID: tx.TransactionID,
-		Type:          Refund,
+		Type:          acca.Refund,
 		Amount:        i.Amount,
 		Balance:       src.Balance,
 		CreatedAt:     time.Now(),
@@ -295,8 +320,8 @@ func (s *CashierPostgres) reject(
 	return
 }
 
-func (s *CashierPostgres) findInvoice(tx *reform.TX, objID int64) (obj *Invoice, err error) {
-	obj = &Invoice{}
+func (s *Transfer) findInvoice(tx *reform.TX, objID int64) (obj *acca.Invoice, err error) {
+	obj = &acca.Invoice{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find invoice by ID", objID, err)
 		return nil, err
@@ -304,8 +329,8 @@ func (s *CashierPostgres) findInvoice(tx *reform.TX, objID int64) (obj *Invoice,
 	return obj, nil
 }
 
-func (s *CashierPostgres) findAccount(tx *reform.TX, objID int64) (obj *Account, err error) {
-	obj = &Account{}
+func (s *Transfer) findAccount(tx *reform.TX, objID int64) (obj *acca.Account, err error) {
+	obj = &acca.Account{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find account by ID", objID, err)
 		return nil, err
@@ -313,8 +338,8 @@ func (s *CashierPostgres) findAccount(tx *reform.TX, objID int64) (obj *Account,
 	return obj, nil
 }
 
-func (s *CashierPostgres) findTransaction(tx *reform.TX, objID int64) (obj *Transaction, err error) {
-	obj = &Transaction{}
+func (s *Transfer) findTransaction(tx *reform.TX, objID int64) (obj *acca.Transaction, err error) {
+	obj = &acca.Transaction{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find transaction by ID", objID, err)
 		return nil, err

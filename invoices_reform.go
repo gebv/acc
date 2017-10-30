@@ -15,7 +15,7 @@ type invoiceTableType struct {
 	z []interface{}
 }
 
-// Schema returns a schema name in SQL database ("").
+// Schema returns a schema name in SQL database ("finances").
 func (v *invoiceTableType) Schema() string {
 	return v.s.SQLSchema
 }
@@ -47,7 +47,7 @@ func (v *invoiceTableType) PKColumnIndex() uint {
 
 // InvoiceTable represents invoices view or table in SQL database.
 var InvoiceTable = &invoiceTableType{
-	s: parse.StructInfo{Type: "Invoice", SQLSchema: "", SQLName: "invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", PKType: "int64", Column: "invoice_id"}, {Name: "OrderID", PKType: "", Column: "order_id"}, {Name: "DestinationID", PKType: "", Column: "destination_id"}, {Name: "SourceID", PKType: "", Column: "source_id"}, {Name: "Paid", PKType: "", Column: "paid"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Invoice", SQLSchema: "finances", SQLName: "invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", PKType: "int64", Column: "invoice_id"}, {Name: "OrderID", PKType: "", Column: "order_id"}, {Name: "DestinationID", PKType: "", Column: "destination_id"}, {Name: "SourceID", PKType: "", Column: "source_id"}, {Name: "Paid", PKType: "", Column: "paid"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(Invoice).Values(),
 }
 

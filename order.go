@@ -9,8 +9,11 @@ type Order interface {
 
 	Type() OrderType
 	Total() int64
+
+	Closed() bool
 }
 
-type Stock interface {
-	FindOrderByID(orderID string) (Order, error)
+type OrderManager interface {
+	Find(orderID string) (Order, error)
+	ListInvoices(orderID string) ([]*Invoice, error)
 }

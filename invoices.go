@@ -7,7 +7,7 @@ import (
 
 //go:generate reform
 
-//reform:invoices
+//reform:finances.invoices
 type Invoice struct {
 	InvoiceID     int64         `reform:"invoice_id,pk"`
 	OrderID       string        `reform:"order_id" `      // ref to ext layer

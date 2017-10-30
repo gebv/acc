@@ -15,7 +15,7 @@ type accountTableType struct {
 	z []interface{}
 }
 
-// Schema returns a schema name in SQL database ("").
+// Schema returns a schema name in SQL database ("finances").
 func (v *accountTableType) Schema() string {
 	return v.s.SQLSchema
 }
@@ -47,7 +47,7 @@ func (v *accountTableType) PKColumnIndex() uint {
 
 // AccountTable represents accounts view or table in SQL database.
 var AccountTable = &accountTableType{
-	s: parse.StructInfo{Type: "Account", SQLSchema: "", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", PKType: "int64", Column: "account_id"}, {Name: "CustomerID", PKType: "", Column: "customer_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "UpdatedAt", PKType: "", Column: "updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Account", SQLSchema: "finances", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", PKType: "int64", Column: "account_id"}, {Name: "CustomerID", PKType: "", Column: "customer_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "UpdatedAt", PKType: "", Column: "updated_at"}}, PKFieldIndex: 0},
 	z: new(Account).Values(),
 }
 

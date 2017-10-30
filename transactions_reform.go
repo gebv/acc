@@ -15,7 +15,7 @@ type transactionTableType struct {
 	z []interface{}
 }
 
-// Schema returns a schema name in SQL database ("").
+// Schema returns a schema name in SQL database ("finances").
 func (v *transactionTableType) Schema() string {
 	return v.s.SQLSchema
 }
@@ -47,7 +47,7 @@ func (v *transactionTableType) PKColumnIndex() uint {
 
 // TransactionTable represents transactions view or table in SQL database.
 var TransactionTable = &transactionTableType{
-	s: parse.StructInfo{Type: "Transaction", SQLSchema: "", SQLName: "transactions", Fields: []parse.FieldInfo{{Name: "TransactionID", PKType: "int64", Column: "transaction_id"}, {Name: "InvoiceID", PKType: "", Column: "invoice_id"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Source", PKType: "", Column: "source"}, {Name: "Destination", PKType: "", Column: "destination"}, {Name: "Status", PKType: "", Column: "status"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}, {Name: "ClosedAt", PKType: "", Column: "closed_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Transaction", SQLSchema: "finances", SQLName: "transactions", Fields: []parse.FieldInfo{{Name: "TransactionID", PKType: "int64", Column: "transaction_id"}, {Name: "InvoiceID", PKType: "", Column: "invoice_id"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Source", PKType: "", Column: "source"}, {Name: "Destination", PKType: "", Column: "destination"}, {Name: "Status", PKType: "", Column: "status"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}, {Name: "ClosedAt", PKType: "", Column: "closed_at"}}, PKFieldIndex: 0},
 	z: new(Transaction).Values(),
 }
 
@@ -145,7 +145,7 @@ type balanceChangesTableType struct {
 	z []interface{}
 }
 
-// Schema returns a schema name in SQL database ("").
+// Schema returns a schema name in SQL database ("finances").
 func (v *balanceChangesTableType) Schema() string {
 	return v.s.SQLSchema
 }
@@ -177,7 +177,7 @@ func (v *balanceChangesTableType) PKColumnIndex() uint {
 
 // BalanceChangesTable represents balance_changes view or table in SQL database.
 var BalanceChangesTable = &balanceChangesTableType{
-	s: parse.StructInfo{Type: "BalanceChanges", SQLSchema: "", SQLName: "balance_changes", Fields: []parse.FieldInfo{{Name: "ChangeID", PKType: "int64", Column: "change_id"}, {Name: "AccountID", PKType: "", Column: "account_id"}, {Name: "TransactionID", PKType: "", Column: "transaction_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "BalanceChanges", SQLSchema: "finances", SQLName: "balance_changes", Fields: []parse.FieldInfo{{Name: "ChangeID", PKType: "int64", Column: "change_id"}, {Name: "AccountID", PKType: "", Column: "account_id"}, {Name: "TransactionID", PKType: "", Column: "transaction_id"}, {Name: "Type", PKType: "", Column: "_type"}, {Name: "Amount", PKType: "", Column: "amount"}, {Name: "Balance", PKType: "", Column: "balance"}, {Name: "CreatedAt", PKType: "", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(BalanceChanges).Values(),
 }
 

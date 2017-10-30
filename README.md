@@ -47,3 +47,11 @@ type Shop interface {
 	Pay(invoiceID, sourceID int64) error
 }
 ```
+
+### Settings VSCode workspace
+
+```json
+{
+    "go.testEnvFile": "${workspaceRoot}/.env"
+}
+```

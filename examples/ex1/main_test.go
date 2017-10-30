@@ -1,4 +1,4 @@
-package acca
+package ex1
 
 import (
 	"database/sql"
@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/gebv/acca"
 	_ "github.com/lib/pq"
 
 	"gopkg.in/reform.v1"
@@ -38,7 +39,7 @@ func resetFixtures() {
 
 func setupFixtures() {
 	var err error
-	_, err = db.Exec(`INSERT INTO accounts(account_id, customer_id, _type, balance) VALUES
+	_, err = db.Exec(`INSERT INTO finances.accounts(account_id, customer_id, _type, balance) VALUES
     (1, 's1000', 'system', 1000),
     (2, 'c100', 'customer', 100),
     (3, 'c10', 'customer', 10),
@@ -51,7 +52,7 @@ func setupFixtures() {
 	// (3, 'o3', 1, 2, 10, now())`)
 	// log.Println("fixture: invoices", err)
 
-	_, err = db.Exec(`INSERT INTO invoices(invoice_id, order_id, destination_id, amount, created_at) VALUES 
+	_, err = db.Exec(`INSERT INTO finances.invoices(invoice_id, order_id, destination_id, amount, created_at) VALUES 
     (1, 'o1', 1, 100, now()),
     (2, 'o2', 1, 1000, now()),
 	(3, 'o3', 1, 10, now())`)
@@ -59,10 +60,10 @@ func setupFixtures() {
 }
 
 func destroyFixtures() {
-	db.Exec(`DELETE FROM balance_changes`)
-	db.Exec(`DELETE FROM transactions`)
-	db.Exec(`DELETE FROM invoices`)
-	db.Exec(`DELETE FROM accounts`)
+	db.Exec(`DELETE FROM finances.balance_changes`)
+	db.Exec(`DELETE FROM finances.transactions`)
+	db.Exec(`DELETE FROM finances.invoices`)
+	db.Exec(`DELETE FROM finances.accounts`)
 }
 
 func newConn(
@@ -100,22 +101,22 @@ func dumpFromInvoice(invoiceID int64) (
 	d *dump,
 ) {
 	d = &dump{}
-	d.i = &Invoice{}
+	d.i = &acca.Invoice{}
 	db.FindByPrimaryKeyTo(d.i, invoiceID)
 
-	accList, _ := db.SelectAllFrom((&Account{}).View(), "")
+	accList, _ := db.SelectAllFrom((&acca.Account{}).View(), "")
 	for _, item := range accList {
-		d.accs = append(d.accs, item.(*Account))
+		d.accs = append(d.accs, item.(*acca.Account))
 	}
 
-	txList, _ := db.SelectAllFrom((&Transaction{}).View(), "WHERE invoice_id = $1", invoiceID)
+	txList, _ := db.SelectAllFrom((&acca.Transaction{}).View(), "WHERE invoice_id = $1", invoiceID)
 	for _, item := range txList {
-		tx := item.(*Transaction)
+		tx := item.(*acca.Transaction)
 		d.txs = append(d.txs, tx)
 
-		chList, _ := db.SelectAllFrom((&BalanceChanges{}).View(), "WHERE transaction_id = $1", tx.TransactionID)
+		chList, _ := db.SelectAllFrom((&acca.BalanceChanges{}).View(), "WHERE transaction_id = $1", tx.TransactionID)
 		for _, item := range chList {
-			d.bcs = append(d.bcs, item.(*BalanceChanges))
+			d.bcs = append(d.bcs, item.(*acca.BalanceChanges))
 		}
 	}
 
@@ -123,13 +124,13 @@ func dumpFromInvoice(invoiceID int64) (
 }
 
 type dump struct {
-	i    *Invoice
-	accs []*Account
-	bcs  []*BalanceChanges
-	txs  []*Transaction
+	i    *acca.Invoice
+	accs []*acca.Account
+	bcs  []*acca.BalanceChanges
+	txs  []*acca.Transaction
 }
 
-func (d *dump) FindAccount(objID int64) *Account {
+func (d *dump) FindAccount(objID int64) *acca.Account {
 	for _, item := range d.accs {
 		if item.AccountID == objID {
 			return item
@@ -138,7 +139,7 @@ func (d *dump) FindAccount(objID int64) *Account {
 	return nil
 }
 
-func (d *dump) FindTx(objID int64) *Transaction {
+func (d *dump) FindTx(objID int64) *acca.Transaction {
 	for _, item := range d.txs {
 		if item.TransactionID == objID {
 			return item
@@ -147,7 +148,7 @@ func (d *dump) FindTx(objID int64) *Transaction {
 	return nil
 }
 
-func (d *dump) ChangesByAcc(objID int64) (res []*BalanceChanges) {
+func (d *dump) ChangesByAcc(objID int64) (res []*acca.BalanceChanges) {
 	for _, item := range d.bcs {
 		if item.AccountID == objID {
 			res = append(res, item)
