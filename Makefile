@@ -31,6 +31,7 @@ gogenerate:
 	go generate ./invoices.go
 	go generate ./transactions.go
 	go generate ./accounts.go
+	go generate ./shop/order.go
 .PHONY: gogenerate
 
 test:
