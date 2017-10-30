@@ -3,7 +3,6 @@ package acca
 import (
 	"errors"
 	"log"
-	"sync/atomic"
 	"time"
 
 	reform "gopkg.in/reform.v1"
@@ -14,21 +13,16 @@ var ErrTransferClosed = errors.New("transfer closed")
 var _ Transfer = (*TransferPG)(nil)
 
 func NewTrnasferPG(tx *reform.TX) *TransferPG {
-	return &TransferPG{tx, 0}
+	return &TransferPG{tx}
 }
 
 type TransferPG struct {
-	tx   *reform.TX
-	once uint32
+	tx *reform.TX
 }
 
 // Accept подтверждает транзакцию
 // Успешно закрывается операция.
 func (c *TransferPG) Accept(txID int64) (err error) {
-	if c.once > 0 {
-		return ErrTransferClosed
-	}
-	defer atomic.AddUint32(&c.once, 1)
 
 	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
@@ -72,10 +66,6 @@ func (c *TransferPG) Accept(txID int64) (err error) {
 // Reject отклоняет транзакцию.
 // Откатывается вся операция.
 func (c *TransferPG) Reject(txID int64) (err error) {
-	if c.once > 0 {
-		return ErrTransferClosed
-	}
-	defer atomic.AddUint32(&c.once, 1)
 
 	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
@@ -120,11 +110,6 @@ func (c *TransferPG) Reject(txID int64) (err error) {
 // Средства становятся доступны адресату после подвтерждения транзакции
 // В противном случае средства возвращаются
 func (c *TransferPG) Hold(sourceID, invoiceID int64) (txID int64, err error) {
-	if c.once > 0 {
-		return 0, ErrTransferClosed
-	}
-	defer atomic.AddUint32(&c.once, 1)
-
 	i, err := c.findInvoice(c.tx, invoiceID)
 	if err != nil {
 		log.Println("ERR: find invoice account", sourceID, err)
