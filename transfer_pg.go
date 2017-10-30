@@ -1,4 +1,4 @@
-package ex1
+package acca
 
 import (
 	"errors"
@@ -6,43 +6,29 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gebv/acca"
 	reform "gopkg.in/reform.v1"
 )
 
 var ErrTransferClosed = errors.New("transfer closed")
 
-var _ acca.Transfer = (*Transfer)(nil)
+var _ Transfer = (*TransferPG)(nil)
 
-func NewTrnasfer(db *reform.DB) *Transfer {
-	tx, err := db.Begin()
-	if err != nil {
-		panic(err)
-	}
-	return &Transfer{tx, 0}
+func NewTrnasferPG(tx *reform.TX) *TransferPG {
+	return &TransferPG{tx, 0}
 }
 
-type Transfer struct {
+type TransferPG struct {
 	tx   *reform.TX
 	once uint32
 }
 
 // Accept подтверждает транзакцию
 // Успешно закрывается операция.
-func (c *Transfer) Accept(txID int64) (err error) {
+func (c *TransferPG) Accept(txID int64) (err error) {
 	if c.once > 0 {
 		return ErrTransferClosed
 	}
 	defer atomic.AddUint32(&c.once, 1)
-
-	defer func() {
-		if err != nil {
-			err = c.tx.Rollback()
-			return
-		}
-
-		err = c.tx.Commit()
-	}()
 
 	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
@@ -50,7 +36,7 @@ func (c *Transfer) Accept(txID int64) (err error) {
 		return err
 	}
 
-	if tx.Status != acca.Authorization {
+	if tx.Status != Authorization {
 		err = errors.New("transaction has closed")
 		return
 	}
@@ -61,7 +47,7 @@ func (c *Transfer) Accept(txID int64) (err error) {
 		return err
 	}
 	if i.Paid {
-		err = acca.ErrInvoiceHasBeenPaid
+		err = ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
@@ -85,20 +71,11 @@ func (c *Transfer) Accept(txID int64) (err error) {
 
 // Reject отклоняет транзакцию.
 // Откатывается вся операция.
-func (c *Transfer) Reject(txID int64) (err error) {
+func (c *TransferPG) Reject(txID int64) (err error) {
 	if c.once > 0 {
 		return ErrTransferClosed
 	}
 	defer atomic.AddUint32(&c.once, 1)
-
-	defer func() {
-		if err != nil {
-			err = c.tx.Rollback()
-			return
-		}
-
-		err = c.tx.Commit()
-	}()
 
 	tx, err := c.findTransaction(c.tx, txID)
 	if err != nil {
@@ -106,7 +83,7 @@ func (c *Transfer) Reject(txID int64) (err error) {
 		return err
 	}
 
-	if tx.Status != acca.Authorization {
+	if tx.Status != Authorization {
 		err = errors.New("transaction has closed")
 		return
 	}
@@ -117,7 +94,7 @@ func (c *Transfer) Reject(txID int64) (err error) {
 		return err
 	}
 	if i.Paid {
-		err = acca.ErrInvoiceHasBeenPaid
+		err = ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
@@ -142,20 +119,11 @@ func (c *Transfer) Reject(txID int64) (err error) {
 // Hold замораживаются средства
 // Средства становятся доступны адресату после подвтерждения транзакции
 // В противном случае средства возвращаются
-func (c *Transfer) Hold(sourceID, invoiceID int64) (txID int64, err error) {
+func (c *TransferPG) Hold(sourceID, invoiceID int64) (txID int64, err error) {
 	if c.once > 0 {
 		return 0, ErrTransferClosed
 	}
 	defer atomic.AddUint32(&c.once, 1)
-
-	defer func() {
-		if err != nil {
-			err = c.tx.Rollback()
-			return
-		}
-
-		c.tx.Commit()
-	}()
 
 	i, err := c.findInvoice(c.tx, invoiceID)
 	if err != nil {
@@ -163,7 +131,7 @@ func (c *Transfer) Hold(sourceID, invoiceID int64) (txID int64, err error) {
 		return
 	}
 	if i.Paid {
-		err = acca.ErrInvoiceHasBeenPaid
+		err = ErrInvoiceHasBeenPaid
 		log.Println("ERR: invoice has been paid", i.InvoiceID)
 		return
 	}
@@ -191,17 +159,17 @@ func (c *Transfer) Hold(sourceID, invoiceID int64) (txID int64, err error) {
 	return holdTx.TransactionID, nil
 }
 
-func (s *Transfer) hold(
+func (s *TransferPG) hold(
 	tx *reform.TX,
-	i *acca.Invoice,
-	src *acca.Account, // source
-) (hold *acca.BalanceChanges, holdTx *acca.Transaction, err error) {
-	holdTx = &acca.Transaction{
+	i *Invoice,
+	src *Account, // source
+) (hold *BalanceChanges, holdTx *Transaction, err error) {
+	holdTx = &Transaction{
 		InvoiceID:   i.InvoiceID,
 		Amount:      i.Amount,
 		Source:      src.AccountID,
 		Destination: i.DestinationID,
-		Status:      acca.Authorization,
+		Status:      Authorization,
 		CreatedAt:   time.Now(),
 	}
 
@@ -215,17 +183,17 @@ func (s *Transfer) hold(
 
 	if src.Balance < 0 {
 		log.Println("ERR: не достаточно средств на счете", src.AccountID)
-		return nil, nil, acca.ErrInsufficientFunds
+		return nil, nil, ErrInsufficientFunds
 	}
 
 	if err = tx.UpdateColumns(src, "balance", "updated_at"); err != nil {
 		log.Println("ERR: update account", src.AccountID, err)
 		return nil, nil, err
 	}
-	hold = &acca.BalanceChanges{
+	hold = &BalanceChanges{
 		AccountID:     src.AccountID,
 		TransactionID: holdTx.TransactionID,
-		Type:          acca.Hold,
+		Type:          Hold,
 		Amount:        -i.Amount,
 		Balance:       src.Balance,
 		CreatedAt:     time.Now(),
@@ -238,13 +206,13 @@ func (s *Transfer) hold(
 	return hold, holdTx, nil
 }
 
-func (s *Transfer) accept(
+func (s *TransferPG) accept(
 	dbtx *reform.TX,
-	tx *acca.Transaction,
-	i *acca.Invoice,
-	dst *acca.Account, // destination
-) (change *acca.BalanceChanges, err error) {
-	tx.Status = acca.Accepted
+	tx *Transaction,
+	i *Invoice,
+	dst *Account, // destination
+) (change *BalanceChanges, err error) {
+	tx.Status = Accepted
 	tx.ClosedAt = time.Now()
 
 	if err = dbtx.UpdateColumns(tx, "status", "closed_at"); err != nil {
@@ -260,10 +228,10 @@ func (s *Transfer) accept(
 		return nil, err
 	}
 
-	change = &acca.BalanceChanges{
+	change = &BalanceChanges{
 		AccountID:     dst.AccountID,
 		TransactionID: tx.TransactionID,
-		Type:          acca.Complete,
+		Type:          Complete,
 		Amount:        i.Amount,
 		Balance:       dst.Balance,
 		CreatedAt:     time.Now(),
@@ -282,13 +250,13 @@ func (s *Transfer) accept(
 	return
 }
 
-func (s *Transfer) reject(
+func (s *TransferPG) reject(
 	dbtx *reform.TX,
-	tx *acca.Transaction,
-	i *acca.Invoice,
-	src *acca.Account, // destination
-) (change *acca.BalanceChanges, err error) {
-	tx.Status = acca.Rejected
+	tx *Transaction,
+	i *Invoice,
+	src *Account, // destination
+) (change *BalanceChanges, err error) {
+	tx.Status = Rejected
 	tx.ClosedAt = time.Now()
 
 	if err = dbtx.UpdateColumns(tx, "status", "closed_at"); err != nil {
@@ -304,10 +272,10 @@ func (s *Transfer) reject(
 		return nil, err
 	}
 
-	change = &acca.BalanceChanges{
+	change = &BalanceChanges{
 		AccountID:     src.AccountID,
 		TransactionID: tx.TransactionID,
-		Type:          acca.Refund,
+		Type:          Refund,
 		Amount:        i.Amount,
 		Balance:       src.Balance,
 		CreatedAt:     time.Now(),
@@ -320,8 +288,8 @@ func (s *Transfer) reject(
 	return
 }
 
-func (s *Transfer) findInvoice(tx *reform.TX, objID int64) (obj *acca.Invoice, err error) {
-	obj = &acca.Invoice{}
+func (s *TransferPG) findInvoice(tx *reform.TX, objID int64) (obj *Invoice, err error) {
+	obj = &Invoice{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find invoice by ID", objID, err)
 		return nil, err
@@ -329,8 +297,8 @@ func (s *Transfer) findInvoice(tx *reform.TX, objID int64) (obj *acca.Invoice, e
 	return obj, nil
 }
 
-func (s *Transfer) findAccount(tx *reform.TX, objID int64) (obj *acca.Account, err error) {
-	obj = &acca.Account{}
+func (s *TransferPG) findAccount(tx *reform.TX, objID int64) (obj *Account, err error) {
+	obj = &Account{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find account by ID", objID, err)
 		return nil, err
@@ -338,8 +306,8 @@ func (s *Transfer) findAccount(tx *reform.TX, objID int64) (obj *acca.Account, e
 	return obj, nil
 }
 
-func (s *Transfer) findTransaction(tx *reform.TX, objID int64) (obj *acca.Transaction, err error) {
-	obj = &acca.Transaction{}
+func (s *TransferPG) findTransaction(tx *reform.TX, objID int64) (obj *Transaction, err error) {
+	obj = &Transaction{}
 	if err = tx.FindByPrimaryKeyTo(obj, objID); err != nil {
 		log.Println("ERR: find transaction by ID", objID, err)
 		return nil, err

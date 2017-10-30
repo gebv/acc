@@ -1,4 +1,4 @@
-package ex1
+package acca
 
 import (
 	"database/sql"
@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/gebv/acca"
 	_ "github.com/lib/pq"
 
 	"gopkg.in/reform.v1"
@@ -101,22 +100,22 @@ func dumpFromInvoice(invoiceID int64) (
 	d *dump,
 ) {
 	d = &dump{}
-	d.i = &acca.Invoice{}
+	d.i = &Invoice{}
 	db.FindByPrimaryKeyTo(d.i, invoiceID)
 
-	accList, _ := db.SelectAllFrom((&acca.Account{}).View(), "")
+	accList, _ := db.SelectAllFrom((&Account{}).View(), "")
 	for _, item := range accList {
-		d.accs = append(d.accs, item.(*acca.Account))
+		d.accs = append(d.accs, item.(*Account))
 	}
 
-	txList, _ := db.SelectAllFrom((&acca.Transaction{}).View(), "WHERE invoice_id = $1", invoiceID)
+	txList, _ := db.SelectAllFrom((&Transaction{}).View(), "WHERE invoice_id = $1", invoiceID)
 	for _, item := range txList {
-		tx := item.(*acca.Transaction)
+		tx := item.(*Transaction)
 		d.txs = append(d.txs, tx)
 
-		chList, _ := db.SelectAllFrom((&acca.BalanceChanges{}).View(), "WHERE transaction_id = $1", tx.TransactionID)
+		chList, _ := db.SelectAllFrom((&BalanceChanges{}).View(), "WHERE transaction_id = $1", tx.TransactionID)
 		for _, item := range chList {
-			d.bcs = append(d.bcs, item.(*acca.BalanceChanges))
+			d.bcs = append(d.bcs, item.(*BalanceChanges))
 		}
 	}
 
@@ -124,13 +123,13 @@ func dumpFromInvoice(invoiceID int64) (
 }
 
 type dump struct {
-	i    *acca.Invoice
-	accs []*acca.Account
-	bcs  []*acca.BalanceChanges
-	txs  []*acca.Transaction
+	i    *Invoice
+	accs []*Account
+	bcs  []*BalanceChanges
+	txs  []*Transaction
 }
 
-func (d *dump) FindAccount(objID int64) *acca.Account {
+func (d *dump) FindAccount(objID int64) *Account {
 	for _, item := range d.accs {
 		if item.AccountID == objID {
 			return item
@@ -139,7 +138,7 @@ func (d *dump) FindAccount(objID int64) *acca.Account {
 	return nil
 }
 
-func (d *dump) FindTx(objID int64) *acca.Transaction {
+func (d *dump) FindTx(objID int64) *Transaction {
 	for _, item := range d.txs {
 		if item.TransactionID == objID {
 			return item
@@ -148,7 +147,7 @@ func (d *dump) FindTx(objID int64) *acca.Transaction {
 	return nil
 }
 
-func (d *dump) ChangesByAcc(objID int64) (res []*acca.BalanceChanges) {
+func (d *dump) ChangesByAcc(objID int64) (res []*BalanceChanges) {
 	for _, item := range d.bcs {
 		if item.AccountID == objID {
 			res = append(res, item)
