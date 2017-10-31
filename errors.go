@@ -5,7 +5,9 @@ import "errors"
 var (
 	ErrInsufficientFunds  = errors.New("insufficient funds")
 	ErrInvoiceHasBeenPaid = errors.New("invoice has been paid")
-	ErrNotFound           = errors.New("not found")
 	ErrOrderClosed        = errors.New("order closed")
-	ErrNotSupported       = errors.New("not supported")
+
+	ErrNotFound     = errors.New("not found")
+	ErrNotSupported = errors.New("not supported")
+	ErrNotAllowed   = errors.New("not allowed")
 )

@@ -37,6 +37,9 @@ func (s ShopPG) Invoice(orderID string, amount int64) (*acca.Invoice, error) {
 }
 
 func (s ShopPG) Pay(invoiceID, sourceID int64) (err error) {
+	if err = s.pi.CanPay(invoiceID, sourceID); err != nil {
+		return err
+	}
 	// TODO: check invoiceID
 	transfer, tx, err := s.simpleTransfer()
 	if err != nil {
