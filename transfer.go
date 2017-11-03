@@ -1,8 +1,8 @@
 package acca
 
 type Transfer interface {
-	// Hold first phase of payment - hold amount of invoice.
-	Hold(sourceID, invoiceID int64) (txID int64, err error)
+	// Hold first phase of payment - hold amount of invoice (optional to specifed source account).
+	Hold(invoiceID int64, sourceID ...int64) (txID int64, err error)
 
 	// Accept second phase of payment - payment confimration.
 	Accept(txID int64) (err error)

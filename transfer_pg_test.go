@@ -6,7 +6,7 @@ import "github.com/stretchr/testify/assert"
 func TestCashier_successAccept(t *testing.T) {
 	resetFixtures()
 	tx, _ := db.Begin()
-	txID, err := NewTrnasferPG(tx).Hold(2, 1)
+	txID, err := NewTrnasferPG(tx).Hold(1, 2)
 	assert.NoError(t, err, "hold")
 	assert.NoError(t, tx.Commit(), "hold commit")
 	if assert.NotNil(t, txID, "tx ID") {
@@ -26,7 +26,7 @@ func TestCashier_successAccept(t *testing.T) {
 func TestCashier_successReject(t *testing.T) {
 	resetFixtures()
 	tx, _ := db.Begin()
-	txID, err := NewTrnasferPG(tx).Hold(2, 1)
+	txID, err := NewTrnasferPG(tx).Hold(1, 2)
 	assert.NoError(t, err, "hold")
 	assert.NoError(t, tx.Commit(), "hold commit")
 	if assert.NotNil(t, txID, "tx ID") {

@@ -9,6 +9,7 @@ import (
 )
 
 var ErrTransferClosed = errors.New("transfer closed")
+var ErrNotSpecifedSourceAccount = errors.New("not specifed source account")
 
 var _ Transfer = (*TransferPG)(nil)
 
@@ -107,9 +108,10 @@ func (c *TransferPG) Reject(txID int64) (err error) {
 }
 
 // Hold замораживаются средства
+// SourceID пустой
 // Средства становятся доступны адресату после подвтерждения транзакции
 // В противном случае средства возвращаются
-func (c *TransferPG) Hold(sourceID, invoiceID int64) (txID int64, err error) {
+func (c *TransferPG) Hold(invoiceID int64, sourceID ...int64) (txID int64, err error) {
 	i, err := c.findInvoice(c.tx, invoiceID)
 	if err != nil {
 		log.Println("ERR: find invoice account", sourceID, err)
@@ -121,18 +123,33 @@ func (c *TransferPG) Hold(sourceID, invoiceID int64) (txID int64, err error) {
 		return
 	}
 
-	i.SetSourceID(sourceID)
-	if err = c.tx.UpdateColumns(i, "source_id"); err != nil {
-		log.Println("ERR: update invocie - set source_id", err)
+	var s *Account // source account
+	if len(sourceID) > 0 {
+		s, err = c.findAccount(c.tx, sourceID[0])
+		if err != nil {
+			log.Println("ERR: find source account", sourceID[0], err)
+			return
+		}
+
+		i.SetSourceID(sourceID[0])
+		if err = c.tx.UpdateColumns(i, "source_id"); err != nil {
+			log.Println("ERR: update invocie - set source_id", err)
+			return
+		}
+	} else {
+		s, _ = c.findAccount(c.tx, i.SourceID.Int64)
+	}
+
+	if s == nil {
+		log.Println("ERR: not specified source account")
+		err = ErrNotSpecifedSourceAccount
 		return
 	}
 
-	s, _ := c.findAccount(c.tx, sourceID)
-	if err != nil {
-		log.Println("ERR: find source account", sourceID, err)
-		return
-	}
-	// d, _ := c.findAccount(tx, i.DestinationID) // TODO: проверка возможности перевода средств с SourceID -> DestinationID
+	// NOTE: одно из двух дает Source Account
+	// ошибка исключена ибо на уровне БД проверка целостности данных
+
+	// TODO: проверка возможности перевода средств с SourceID -> DestinationID
 
 	ch, holdTx, err := c.hold(c.tx, i, s)
 	if err != nil {
