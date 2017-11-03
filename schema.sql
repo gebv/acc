@@ -1,23 +1,28 @@
+
 CREATE SCHEMA IF NOT EXISTS finances;
 
-CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer');
+CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer', 'bonus');
 CREATE TABLE finances.accounts (
     account_id bigserial PRIMARY KEY,
-    customer_id text NOT NULL,
+    customer_id ltree NOT NULL,
     account_type finances.account_type NOT NULL DEFAULT 'customer',
     balance bigint NOT NULL DEFAULT 0 CHECK (balance >= 0),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    UNIQUE (customer_id)
 );
+CREATE INDEX accounts_customer_id_gist_idx ON finances.accounts USING GIST (customer_id);
 
 CREATE TABLE finances.invoices (
     invoice_id bigserial PRIMARY KEY,
-    order_id text NOT NULL,
+    order_id ltree NOT NULL,
     destination_id bigint NOT NULL REFERENCES finances.accounts(account_id),
     source_id bigint REFERENCES finances.accounts(account_id),
     paid boolean NOT NULL DEFAULT false,
     amount bigint NOT NULL DEFAULT 0 CHECK (amount > 0),
-    created_at timestamp with time zone NOT NULL
+    created_at timestamp with time zone NOT NULL,
+    UNIQUE (order_id)
 );
+CREATE INDEX invoices_order_id_gist_idx ON finances.invoices USING GIST (order_id);
 
 CREATE TYPE finances.tx_type AS ENUM('authorization', 'accepted', 'rejected');
 CREATE TABLE finances.transactions (

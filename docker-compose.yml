@@ -13,7 +13,7 @@ services:
       - DB_NAME=acc
       - DB_TEMPLATE=
 
-      - DB_EXTENSION=
+      - DB_EXTENSION=ltree
 
       - REPLICATION_MODE=
       - REPLICATION_USER=
