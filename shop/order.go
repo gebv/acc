@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/gebv/acca"
-	uuid "github.com/satori/go.uuid"
 )
 
 //go:generate reform
@@ -27,12 +26,13 @@ type OrderManager interface {
 }
 
 func NewOrder(
+	orderID string,
 	desID int64,
 	_type OrderType,
 	amount int64,
 ) *order {
 	return &order{
-		OrderID:   uuid.NewV4().String(),
+		OrderID:   orderID,
 		Type:      _type,
 		Total:     amount,
 		CreatedAt: time.Now(),

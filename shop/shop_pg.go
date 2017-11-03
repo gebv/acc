@@ -7,14 +7,26 @@ import (
 	reform "gopkg.in/reform.v1"
 )
 
+func NewShopPG(
+	db *reform.DB,
+	ti acca.TransferInspector,
+	pi PaymentInspector,
+) *ShopPG {
+	return &ShopPG{
+		db: db,
+		ti: ti,
+		pi: pi,
+	}
+}
+
 type ShopPG struct {
 	db *reform.DB
 	ti acca.TransferInspector
 	pi PaymentInspector
 }
 
-func (s ShopPG) CreateOrder(destinationID int64, _type OrderType, amount int64) (Order, error) {
-	o := NewOrder(destinationID, _type, amount)
+func (s ShopPG) CreateOrder(orderID string, destinationID int64, _type OrderType, amount int64) (Order, error) {
+	o := NewOrder(orderID, destinationID, _type, amount)
 	if err := s.db.Insert(o); err != nil {
 		return nil, err
 	}

@@ -5,7 +5,7 @@ import (
 )
 
 type Manager interface {
-	CreateOrder(destinationID int64, _type OrderType, amount int64) (Order, error)
+	CreateOrder(orderID string, destinationID int64, _type OrderType, amount int64) (Order, error)
 	Invoice(orderID string, amount int64) (*acca.Invoice, error)
 }
 
