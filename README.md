@@ -1,6 +1,7 @@
 # accounting
 Financial accounting
 
+See database schema https://github.com/gebv/acca/issues/7
 
 # quick start
 
