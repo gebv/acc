@@ -1,7 +1,7 @@
 
 CREATE SCHEMA IF NOT EXISTS finances;
 
-CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer', 'bonus');
+CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer', 'bonus', 'credit');
 CREATE TABLE finances.accounts (
     account_id bigserial PRIMARY KEY,
     customer_id ltree NOT NULL,
