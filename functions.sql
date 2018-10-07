@@ -196,9 +196,11 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
                     WHEN 'auth' THEN
                         PERFORM acca.auth_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'draft';
                     WHEN 'accept' THEN
-                        PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        -- PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        RAISE EXCEPTION 'Not implemented: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                     WHEN 'reject' THEN
-                        PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        -- PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        RAISE EXCEPTION 'Not implemented: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                     ELSE
                         RAISE EXCEPTION 'Unexpected request type: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                 END CASE;
