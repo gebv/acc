@@ -1,58 +1,27 @@
-# accounting
-Financial accounting
+# TODO
 
-See database schema https://github.com/gebv/acca/issues/7
+- [ ] Tests for basic functionality.
+- [ ] Access to functions. For internal methods, external access is not available.
+- [ ] Example for analitics.
+  - [ ] Beautiful graphics.
 
-# quick start
 
-[schema database](schema.sql)
+## test1
 
-``` shell
-docker-compose up -d
-# setup schema
-make test
+```sql
+INSERT INTO acca.currencies(curr) VALUES ('rub');
+INSERT INTO acca.accounts(acc_id, curr, balance) VALUES('1', 'rub', 0), ('2', 'rub', 0), ('3', 'rub', 0), ('4', 'rub', 0);
+SELECT acca.new_transfer('[{"src_acc_id": "1", "dst_acc_id": "2", "type": "internal", "amount": 10, "reason": "test", "meta": {}, "hold": false}, {"src_acc_id": "3", "dst_acc_id": "4", "type": "internal", "amount": 20, "reason": "test", "meta": {}, "hold": false}]', 'reason.example', '{}', false);
+
+SELECT acca.handle_requests(1);
 ```
 
-for reference see tests 
-* [cashier](cashier_pg_test.go)
+## test2
 
-# overview
+```sql
+INSERT INTO acca.currencies(curr) VALUES ('rub');
+INSERT INTO acca.accounts(acc_id, curr, balance) VALUES('hold1', 'rub', 0) ;
+SELECT acca.new_transfer('[{"src_acc_id": "1", "dst_acc_id": "2", "type": "internal", "amount": 10, "reason": "test", "meta": {}, "hold": true, "hold_acc_id": "hold1"}, {"src_acc_id": "3", "dst_acc_id": "4", "type": "internal", "amount": 20, "reason": "test", "meta": {}, "hold": true, "hold_acc_id": "hold1"}]', 'reason.example', '{}', true);
 
-## cashier
-
-low-level layer responsible for the transfer of funds between accounts
-
-```golang
-type Cashier interface {
-	// Hold first phase of payment - hold amount of invoice.
-	Hold(sourceID, invoiceID int64) (txID int64, err error)
-
-	// Accept second phase of payment - payment confimration.
-	Accept(txID int64) (err error)
-
-	// Reject second phase of payment - payment not rejected.
-	Reject(txID int64) (err error)
-}
-
-```
-
-## shop
-
-```golang
-
-type Shop interface {
-	// Invocie returns the invoice for payment.
-	Invoice(orderID string, amount int64) (*Invoice, error)
-
-	// Pay payment of invoice.
-	Pay(invoiceID, sourceID int64) error
-}
-```
-
-### Settings VSCode workspace
-
-```json
-{
-    "go.testEnvFile": "${workspaceRoot}/.env"
-}
+SELECT acca.handle_requests(1);
 ```

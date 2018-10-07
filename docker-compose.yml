@@ -1,26 +1,12 @@
-version: "3"
+---
+version: '3'
 services:
-  PostgreSQL:
-    restart: always
-    image: sameersbn/postgresql:9.6-2
-    ports:
-      - "5432:5432"
+  postgres:
+    image: postgres:10.5
     environment:
-      - DEBUG=false
-
-      - DB_USER=acc
-      - DB_PASS=acc
-      - DB_NAME=acc
-      - DB_TEMPLATE=
-
-      - DB_EXTENSION=ltree
-
-      - REPLICATION_MODE=
-      - REPLICATION_USER=
-      - REPLICATION_PASS=
-      - REPLICATION_SSLMODE=
-    volumes:
-      - pg_data:/var/lib/postgresql
-
-volumes:
-  pg_data:
+      - TZ=UTC
+      - POSTGRES_DB=acca
+      - POSTGRES_USER=acca
+      - POSTGRES_PASSWORD=acca
+    ports:
+      - 127.0.0.1:5432:5432
