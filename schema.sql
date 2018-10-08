@@ -2,7 +2,7 @@ CREATE SCHEMA IF NOT EXISTS acca;
 
 CREATE EXTENSION ltree;
 
--- money in the numeric(69,18)
+-- money in the numeric(69, 0)
 -- for example, to store balances for WEI (ETH)
 -- change manually if you need less accuracy to
 
@@ -21,7 +21,7 @@ COMMENT ON COLUMN acca.currencies.meta IS 'Container with meta information.';
 CREATE TABLE acca.accounts (
     acc_id ltree NOT NULL PRIMARY KEY,
     curr varchar(10) REFERENCES acca.currencies(curr),
-    balance numeric(69, 18) NOT NULL DEFAULT 0 CHECK(balance >= 0),
+    balance numeric(69, 00) NOT NULL DEFAULT 0 CHECK(balance >= 0),
     meta jsonb NOT NULL DEFAULT '{}'
 );
 CREATE INDEX accounts_acc_gist_idx ON acca.accounts USING GIST (acc_id);
@@ -92,7 +92,7 @@ CREATE TABLE acca.operations (
     src_acc_id ltree NOT NULL REFERENCES acca.accounts(acc_id),
     dst_acc_id ltree NOT NULL REFERENCES acca.accounts(acc_id),
     type acca.operation_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
-    amount numeric(69,18) NOT NULL,
+    amount numeric(69, 00) NOT NULL,
     reason ltree NOT NULL DEFAULT '',
     meta jsonb NOT NULL DEFAULT '{}',
     hold boolean NOT NULL DEFAULT false,
@@ -121,15 +121,15 @@ CREATE TYPE acca.request_type AS enum (
 );
 
 -- request for action
-CREATE TABLE acca.requests (
+CREATE TABLE acca.requests_queue (
     tx_id bigserial REFERENCES acca.transactions (tx_id),
     type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL DEFAULT now()
 );
-CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON requests (tx_id, type);
+CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON acca.requests_queue (tx_id, type);
 
 -- history requests
-CREATE TABLE acca.history_requests (
+CREATE TABLE acca.requests_history (
     tx_id bigserial REFERENCES acca.transactions (tx_id),
     type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL,

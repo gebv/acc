@@ -5,7 +5,6 @@ CREATE OR REPLACE FUNCTION acca.new_transfer(
     _operations jsonb,
     _reason ltree,
     _meta jsonb,
-    _hold boolean,
     OUT _tx_id bigint
 ) RETURNS bigint AS $$
     BEGIN
@@ -17,7 +16,7 @@ CREATE OR REPLACE FUNCTION acca.new_transfer(
         INSERT INTO acca.transactions (tx_id, reason, meta, status) VALUES (DEFAULT, _reason, _meta, 'draft'::acca.transaction_status) RETURNING acca.transactions.tx_id INTO _tx_id;
 
         -- authorization transaction
-        INSERT INTO acca.requests(tx_id, type) VALUES(_tx_id, 'auth'::acca.request_type);
+        INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'auth'::acca.request_type);
 
         -- processing incoming operations
         INSERT INTO acca.operations(tx_id, src_acc_id, dst_acc_id, type, amount, reason, meta, hold, hold_acc_id, status)
@@ -45,7 +44,7 @@ CREATE OR REPLACE FUNCTION acca.accept_tx(
 ) RETURNS void AS $$
     BEGIN
         -- TODO: check tx status
-        INSERT INTO acca.requests(tx_id, type) VALUES(_tx_id, 'accept'::acca.request_type);
+        INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'accept'::acca.request_type);
     END;
 $$ language plpgsql;
 
@@ -55,7 +54,7 @@ CREATE OR REPLACE FUNCTION acca.reject_tx(
 ) RETURNS void AS $$
     BEGIN
         -- TODO: check tx status
-        INSERT INTO acca.requests(tx_id, type) VALUES(_tx_id, 'reject'::acca.request_type);
+        INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'reject'::acca.request_type);
     END;
 $$ language plpgsql;
 
@@ -185,11 +184,11 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
         -- num_tx_opers bigint := 1;
     BEGIN
         FOR reqrow IN
-            SELECT tx_id, type FROM acca.requests ORDER BY created_at ASC LIMIT _limit
+            SELECT tx_id, type FROM acca.requests_queue ORDER BY created_at ASC LIMIT _limit
         LOOP
             -- required remove from queue
-            INSERT INTO acca.history_requests(tx_id, type, created_at, executed_at) SELECT tx_id, type, created_at, now() FROM acca.requests WHERE tx_id = reqrow.tx_id;
-            DELETE FROM acca.requests WHERE tx_id = reqrow.tx_id;
+            INSERT INTO acca.requests_history(tx_id, type, created_at, executed_at) SELECT tx_id, type, created_at, now() FROM acca.requests_queue WHERE tx_id = reqrow.tx_id;
+            DELETE FROM acca.requests_queue WHERE tx_id = reqrow.tx_id;
 
             BEGIN
                 CASE reqrow.type
