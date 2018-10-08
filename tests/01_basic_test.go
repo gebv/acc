@@ -128,6 +128,107 @@ func Test01Basic_Simple(t *testing.T) {
 			"auth",
 			1,
 		},
+		{
+			"InternalTransferWithError1",
+			[]string{"cur3"},
+			[]accountInfo{
+				{
+					"cur3",
+					"cur3.1",
+					10,
+				},
+				{
+					"cur3",
+					"cur3.2",
+					20,
+				},
+				{
+					"cur3",
+					"cur3.3",
+					30,
+				},
+				{
+					"cur3",
+					"cur3.hold1",
+					0,
+				},
+			},
+			transfers{
+				{
+					SrcAccID: "cur3.1",
+					DstAccID: "cur3.2",
+					Type:     Internal,
+					Amount:   1000,
+					Reason:   "fortesting",
+					Meta: MetaData{
+						"foo": "bar",
+					},
+					Hold: false,
+				},
+				{
+					SrcAccID: "cur3.2",
+					DstAccID: "cur3.3",
+					Type:     Internal,
+					Amount:   1,
+					Reason:   "fortesting",
+					Meta: MetaData{
+						"foo": "bar",
+					},
+					Hold: false,
+				},
+			},
+			MetaData{"foo": "bar"},
+			"testing",
+			0,
+			map[string]uint64{
+				"cur3.1":     10,
+				"cur3.2":     20,
+				"cur3.3":     30,
+				"cur3.hold1": 0,
+			},
+			"draft",
+			"failed",
+			1,
+		},
+		{
+			"InternalTransferWithError2_EmptyTransfers",
+			[]string{"cur4"},
+			[]accountInfo{
+				{
+					"cur4",
+					"cur4.1",
+					10,
+				},
+				{
+					"cur4",
+					"cur4.2",
+					20,
+				},
+				{
+					"cur4",
+					"cur4.3",
+					30,
+				},
+				{
+					"cur4",
+					"cur4.hold1",
+					0,
+				},
+			},
+			transfers{},
+			MetaData{"foo": "bar"},
+			"testing",
+			0,
+			map[string]uint64{
+				"cur4.1":     10,
+				"cur4.2":     20,
+				"cur4.3":     30,
+				"cur4.hold1": 0,
+			},
+			"draft",
+			"accepted",
+			1,
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,7 +276,7 @@ func Test01Basic_Simple(t *testing.T) {
 			t.Run("CheckBalances", func(t *testing.T) {
 				after := loadBalances(t)
 				for accID, balance := range tt.ExpectedBalances {
-					assert.Equal(t, int64(after[accID]), int64(balance), "Not equal balances for acc = %v", accID)
+					assert.Equal(t, int64(balance), int64(after[accID]), "Not equal balances for acc = %v", accID)
 				}
 			})
 		})
