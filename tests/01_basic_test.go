@@ -129,7 +129,7 @@ func Test01Basic_Simple(t *testing.T) {
 			1,
 		},
 		{
-			"InternalTransferWithError1",
+			"InternalTransferWithError1_NotEnoughMoney",
 			[]string{"cur3"},
 			[]accountInfo{
 				{
