@@ -42,8 +42,19 @@ $$ language plpgsql;
 CREATE OR REPLACE FUNCTION acca.accept_tx(
     _tx_id bigint
 ) RETURNS void AS $$
+    DECLARE
+        _tx_status acca.transaction_status;
     BEGIN
-        -- TODO: check tx status
+        SELECT status INTO _tx_status FROM acca.transactions WHERE tx_id = _tx_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Transaction not found';
+        END IF;
+
+        IF _tx_status <> 'auth' THEN
+            RAISE EXCEPTION 'Transaction has already closed (or not found): status=%', _tx_status::text;
+        END IF;
+
         INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'accept'::acca.request_type);
     END;
 $$ language plpgsql;
@@ -52,8 +63,14 @@ $$ language plpgsql;
 CREATE OR REPLACE FUNCTION acca.reject_tx(
     _tx_id bigint
 ) RETURNS void AS $$
+    DECLARE
+        _tx_status acca.transaction_status;
     BEGIN
-        -- TODO: check tx status
+        SELECT status INTO _tx_status FROM acca.transactions WHERE tx_id = _tx_id;
+        IF _tx_status <> 'auth' THEN
+            RAISE EXCEPTION 'Transaction has already closed (or not found): status=%', _tx_status::text;
+        END IF;
+
         INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'reject'::acca.request_type);
     END;
 $$ language plpgsql;
@@ -99,7 +116,6 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
                     END IF;
                 WHEN 'recharge' THEN
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
                         UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _hold_acc_id;
                     ELSE
                         UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
@@ -110,8 +126,7 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
                         __current_acc_id := _src_acc_id;
                         UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
 
-                        __current_acc_id := _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _hold_acc_id;
                     ELSE
                         __current_acc_id := _src_acc_id;
                         UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
@@ -135,7 +150,141 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
         END IF;
         UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
+        -- TODO: more info
         PERFORM pg_notify('auth_operation', json_build_object('oper_id', _oper_id)::text);
+    END;
+$$ language plpgsql;
+
+-- accept_operation
+CREATE OR REPLACE FUNCTION acca.accept_operation(
+    _oper_id bigint
+) RETURNS void AS $$
+    DECLARE
+        _amount numeric(30, 5);
+        _src_acc_id ltree;
+        _dst_acc_id ltree;
+        _hold_acc_id ltree;
+        _type acca.operation_type;
+        _hold boolean;
+        _oper_next_status acca.operation_status;
+
+        __current_acc_id ltree;
+    BEGIN
+        SELECT
+            amount,
+            src_acc_id,
+            dst_acc_id,
+            hold,
+            hold_acc_id,
+            type
+        INTO _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
+        FROM acca.operations WHERE oper_id = _oper_id;
+
+        BEGIN
+            CASE _type
+                WHEN 'internal' THEN
+                    __current_acc_id := _hold_acc_id;
+
+                    IF _hold THEN
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
+                    END IF;
+                WHEN 'recharge' THEN
+                    IF _hold THEN
+                        __current_acc_id := _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                    END IF;
+                WHEN 'withdraw' THEN
+                    IF _hold THEN
+                        __current_acc_id := _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+
+                        __current_acc_id := _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
+                    END IF;
+                ELSE
+                    RAISE EXCEPTION 'Unexpected operation type: oper_id=%, type=%', _oper_id, _type::text;
+            END CASE;
+        EXCEPTION
+            WHEN others THEN
+                RAISE EXCEPTION 'Failed handler operation: oper_id=%, acc_id=%, errm=%.', _oper_id, __current_acc_id, SQLERRM;
+        END;
+
+        -- update status for operation
+        IF _hold THEN
+            _oper_next_status = 'accepted';
+        END IF;
+        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
+
+        -- TODO: more info
+        PERFORM pg_notify('accept_operation', json_build_object('oper_id', _oper_id)::text);
+    END;
+$$ language plpgsql;
+
+-- reject_operation
+CREATE OR REPLACE FUNCTION acca.reject_operation(
+    _oper_id bigint
+) RETURNS void AS $$
+    DECLARE
+        _amount numeric(30, 5);
+        _src_acc_id ltree;
+        _dst_acc_id ltree;
+        _hold_acc_id ltree;
+        _type acca.operation_type;
+        _hold boolean;
+        _oper_next_status acca.operation_status;
+
+        __current_acc_id ltree;
+    BEGIN
+        SELECT
+            amount,
+            src_acc_id,
+            dst_acc_id,
+            hold,
+            hold_acc_id,
+            type
+        INTO _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
+        FROM acca.operations WHERE oper_id = _oper_id;
+
+        BEGIN
+            CASE _type
+                WHEN 'internal' THEN
+                    __current_acc_id := _hold_acc_id;
+
+                    IF _hold THEN
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                    END IF;
+                WHEN 'recharge' THEN
+                    IF _hold THEN
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                    END IF;
+                WHEN 'withdraw' THEN
+                    IF _hold THEN
+                        __current_acc_id := _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+
+                        __current_acc_id := _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                    END IF;
+                ELSE
+                    RAISE EXCEPTION 'Unexpected operation type: oper_id=%, type=%', _oper_id, _type::text;
+            END CASE;
+        EXCEPTION
+            WHEN others THEN
+                RAISE EXCEPTION 'Failed handler operation: oper_id=%, acc_id=%, errm=%.', _oper_id, __current_acc_id, SQLERRM;
+        END;
+
+        -- update status for operation
+        IF _hold THEN
+            _oper_next_status = 'rejected';
+        END IF;
+        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
+
+        -- TODO: more info
+        PERFORM pg_notify('reject_operation', json_build_object('oper_id', _oper_id)::text);
     END;
 $$ language plpgsql;
 
@@ -195,11 +344,9 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
                     WHEN 'auth' THEN
                         PERFORM acca.auth_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'draft';
                     WHEN 'accept' THEN
-                        -- PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
-                        RAISE EXCEPTION 'Not implemented: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
+                        PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
                     WHEN 'reject' THEN
-                        -- PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
-                        RAISE EXCEPTION 'Not implemented: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
                     ELSE
                         RAISE EXCEPTION 'Unexpected request type: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                 END CASE;
