@@ -9,7 +9,7 @@ CREATE EXTENSION ltree;
 -- currencies
 -- currencies any format
 CREATE TABLE acca.currencies (
-    curr varchar(10) NOT NULL PRIMARY KEY,
+    curr varchar(50) NOT NULL PRIMARY KEY,
     meta jsonb NOT NULL DEFAULT '{}'
 );
 
@@ -20,7 +20,7 @@ COMMENT ON COLUMN acca.currencies.meta IS 'Container with meta information.';
 -- account and related meta information and current balance
 CREATE TABLE acca.accounts (
     acc_id ltree NOT NULL PRIMARY KEY,
-    curr varchar(10) REFERENCES acca.currencies(curr),
+    curr varchar(50) REFERENCES acca.currencies(curr),
     balance numeric(69, 00) NOT NULL DEFAULT 0 CHECK(balance >= 0),
     meta jsonb NOT NULL DEFAULT '{}'
 );
@@ -117,7 +117,9 @@ CREATE TYPE acca.request_type AS enum (
     'unknown',
     'auth',
     'accept',
-    'reject'
+    'reject',
+
+    'rollback'
 );
 
 -- request for action

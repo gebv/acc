@@ -6,3 +6,5 @@
 - [ ] Example for analitics.
   - [ ] Beautiful graphics.
 
+# Future list
+- [ ] Process each operation and save the executed status in current operation

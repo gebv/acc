@@ -59,6 +59,27 @@ CREATE OR REPLACE FUNCTION acca.accept_tx(
     END;
 $$ language plpgsql;
 
+-- rollback_tx
+CREATE OR REPLACE FUNCTION acca.rollback_tx(
+    _tx_id bigint
+) RETURNS void AS $$
+    DECLARE
+        _tx_status acca.transaction_status;
+    BEGIN
+        SELECT status INTO _tx_status FROM acca.transactions WHERE tx_id = _tx_id;
+
+        IF NOT FOUND THEN
+            RAISE EXCEPTION 'Transaction not found';
+        END IF;
+
+        IF _tx_status <> 'failed' THEN
+            RAISE EXCEPTION 'Not allowed status of the transaction for rollback: status=%', _tx_status::text;
+        END IF;
+
+        INSERT INTO acca.requests_queue(tx_id, type) VALUES(_tx_id, 'rollback'::acca.request_type);
+    END;
+$$ language plpgsql;
+
 -- create request to reject a transaction
 CREATE OR REPLACE FUNCTION acca.reject_tx(
     _tx_id bigint
@@ -260,10 +281,21 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
                     IF _hold THEN
                         UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
                         UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                    ELSE
+                        __current_acc_id := _dst_acc_id;
+
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
                     END IF;
                 WHEN 'recharge' THEN
                     IF _hold THEN
                         UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                    ELSE
+                        __current_acc_id := _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
+
+                        __current_acc_id := _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
                     END IF;
                 WHEN 'withdraw' THEN
                     IF _hold THEN
@@ -271,6 +303,11 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
                         UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
 
                         __current_acc_id := _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                    ELSE
+                        __current_acc_id := _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+
                         UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
                     END IF;
                 ELSE
@@ -282,15 +319,12 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
         END;
 
         -- update status for operation
-        IF _hold THEN
-            _oper_next_status = 'rejected';
-        END IF;
+        _oper_next_status = 'rejected';
         UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
         PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
-
 
 CREATE OR REPLACE FUNCTION acca.update_status_transaction(
     _tx_id bigint,
@@ -352,6 +386,9 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
                         PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
                     WHEN 'reject' THEN
                         PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                    WHEN 'rollback' THEN
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'accepted';
                     ELSE
                         RAISE EXCEPTION 'Unexpected request type: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                 END CASE;
