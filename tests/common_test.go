@@ -86,28 +86,3 @@ func (ts transfers) Value() (driver.Value, error) {
 	}
 	return buf.Bytes(), nil
 }
-
-type accountInfo struct {
-	Curr    string
-	AccID   string
-	Balance uint64
-}
-
-type testCase struct {
-	CaseName string
-
-	Currencies []string
-	Accounts   []accountInfo
-
-	Transfers transfers
-	MetaData  MetaData
-	Reason    string
-
-	TxID             int64
-	ExpectedBalances map[string]uint64
-
-	TxStatusBefore string
-	TxStatusAfter  string
-
-	NumProcess int
-}
