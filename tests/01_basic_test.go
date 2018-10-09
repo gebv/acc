@@ -313,27 +313,27 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("1"),
+						AccID:   accID("1.1"),
 						Balance: 10,
 					},
 					{
-						AccID:   accID("2"),
+						AccID:   accID("1.2"),
 						Balance: 20,
 					},
 					{
-						AccID:   accID("3"),
+						AccID:   accID("1.3"),
 						Balance: 30,
 					},
 					{
-						AccID:   accID("hold1"),
+						AccID:   accID("1.hold1"),
 						Balance: 0,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("1"),
-							DstAccID: accID("2"),
+							SrcAccID: accID("1.1"),
+							DstAccID: accID("1.2"),
 							Type:     Internal,
 							Amount:   9,
 							Reason:   "fortesting",
@@ -341,11 +341,11 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 								"foo": "bar",
 							},
 							Hold:      true,
-							HoldAccID: accID("hold1"),
+							HoldAccID: accID("1.hold1"),
 						},
 						{
-							SrcAccID: accID("2"),
-							DstAccID: accID("3"),
+							SrcAccID: accID("1.2"),
+							DstAccID: accID("1.3"),
 							Type:     Internal,
 							Amount:   19,
 							Reason:   "fortesting",
@@ -353,11 +353,11 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 								"foo": "bar",
 							},
 							Hold:      true,
-							HoldAccID: accID("hold1"),
+							HoldAccID: accID("1.hold1"),
 						},
 						{
-							SrcAccID: accID("3"),
-							DstAccID: accID("1"),
+							SrcAccID: accID("1.3"),
+							DstAccID: accID("1.1"),
 							Type:     Internal,
 							Amount:   29,
 							Reason:   "fortesting",
@@ -365,7 +365,7 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 								"foo": "bar",
 							},
 							Hold:      true,
-							HoldAccID: accID("hold1"),
+							HoldAccID: accID("1.hold1"),
 						},
 					},
 				}),
@@ -373,19 +373,166 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("auth"),
 				CmdCheckBalances(map[string]uint64{
-					accID("1"):     10 - 9,
-					accID("2"):     20 - 19,
-					accID("3"):     30 - 29,
-					accID("hold1"): 9 + 19 + 29,
+					accID("1.1"):     10 - 9,
+					accID("1.2"):     20 - 19,
+					accID("1.3"):     30 - 29,
+					accID("1.hold1"): 9 + 19 + 29,
 				}),
 				CmdApprove(0),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("1"):     10 - 9 + 29,
-					accID("2"):     20 - 19 + 9,
-					accID("3"):     30 - 29 + 19,
-					accID("hold1"): 0,
+					accID("1.1"):     10 - 9 + 29,
+					accID("1.2"):     20 - 19 + 9,
+					accID("1.3"):     30 - 29 + 19,
+					accID("1.hold1"): 0,
+				}),
+			},
+		},
+		{
+			"InternalTransferWithHold_NotEnoughMoney",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("2.1"),
+						Balance: 10,
+					},
+					{
+						AccID:   accID("2.2"),
+						Balance: 20,
+					},
+					{
+						AccID:   accID("2.3"),
+						Balance: 30,
+					},
+					{
+						AccID:   accID("2.hold1"),
+						Balance: 0,
+					},
+					{
+						AccID:   accID("2.other1"),
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("2.1"),
+							DstAccID: accID("2.2"),
+							Type:     Internal,
+							Amount:   9,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("2.hold1"),
+						},
+						{
+							SrcAccID: accID("2.2"),
+							DstAccID: accID("2.3"),
+							Type:     Internal,
+							Amount:   19,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("2.hold1"),
+						},
+						{
+							SrcAccID: accID("2.3"),
+							DstAccID: accID("2.1"),
+							Type:     Internal,
+							Amount:   29,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("2.hold1"),
+						},
+					},
+					transfers{
+						{
+							SrcAccID: accID("2.hold1"),
+							DstAccID: accID("2.other1"),
+							Type:     Internal,
+							Amount:   9 + 19 + 29,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft", "draft"),
+				CmdExecute(2),
+				CmdCheckStatuses("auth", "accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"):      10 - 9,
+					accID("2.2"):      20 - 19,
+					accID("2.3"):      30 - 29,
+					accID("2.hold1"):  0,
+					accID("2.other1"): 9 + 19 + 29,
+				}),
+				CmdApprove(0),
+				CmdExecute(1),
+				CmdCheckStatuses("failed", "accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"):      10 - 9,
+					accID("2.2"):      20 - 19,
+					accID("2.3"):      30 - 29,
+					accID("2.hold1"):  0,
+					accID("2.other1"): 9 + 19 + 29,
+				}),
+				CmdRollback(0), // not enough money
+				CmdExecute(1),
+				CmdCheckStatuses("failed", "accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"):      10 - 9,
+					accID("2.2"):      20 - 19,
+					accID("2.3"):      30 - 29,
+					accID("2.hold1"):  0,
+					accID("2.other1"): 9 + 19 + 29,
+				}),
+				//
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("2.other1"),
+							DstAccID: accID("2.hold1"),
+							Type:     Internal,
+							Amount:   9 + 19 + 29,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdExecute(1),
+				CmdCheckStatuses("failed", "accepted", "accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"):      10 - 9,
+					accID("2.2"):      20 - 19,
+					accID("2.3"):      30 - 29,
+					accID("2.hold1"):  9 + 19 + 29,
+					accID("2.other1"): 0,
+				}),
+
+				CmdRollback(0), // not enough money
+				CmdExecute(1),
+
+				CmdCheckStatuses("rejected", "accepted", "accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"):      10,
+					accID("2.2"):      20,
+					accID("2.3"):      30,
+					accID("2.hold1"):  0,
+					accID("2.other1"): 0,
 				}),
 			},
 		},
