@@ -89,17 +89,19 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
+        _tx_id bigint;
 
         __current_acc_id ltree;
     BEGIN
         SELECT
+            tx_id,
             amount,
             src_acc_id,
             dst_acc_id,
             hold,
             hold_acc_id,
             type
-        INTO _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
+        INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
 
         BEGIN
@@ -150,8 +152,7 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
         END IF;
         UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
-        -- TODO: more info
-        PERFORM pg_notify('auth_operation', json_build_object('oper_id', _oper_id)::text);
+        PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
 
@@ -167,17 +168,19 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
+        _tx_id bigint;
 
         __current_acc_id ltree;
     BEGIN
         SELECT
+            tx_id,
             amount,
             src_acc_id,
             dst_acc_id,
             hold,
             hold_acc_id,
             type
-        INTO _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
+        INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
 
         BEGIN
@@ -218,8 +221,7 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
         END IF;
         UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
-        -- TODO: more info
-        PERFORM pg_notify('accept_operation', json_build_object('oper_id', _oper_id)::text);
+        PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
 
@@ -235,17 +237,19 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
+        _tx_id bigint;
 
         __current_acc_id ltree;
     BEGIN
         SELECT
+            tx_id,
             amount,
             src_acc_id,
             dst_acc_id,
             hold,
             hold_acc_id,
             type
-        INTO _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
+        INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
 
         BEGIN
@@ -283,15 +287,15 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
         END IF;
         UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
-        -- TODO: more info
-        PERFORM pg_notify('reject_operation', json_build_object('oper_id', _oper_id)::text);
+        PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
 
 
 CREATE OR REPLACE FUNCTION acca.update_status_transaction(
-    _tx_id bigint
-) RETURNS void AS $$
+    _tx_id bigint,
+    OUT _tx_new_status acca.transaction_status
+) RETURNS acca.transaction_status AS $$
     DECLARE
         num_total integer;
         num_hold integer;
@@ -307,18 +311,17 @@ CREATE OR REPLACE FUNCTION acca.update_status_transaction(
         SELECT count(*) INTO num_draft FROM acca.operations WHERE tx_id = _tx_id AND status = 'draft';
 
         IF num_total = num_accepted THEN
-            UPDATE acca.transactions
-                SET status = 'accepted'::acca.transaction_status
-                WHERE tx_id = _tx_id;
+            _tx_new_status := 'accepted'::acca.transaction_status;
+
         ELSIF num_total = num_rejected THEN
-            UPDATE acca.transactions
-                SET status = 'rejected'::acca.transaction_status
-                WHERE tx_id = _tx_id;
+            _tx_new_status := 'rejected'::acca.transaction_status;
         ELSE
-            UPDATE acca.transactions
-                SET status = 'auth'::acca.transaction_status
-                WHERE tx_id = _tx_id;
+            _tx_new_status := 'auth'::acca.transaction_status;
         END IF;
+
+        UPDATE acca.transactions
+            SET status = _tx_new_status
+            WHERE tx_id = _tx_id;
     END;
 $$ language plpgsql;
 
@@ -330,6 +333,8 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
         reqrow record;
         failed boolean;
         failed_errm text;
+
+        _tx_new_status acca.transaction_status;
         -- num_tx_opers bigint := 1;
     BEGIN
         FOR reqrow IN
@@ -360,16 +365,19 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
 
             IF failed THEN
                 -- TODO: add error message to transaction
+
+                _tx_new_status := 'failed'::acca.transaction_status;
+
                 UPDATE acca.transactions
-                    SET status = 'failed'::acca.transaction_status,
+                    SET status = _tx_new_status,
                     errm = failed_errm
                     WHERE tx_id = reqrow.tx_id;
             ELSE
                 -- upd status for tx
-                PERFORM acca.update_status_transaction(reqrow.tx_id);
+                SELECT acca.update_status_transaction(reqrow.tx_id) INTO _tx_new_status;
             END IF;
 
-            PERFORM pg_notify('auth_transaction', json_build_object('tx_id', reqrow.tx_id)::text);
+            PERFORM pg_notify('tx_update_status', json_build_object('tx_id', reqrow.tx_id, 'new_status', _tx_new_status)::text);
         END LOOP;
     END;
 $$ language plpgsql;
