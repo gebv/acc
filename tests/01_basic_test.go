@@ -3,8 +3,6 @@ package tests
 import (
 	"fmt"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type accountInfo1 struct {
@@ -30,491 +28,378 @@ type testCase1 struct {
 	NumProcess int
 }
 
-// Follow workflow
-// - Create accounts with initial balances
-// - Add transfers
-// - Check statuses before execute requests
-// - Process from queue
-// - Check statuses after execute requests
-// - Check balances
-func Test01Basic_01SimpleTransferWithoutHold(t *testing.T) {
-	curr := "curr1"
-	t.Run("SetupCurrencies", func(t *testing.T) {
-		_, err := db.Exec(`INSERT INTO acca.currencies(curr) VALUES ($1)`, curr)
-		assert.NoErrorf(t, err, "Failed insert currency: %v", curr)
-	})
+func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
+	prefix := "test01.01."
+	cur := prefix + "curr"
+	accID := func(accID string) string {
+		return prefix + accID
+	}
 
-	tests := []testCase1{
+	tests := []cmdBatch{
 		{
 			"InternalTransfer",
-			[]accountInfo1{
-				{
-					"acc1.1",
-					10,
-				},
-				{
-					"acc1.2",
-					20,
-				},
-				{
-					"acc1.3",
-					30,
-				},
-			},
-			transfers{
-				{
-					SrcAccID: "acc1.1",
-					DstAccID: "acc1.2",
-					Type:     Internal,
-					Amount:   9,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("1.1"),
+						Balance: 10,
 					},
-					Hold: false,
-				},
-				{
-					SrcAccID: "acc1.2",
-					DstAccID: "acc1.3",
-					Type:     Internal,
-					Amount:   29,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+					{
+						AccID:   accID("1.2"),
+						Balance: 20,
 					},
-					Hold: false,
-				},
+					{
+						AccID:   accID("1.3"),
+						Balance: 30,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("1.1"),
+							DstAccID: accID("1.2"),
+							Type:     Internal,
+							Amount:   9,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+						{
+							SrcAccID: accID("1.2"),
+							DstAccID: accID("1.3"),
+							Type:     Internal,
+							Amount:   29,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("1.1"): 10 - 9,
+					accID("1.2"): 20 + 9 - 29,
+					accID("1.3"): 30 + 29,
+				}),
 			},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc1.1": 10 - 9,
-				"acc1.2": 20 + 9 - 29,
-				"acc1.3": 30 + 29,
-			},
-			"draft",
-			"accepted",
-			1,
 		},
 		{
 			"InternalTransfer_Error_NotEnoughMoney",
-			[]accountInfo1{
-				{
-					"acc2.1",
-					10,
-				},
-				{
-					"acc2.2",
-					20,
-				},
-				{
-					"acc2.3",
-					30,
-				},
-			},
-			transfers{
-				{
-					SrcAccID: "acc2.1",
-					DstAccID: "acc2.2",
-					Type:     Internal,
-					Amount:   1000,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("2.1"),
+						Balance: 10,
 					},
-					Hold: false,
-				},
-				{
-					SrcAccID: "acc2.2",
-					DstAccID: "acc2.3",
-					Type:     Internal,
-					Amount:   1,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+					{
+						AccID:   accID("2.2"),
+						Balance: 20,
 					},
-					Hold: false,
-				},
+					{
+						AccID:   accID("2.3"),
+						Balance: 30,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("2.1"),
+							DstAccID: accID("2.2"),
+							Type:     Internal,
+							Amount:   1,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+						{
+							SrcAccID: accID("2.2"),
+							DstAccID: accID("2.3"),
+							Type:     Internal,
+							Amount:   1000,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("failed"),
+				CmdCheckBalances(map[string]uint64{
+					accID("2.1"): 10,
+					accID("2.2"): 20,
+					accID("2.3"): 30,
+				}),
 			},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc2.1": 10,
-				"acc2.2": 20,
-				"acc2.3": 30,
-			},
-			"draft",
-			"failed",
-			1,
 		},
 		{
 			"InternalTransfer_EmptyListTransfers",
-			[]accountInfo1{
-				{
-					"acc4.1",
-					10,
-				},
-				{
-					"acc4.2",
-					20,
-				},
-				{
-					"acc4.3",
-					30,
-				},
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("3.1"),
+						Balance: 10,
+					},
+					{
+						AccID:   accID("3.2"),
+						Balance: 20,
+					},
+					{
+						AccID:   accID("3.3"),
+						Balance: 30,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{}, // empty list transaction
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("3.1"): 10,
+					accID("3.2"): 20,
+					accID("3.3"): 30,
+				}),
 			},
-			transfers{},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc4.1": 10,
-				"acc4.2": 20,
-				"acc4.3": 30,
-			},
-			"draft",
-			"accepted",
-			1,
 		},
+
 		{
 			"InternalTransfer_Recharge",
-			[]accountInfo1{
-				{
-					"acc5.payment_gateway.paypal",
-					0,
-				},
-				{
-					"acc5.client",
-					0,
-				},
-			},
-			transfers{
-				{
-					SrcAccID: "acc5.payment_gateway.paypal",
-					DstAccID: "acc5.client",
-					Type:     Recharge,
-					Amount:   10,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("4.payment_gateway"),
+						Balance: 0,
 					},
-					Hold: false,
-				},
+					{
+						AccID:   accID("4.client"),
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("4.payment_gateway"),
+							DstAccID: accID("4.client"),
+							Type:     Recharge,
+							Amount:   102,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("4.payment_gateway"): 102,
+					accID("4.client"):          102,
+				}),
 			},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc5.payment_gateway.paypal": 10,
-				"acc5.client":                 10,
-			},
-			"draft",
-			"accepted",
-			1,
 		},
+
 		{
 			"InternalTransfer_Withdraw",
-			[]accountInfo1{
-				{
-					"acc6.payment_gateway.paypal",
-					100,
-				},
-				{
-					"acc6.client",
-					10,
-				},
-			},
-			transfers{
-				{
-					SrcAccID: "acc6.client",
-					DstAccID: "acc6.payment_gateway.paypal",
-					Type:     Withdraw,
-					Amount:   10,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("5.payment_gateway"),
+						Balance: 100,
 					},
-					Hold: false,
-				},
+					{
+						AccID:   accID("5.client"),
+						Balance: 10,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("5.client"),
+							DstAccID: accID("5.payment_gateway"),
+							Type:     Withdraw,
+							Amount:   10,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("5.payment_gateway"): 90,
+					accID("5.client"):          0,
+				}),
 			},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc6.payment_gateway.paypal": 90,
-				"acc6.client":                 0,
-			},
-			"draft",
-			"accepted",
-			1,
 		},
+
 		{
 			"InternalTransfer_WithdrawError1_NotEnoughMoneyFromSysAccount",
-			[]accountInfo1{
-				{
-					"acc7.payment_gateway.paypal",
-					0,
-				},
-				{
-					"acc7.client",
-					10,
-				},
-			},
-			transfers{
-				{
-					SrcAccID: "acc7.client",
-					DstAccID: "acc7.payment_gateway.paypal",
-					Type:     Withdraw,
-					Amount:   10,
-					Reason:   "fortesting",
-					Meta: MetaData{
-						"foo": "bar",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("6.payment_gateway"),
+						Balance: 0,
 					},
-					Hold: false,
-				},
+					{
+						AccID:   accID("6.client"),
+						Balance: 10,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("6.client"),
+							DstAccID: accID("6.payment_gateway"),
+							Type:     Withdraw,
+							Amount:   10,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold: false,
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("failed"),
+				CmdCheckBalances(map[string]uint64{
+					accID("6.payment_gateway"): 0,
+					accID("6.client"):          10,
+				}),
 			},
-			MetaData{"foo": "bar"},
-			"testing",
-			0,
-			map[string]uint64{
-				"acc7.payment_gateway.paypal": 0,
-				"acc7.client":                 10,
-			},
-			"draft",
-			"failed",
-			1,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(tt.CaseName, func(t *testing.T) {
-			t.Run("SetupAccounts", func(t *testing.T) {
-				for _, acc := range tt.InitAccounts {
-					_, err := db.Exec(`INSERT INTO acca.accounts(acc_id, curr, balance) VALUES ($1, $2, $3)`, acc.AccID, curr, acc.Balance)
-					assert.NoErrorf(t, err, "Failed insert account: %+v", acc)
-				}
+		txIDs := []int64{}
+		for index, cmd := range tt.Commands {
+			t.Run(tt.Name+"_#"+fmt.Sprint(index+1), func(t *testing.T) {
+				cmdApply(t, cmd, &txIDs)
 			})
-
-			t.Run("AddNewTransfer", func(t *testing.T) {
-				err := db.QueryRow(`SELECT acca.new_transfer($1, $2, $3);`, tt.Transfers, tt.Reason, tt.MetaData).Scan(&tt.TxID)
-				assert.NoError(t, err, "Add new transfers")
-				assert.NotEmpty(t, tt.TxID)
-			})
-
-			t.Run("StatusTransactionBeforeProcess", func(t *testing.T) {
-				var status string
-				err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, tt.TxID).Scan(&status)
-				if assert.NoError(t, err) {
-					assert.Equal(t, tt.TxStatusBefore, status)
-				}
-			})
-
-			t.Run("ProcessFromQueue", func(t *testing.T) {
-				processFromQueue(t, tt.NumProcess)
-			})
-
-			t.Run("StatusTransactionAfterProcess", func(t *testing.T) {
-				var status string
-				err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, tt.TxID).Scan(&status)
-				if assert.NoError(t, err) {
-					assert.Equal(t, tt.TxStatusAfter, status)
-				}
-			})
-
-			t.Run("CheckBalances", func(t *testing.T) {
-				after := loadBalances(t)
-				for accID, balance := range tt.ExpectedBalances {
-					assert.Equal(t, int64(balance), int64(after[accID]), "Not equal balances for acc = %v", accID)
-				}
-			})
+		}
+		t.Run(tt.Name+"_#Destroy", func(t *testing.T) {
+			t.Logf("Tx IDs: %+v", txIDs)
 		})
 	}
 }
+func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
+	prefix := "test01.02."
+	cur := prefix + "curr"
+	accID := func(accID string) string {
+		return prefix + accID
+	}
 
-type testCase2 struct {
-	CaseName string
-
-	InitAccounts []accountInfo1
-
-	Commands []transfers
-
-	// approve tx from result of execute command by index
-	ApproveCommandIdx []int
-
-	// reject tx from result of execute command by index
-	RejectCommandIdx []int
-
-	// filled in as a result of executing commands
-	GotTxIDs []int64
-
-	NumProcess1Phase int
-	NumProcess2Phase int
-
-	ExpectedTxStatusesBefore1Phase []string
-	ExpectedTxStatusesAfter1Phase  []string
-	ExpectedTxStatusesAfter2Phase  []string
-
-	ExpectedBalancesAfter1Phase map[string]uint64
-	ExpectedBalancesAfter2Phase map[string]uint64
-}
-
-// Follow workflow
-// - Create accounts with initial balances
-// - Execute commands
-// - 1 Phase: Execute requests from queue
-// - Save recived tx IDs from executed commands
-// - Checking statuses for recived tx IDs and interesting balances
-// - Approve and reject interested tx (if need)
-// - 2 Phase: Execute requests from queue
-// - Checking statuses
-// - Checking balances
-func Test01Basic_01SimpleTransferWithHold(t *testing.T) {
-	curr := "cur2"
-	t.Run("SetupCurrencies", func(t *testing.T) {
-		_, err := db.Exec(`INSERT INTO acca.currencies(curr) VALUES ($1)`, curr)
-		assert.NoErrorf(t, err, "Failed insert currency: %v", curr)
-	})
-
-	tests := []testCase2{}
+	tests := []cmdBatch{
+		{
+			"InternalTransferWithHold",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccID:   accID("1"),
+						Balance: 10,
+					},
+					{
+						AccID:   accID("2"),
+						Balance: 20,
+					},
+					{
+						AccID:   accID("3"),
+						Balance: 30,
+					},
+					{
+						AccID:   accID("hold1"),
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAccID: accID("1"),
+							DstAccID: accID("2"),
+							Type:     Internal,
+							Amount:   9,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("hold1"),
+						},
+						{
+							SrcAccID: accID("2"),
+							DstAccID: accID("3"),
+							Type:     Internal,
+							Amount:   19,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("hold1"),
+						},
+						{
+							SrcAccID: accID("3"),
+							DstAccID: accID("1"),
+							Type:     Internal,
+							Amount:   29,
+							Reason:   "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:      true,
+							HoldAccID: accID("hold1"),
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("auth"),
+				CmdCheckBalances(map[string]uint64{
+					accID("1"):     10 - 9,
+					accID("2"):     20 - 19,
+					accID("3"):     30 - 29,
+					accID("hold1"): 9 + 19 + 29,
+				}),
+				CmdApprove(0),
+				CmdExecute(1),
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]uint64{
+					accID("1"):     10 - 9 + 29,
+					accID("2"):     20 - 19 + 9,
+					accID("3"):     30 - 29 + 19,
+					accID("hold1"): 0,
+				}),
+			},
+		},
+	}
 
 	for _, tt := range tests {
-		t.Run(tt.CaseName, func(t *testing.T) {
-			t.Run("SetupAccounts", func(t *testing.T) {
-				for _, acc := range tt.InitAccounts {
-					_, err := db.Exec(`INSERT INTO acca.accounts(acc_id, curr, balance) VALUES ($1, $2, $3)`, acc.AccID, curr, acc.Balance)
-					assert.NoErrorf(t, err, "Failed insert account: %+v", acc)
-				}
+		txIDs := []int64{}
+		for index, cmd := range tt.Commands {
+			t.Run(tt.Name+"_#"+fmt.Sprint(index+1), func(t *testing.T) {
+				cmdApply(t, cmd, &txIDs)
 			})
-
-			t.Run("ExecuteCommands", func(t *testing.T) {
-				tt.GotTxIDs = make([]int64, len(tt.Commands), len(tt.Commands))
-
-				for index, cmd := range tt.Commands {
-					t.Run("ExecuteCommandWithIndex#"+fmt.Sprint(index), func(t *testing.T) {
-						var txID int64
-						err := db.QueryRow(`SELECT acca.new_transfer($1, $2, $3);`, cmd, "testing", MetaData{"foo": "bar"}).Scan(&txID)
-						assert.NoErrorf(t, err, "Add new transfers for command with index '%d'", index)
-						if assert.NotEmpty(t, txID) {
-							tt.GotTxIDs[index] = txID
-							t.Logf("Recived txID for a command with index '%d': %d", index, txID)
-						}
-					})
-				}
-
-			})
-
-			t.Run("StatusTransactionBefore1Phase", func(t *testing.T) {
-				for index, txID := range tt.GotTxIDs {
-					if txID == 0 {
-						continue
-					}
-
-					t.Run("CommandWithIndex#"+fmt.Sprint(index), func(t *testing.T) {
-						var got string
-						expected := tt.ExpectedTxStatusesBefore1Phase[index]
-						err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, txID).Scan(&got)
-						if assert.NoErrorf(t, err, "Failed get status for txID=%d", txID) {
-							assert.Equal(t, expected, got)
-						}
-					})
-				}
-			})
-
-			t.Run("1Phase", func(t *testing.T) {
-				t.Run("ProcessFromQueue", func(t *testing.T) {
-					processFromQueue(t, tt.NumProcess1Phase)
-				})
-
-				t.Run("StatusTxsAfter", func(t *testing.T) {
-					for index, txID := range tt.GotTxIDs {
-						if txID == 0 {
-							continue
-						}
-
-						t.Run("CommandWithIndex#"+fmt.Sprint(index), func(t *testing.T) {
-							var got string
-							expected := tt.ExpectedTxStatusesAfter1Phase[index]
-							err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, txID).Scan(&got)
-							if assert.NoErrorf(t, err, "Failed get status for txID=%d", txID) {
-								assert.Equal(t, expected, got)
-							}
-						})
-					}
-				})
-
-				t.Run("BalancesAfter", func(t *testing.T) {
-					after := loadBalances(t)
-					for accID, balance := range tt.ExpectedBalancesAfter1Phase {
-						assert.Equal(t, int64(balance), int64(after[accID]), "Not equal balances for acc = %v", accID)
-					}
-				})
-
-				t.Run("ApproveIfNeed", func(t *testing.T) {
-					for _, cmdIndex := range tt.ApproveCommandIdx {
-						txID := tt.GotTxIDs[cmdIndex]
-						if txID <= 0 {
-							// should not be
-							t.Errorf("Expected a positive txID, got %d", txID)
-							continue
-						}
-						t.Run("ForCommandIndex#"+fmt.Sprint(cmdIndex), func(t *testing.T) {
-							_, err := db.Exec(`SELECT acca.accept_tx($1)`, txID)
-							assert.NoError(t, err)
-						})
-					}
-				})
-
-				t.Run("RejectIfNeed", func(t *testing.T) {
-					for _, cmdIndex := range tt.RejectCommandIdx {
-						txID := tt.GotTxIDs[cmdIndex]
-						if txID <= 0 {
-							// should not be
-							t.Errorf("Expected a positive txID, got %d", txID)
-							continue
-						}
-						t.Run("ForCommandIndex#"+fmt.Sprint(cmdIndex), func(t *testing.T) {
-							_, err := db.Exec(`SELECT acca.reject_tx($1)`, txID)
-							assert.NoError(t, err)
-						})
-					}
-				})
-
-				// end 1phase
-			})
-
-			t.Run("2Phase", func(t *testing.T) {
-				t.Run("ProcessFromQueue", func(t *testing.T) {
-					processFromQueue(t, tt.NumProcess2Phase)
-				})
-
-				t.Run("StatusTxsAfter", func(t *testing.T) {
-					for index, txID := range tt.GotTxIDs {
-						if txID == 0 {
-							continue
-						}
-
-						t.Run("CommandWithIndex#"+fmt.Sprint(index), func(t *testing.T) {
-							var got string
-							expected := tt.ExpectedTxStatusesAfter2Phase[index]
-							err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, txID).Scan(&got)
-							if assert.NoErrorf(t, err, "Failed get status for txID=%d", txID) {
-								assert.Equal(t, expected, got)
-							}
-						})
-					}
-				})
-
-				t.Run("BalancesAfter", func(t *testing.T) {
-					after := loadBalances(t)
-					for accID, balance := range tt.ExpectedBalancesAfter2Phase {
-						assert.Equal(t, int64(balance), int64(after[accID]), "Not equal balances for acc = %v", accID)
-					}
-				})
-
-				// end 2phase
-			})
+		}
+		t.Run(tt.Name+"_#Destroy", func(t *testing.T) {
+			t.Logf("Tx IDs: %+v", txIDs)
 		})
 	}
 }
