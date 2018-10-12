@@ -15,6 +15,7 @@ CREATE TABLE acca.currencies (
     meta jsonb NOT NULL DEFAULT '{}'
 );
 CREATE INDEX currencies_key_gist_idx ON acca.currencies USING GIST (key);
+CREATE UNIQUE INDEX currencies_key_uniq_idx ON acca.currencies (key);
 
 COMMENT ON COLUMN acca.currencies.curr_id IS 'Currency ID.';
 COMMENT ON COLUMN acca.currencies.key IS 'Currency key (it is not primary key).';
@@ -107,7 +108,6 @@ CREATE TABLE acca.operations (
     updated_at timestamp without time zone
 );
 CREATE INDEX operations_reason_gist_idx ON acca.operations USING GIST (reason);
-CREATE INDEX operations_tx_idx ON acca.operations USING GIST (tx_id);
 
 COMMENT ON COLUMN acca.operations.src_acc_id IS 'Withdrawal account.';
 COMMENT ON COLUMN acca.operations.dst_acc_id IS 'Deposit account.';

@@ -9,22 +9,21 @@ import (
 )
 
 type accountInfo struct {
-	AccID   string
+	AccKey  string
 	Balance uint64
 }
 
-func cmdApply(t *testing.T, cmd command, txIDs *[]int64) {
-	newTxIDs := CmdTransfersExecutor(t, cmd.Transfers)
-	(*txIDs) = append((*txIDs), newTxIDs...)
+func cmdApply(t *testing.T, state *testCaseState, cmd command) {
+	CmdTransfersExecutor(t, state, cmd.Transfers)
 
-	CmdInitAccountsExecutor(t, cmd.InitAccounts)
-	CmdApproveExecutor(t, cmd.Approve, (*txIDs))
-	CmdRejectExecutor(t, cmd.Reject, (*txIDs))
-	CmdRollbackExecutor(t, cmd.Rollback, (*txIDs))
+	CmdInitAccountsExecutor(t, state, cmd.InitAccounts)
+	CmdApproveExecutor(t, state, cmd.Approve)
+	CmdRejectExecutor(t, state, cmd.Reject)
+	CmdRollbackExecutor(t, state, cmd.Rollback)
 	CmdExecuteExecutor(t, cmd.Execute)
 	CmdCheckBalancesExecutor(t, cmd.CheckBalances)
-	CmdCheckStatusesExecutor(t, cmd.CheckStatuses, (*txIDs))
-	CmdCustomFnExecutor(t, cmd.CustomFn, (*txIDs))
+	CmdCheckStatusesExecutor(t, state, cmd.CheckStatuses)
+	CmdCustomFnExecutor(t, state, cmd.CustomFn)
 }
 
 type cmdBatch struct {
@@ -53,19 +52,34 @@ func CmdInitAccounts(currName string, acc []accountInfo) command {
 	}
 }
 
-func CmdInitAccountsExecutor(t *testing.T, cmd *cmdInitAccounts) {
+func CmdInitAccountsExecutor(t *testing.T, state *testCaseState, cmd *cmdInitAccounts) {
 	if cmd == nil {
 		return
 	}
 	t.Run("InitAccounts", func(t *testing.T) {
-		_, err := db.Exec(`INSERT INTO acca.currencies(curr) VALUES ($1)`, cmd.CurrName)
-		if err != nil {
-			assert.True(t, strings.HasPrefix(err.Error(), "pq: duplicate key"))
+		var curID int64
+		err := db.QueryRow(`INSERT INTO acca.currencies(key) VALUES ($1) RETURNING curr_id`, cmd.CurrName).Scan(&curID)
+		if err == nil {
+			state.AddCurr(curID, cmd.CurrName)
+		} else {
+			if !assert.True(t, strings.HasPrefix(err.Error(), "pq: duplicate key")) {
+				assert.NoError(t, err, "Should be only 'duplicate key' error")
+			}
+			err := db.QueryRow(`SELECT curr_id FROM acca.currencies WHERE key = $1`, cmd.CurrName).Scan(&curID)
+			if !assert.NoError(t, err, "Failed get curr ID") {
+				panic(err)
+			}
 		}
 
 		for _, acc := range cmd.Accounts {
-			_, err := db.Exec(`INSERT INTO acca.accounts(acc_id, curr, balance) VALUES ($1, $2, $3)`, acc.AccID, cmd.CurrName, acc.Balance)
-			assert.NoErrorf(t, err, "Failed insert account: %+v", acc)
+			var accID int64
+			err := db.QueryRow(`INSERT INTO acca.accounts(key, curr_id, balance) VALUES ($1, $2, $3) RETURNING acc_id`, acc.AccKey, curID, acc.Balance).Scan(&accID)
+
+			if assert.NoErrorf(t, err, "Failed insert account: %+v", acc) {
+				state.AddAccount(accID, acc.AccKey)
+			} else {
+				panic(err)
+			}
 		}
 	})
 }
@@ -83,28 +97,32 @@ func CmdTransfers(trs []transfers) command {
 	}
 }
 
-func CmdTransfersExecutor(t *testing.T, cmd *cmdTransfers) []int64 {
+func CmdTransfersExecutor(t *testing.T, state *testCaseState, cmd *cmdTransfers) {
 	if cmd == nil {
-		return []int64{}
+		return
 	}
-
-	txIDs := make([]int64, len(cmd.Transfers), len(cmd.Transfers))
 
 	t.Run("Transfer", func(t *testing.T) {
 		for index, cmd := range cmd.Transfers {
+
+			for i, tr := range cmd {
+				state.FillTransferAccID(&tr)
+				cmd[i] = tr
+			}
+
 			t.Run("Batch#"+fmt.Sprint(index), func(t *testing.T) {
 				var txID int64
 				err := db.QueryRow(`SELECT acca.new_transfer($1, $2, $3);`, cmd, "testing", MetaData{"foo": "bar"}).Scan(&txID)
 				assert.NoErrorf(t, err, "Add new transfers for batch with index '%d'", index)
 				if assert.NotEmpty(t, txID) {
-					txIDs[index] = txID
+					state.AddTxID(txID)
 					t.Logf("Recived txID for a batch with index '%d': %d", index, txID)
 				}
 			})
 		}
 	})
 
-	return txIDs
+	return
 }
 
 type cmdTransfers struct {
@@ -119,13 +137,13 @@ func CmdApprove(ids ...int) command {
 	}
 }
 
-func CmdApproveExecutor(t *testing.T, cmd *cmdApprove, txIDs []int64) {
+func CmdApproveExecutor(t *testing.T, state *testCaseState, cmd *cmdApprove) {
 	if cmd == nil {
 		return
 	}
 	t.Run("Approve", func(t *testing.T) {
 		for _, cmdIndex := range cmd.IDs {
-			txID := txIDs[cmdIndex]
+			txID := state.LastTxIDs[cmdIndex]
 			if txID <= 0 {
 				// should not be
 				t.Errorf("Expected a positive txID, got %d", txID)
@@ -151,13 +169,13 @@ func CmdReject(ids ...int) command {
 	}
 }
 
-func CmdRejectExecutor(t *testing.T, cmd *cmdReject, txIDs []int64) {
+func CmdRejectExecutor(t *testing.T, state *testCaseState, cmd *cmdReject) {
 	if cmd == nil {
 		return
 	}
 	t.Run("Reject", func(t *testing.T) {
 		for _, cmdIndex := range cmd.IDs {
-			txID := txIDs[cmdIndex]
+			txID := state.LastTxIDs[cmdIndex]
 			if txID <= 0 {
 				// should not be
 				t.Errorf("Expected a positive txID, got %d", txID)
@@ -183,13 +201,13 @@ func CmdRollback(ids ...int) command {
 	}
 }
 
-func CmdRollbackExecutor(t *testing.T, cmd *cmdRollback, txIDs []int64) {
+func CmdRollbackExecutor(t *testing.T, state *testCaseState, cmd *cmdRollback) {
 	if cmd == nil {
 		return
 	}
 	t.Run("Rollback", func(t *testing.T) {
 		for _, cmdIndex := range cmd.IDs {
-			txID := txIDs[cmdIndex]
+			txID := state.LastTxIDs[cmdIndex]
 			if txID <= 0 {
 				// should not be
 				t.Errorf("Expected a positive txID, got %d", txID)
@@ -260,12 +278,12 @@ func CmdCheckStatuses(expected ...string) command {
 	}
 }
 
-func CmdCheckStatusesExecutor(t *testing.T, cmd *cmdCheckStatuses, txIDs []int64) {
+func CmdCheckStatusesExecutor(t *testing.T, state *testCaseState, cmd *cmdCheckStatuses) {
 	if cmd == nil {
 		return
 	}
 	t.Run("CheckStatuses", func(t *testing.T) {
-		for index, txID := range txIDs {
+		for index, txID := range state.LastTxIDs {
 			if txID == 0 {
 				continue
 			}
@@ -286,7 +304,7 @@ type cmdCheckStatuses struct {
 	Expected []string
 }
 
-func CmdCustomFn(fn func(t *testing.T, txIDs []int64)) command {
+func CmdCustomFn(fn func(t *testing.T, state *testCaseState)) command {
 	return command{
 		CustomFn: &cmdCustomFn{
 			Fn: fn,
@@ -294,15 +312,63 @@ func CmdCustomFn(fn func(t *testing.T, txIDs []int64)) command {
 	}
 }
 
-func CmdCustomFnExecutor(t *testing.T, cmd *cmdCustomFn, txIDs []int64) {
+func CmdCustomFnExecutor(t *testing.T, state *testCaseState, cmd *cmdCustomFn) {
 	if cmd == nil || cmd.Fn == nil {
 		return
 	}
 	t.Run("CustomFn", func(t *testing.T) {
-		cmd.Fn(t, txIDs)
+		cmd.Fn(t, state)
 	})
 }
 
 type cmdCustomFn struct {
-	Fn func(t *testing.T, txIDs []int64)
+	Fn func(t *testing.T, state *testCaseState)
+}
+
+func newTestCaseState() *testCaseState {
+	return &testCaseState{
+		AccIDsToKey:  make(map[int64]string),
+		AccKeysToIDs: make(map[string]int64),
+
+		CurrIDsToKey:  make(map[int64]string),
+		CurrKeysToIDs: make(map[string]int64),
+	}
+}
+
+type testCaseState struct {
+	LastTxIDs []int64
+
+	AccIDsToKey  map[int64]string
+	AccKeysToIDs map[string]int64
+
+	CurrIDsToKey  map[int64]string
+	CurrKeysToIDs map[string]int64
+}
+
+func (t *testCaseState) AddAccount(accID int64, key string) {
+	t.AccIDsToKey[accID] = key
+	t.AccKeysToIDs[key] = accID
+}
+
+func (t *testCaseState) AddCurr(curID int64, key string) {
+	t.CurrIDsToKey[curID] = key
+	t.CurrKeysToIDs[key] = curID
+}
+
+func (t *testCaseState) AddTxID(txID int64) {
+	t.LastTxIDs = append(t.LastTxIDs, txID)
+}
+
+func (t *testCaseState) FillTransferAccID(tr *transfer) {
+	tr.SrcAccID = t.AccKeysToIDs[tr.SrcAcc]
+	tr.DstAccID = t.AccKeysToIDs[tr.DstAcc]
+	tr.HoldAccID = t.AccKeysToIDs[tr.HoldAcc]
+
+	if tr.SrcAccID == 0 || tr.DstAccID == 0 {
+		panic("should be account ID")
+	}
+
+	if len(tr.HoldAcc) > 0 && tr.HoldAccID == 0 {
+		panic("should be account ID")
+	}
 }
