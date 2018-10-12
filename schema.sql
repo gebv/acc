@@ -5,29 +5,34 @@ CREATE EXTENSION ltree;
 -- money in the numeric(69, 0)
 -- for example, to store balances for WEI (ETH)
 -- change manually if you need less accuracy to
+-- NOTE: cannot be justified if used small number (<1^10*12), recomented used bigint
 
 -- currencies
 -- currencies any format
 CREATE TABLE acca.currencies (
-    curr varchar(50) NOT NULL PRIMARY KEY,
+    curr_id bigserial PRIMARY KEY,
+    key ltree NOT NULL,
     meta jsonb NOT NULL DEFAULT '{}'
 );
+CREATE INDEX currencies_key_gist_idx ON acca.currencies USING GIST (key);
 
-COMMENT ON COLUMN acca.currencies.curr IS 'Currency ID.';
+COMMENT ON COLUMN acca.currencies.curr_id IS 'Currency ID.';
+COMMENT ON COLUMN acca.currencies.key IS 'Currency key (it is not primary key).';
 COMMENT ON COLUMN acca.currencies.meta IS 'Container with meta information.';
 
 -- accounts
 -- account and related meta information and current balance
 CREATE TABLE acca.accounts (
-    acc_id ltree NOT NULL PRIMARY KEY,
-    curr varchar(50) REFERENCES acca.currencies(curr),
+    acc_id bigserial PRIMARY KEY,
+    curr_id bigint REFERENCES acca.currencies(curr_id),
+    key ltree NOT NULL,
     balance numeric(69, 00) NOT NULL DEFAULT 0 CHECK(balance >= 0),
     meta jsonb NOT NULL DEFAULT '{}'
 );
-CREATE INDEX accounts_acc_gist_idx ON acca.accounts USING GIST (acc_id);
 
 COMMENT ON COLUMN acca.accounts.acc_id IS 'Account ID.';
-COMMENT ON COLUMN acca.accounts.curr IS 'Currency of account.';
+COMMENT ON COLUMN acca.accounts.curr_id IS 'Currency of account.';
+COMMENT ON COLUMN acca.accounts.key IS 'Account key (it is not primary key).';
 COMMENT ON COLUMN acca.accounts.balance IS 'Current balance.';
 COMMENT ON COLUMN acca.accounts.meta IS 'Container with meta information.';
 
@@ -89,19 +94,20 @@ CREATE TYPE acca.operation_status AS enum (
 CREATE TABLE acca.operations (
     oper_id bigserial PRIMARY KEY,
     tx_id bigint NOT NULL REFERENCES acca.transactions (tx_id),
-    src_acc_id ltree NOT NULL REFERENCES acca.accounts(acc_id),
-    dst_acc_id ltree NOT NULL REFERENCES acca.accounts(acc_id),
+    src_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
+    dst_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
     type acca.operation_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     amount numeric(69, 00) NOT NULL,
     reason ltree NOT NULL DEFAULT '',
     meta jsonb NOT NULL DEFAULT '{}',
     hold boolean NOT NULL DEFAULT false,
-    hold_acc_id ltree REFERENCES acca.accounts(acc_id),
+    hold_acc_id bigint REFERENCES acca.accounts(acc_id),
     status acca.operation_status NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL DEFAULT now(),
     updated_at timestamp without time zone
 );
 CREATE INDEX operations_reason_gist_idx ON acca.operations USING GIST (reason);
+CREATE INDEX operations_tx_idx ON acca.operations USING GIST (tx_id);
 
 COMMENT ON COLUMN acca.operations.src_acc_id IS 'Withdrawal account.';
 COMMENT ON COLUMN acca.operations.dst_acc_id IS 'Deposit account.';
