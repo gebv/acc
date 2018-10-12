@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func loadBalances(t *testing.T) map[string]uint64 {
@@ -16,6 +17,7 @@ func loadBalances(t *testing.T) map[string]uint64 {
 	var key string
 	var balance uint64
 	rows, err := db.Query(`SELECT acc_id, key, balance FROM acca.accounts`)
+	require.NoError(t, err, "Failed get acccounts")
 	if assert.NoError(t, err) {
 		defer rows.Close()
 		for rows.Next() {

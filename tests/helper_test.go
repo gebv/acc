@@ -2,10 +2,10 @@ package tests
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type accountInfo struct {
@@ -59,27 +59,22 @@ func CmdInitAccountsExecutor(t *testing.T, state *testCaseState, cmd *cmdInitAcc
 	t.Run("InitAccounts", func(t *testing.T) {
 		var curID int64
 		err := db.QueryRow(`INSERT INTO acca.currencies(key) VALUES ($1) RETURNING curr_id`, cmd.CurrName).Scan(&curID)
-		if err == nil {
-			state.AddCurr(curID, cmd.CurrName)
-		} else {
-			if !assert.True(t, strings.HasPrefix(err.Error(), "pq: duplicate key")) {
-				assert.NoError(t, err, "Should be only 'duplicate key' error")
-			}
-			err := db.QueryRow(`SELECT curr_id FROM acca.currencies WHERE key = $1`, cmd.CurrName).Scan(&curID)
-			if !assert.NoError(t, err, "Failed get curr ID") {
-				panic(err)
+
+		if err != nil {
+			if assert.EqualError(t, err, `pq: duplicate key value violates unique constraint "currencies_key_uniq_idx"`) {
+				err := db.QueryRow(`SELECT curr_id FROM acca.currencies WHERE key = $1`, cmd.CurrName).Scan(&curID)
+				require.NoErrorf(t, err, "Failed get account by key=%v", cmd.CurrName)
 			}
 		}
+
+		state.AddCurr(curID, cmd.CurrName)
 
 		for _, acc := range cmd.Accounts {
 			var accID int64
 			err := db.QueryRow(`INSERT INTO acca.accounts(key, curr_id, balance) VALUES ($1, $2, $3) RETURNING acc_id`, acc.AccKey, curID, acc.Balance).Scan(&accID)
 
-			if assert.NoErrorf(t, err, "Failed insert account: %+v", acc) {
-				state.AddAccount(accID, acc.AccKey)
-			} else {
-				panic(err)
-			}
+			require.NoError(t, err, "Failed insert new account")
+			state.AddAccount(accID, acc.AccKey)
 		}
 	})
 }
@@ -113,7 +108,7 @@ func CmdTransfersExecutor(t *testing.T, state *testCaseState, cmd *cmdTransfers)
 			t.Run("Batch#"+fmt.Sprint(index), func(t *testing.T) {
 				var txID int64
 				err := db.QueryRow(`SELECT acca.new_transfer($1, $2, $3);`, cmd, "testing", MetaData{"foo": "bar"}).Scan(&txID)
-				assert.NoErrorf(t, err, "Add new transfers for batch with index '%d'", index)
+				require.NoErrorf(t, err, "Add new transfers for batch with index '%d'", index)
 				if assert.NotEmpty(t, txID) {
 					state.AddTxID(txID)
 					t.Logf("Recived txID for a batch with index '%d': %d", index, txID)
@@ -151,7 +146,7 @@ func CmdApproveExecutor(t *testing.T, state *testCaseState, cmd *cmdApprove) {
 			}
 			t.Run("ForBatchIndex#"+fmt.Sprint(cmdIndex), func(t *testing.T) {
 				_, err := db.Exec(`SELECT acca.accept_tx($1)`, txID)
-				assert.NoError(t, err)
+				require.NoError(t, err, "Failed accept tx")
 			})
 		}
 	})
@@ -183,7 +178,7 @@ func CmdRejectExecutor(t *testing.T, state *testCaseState, cmd *cmdReject) {
 			}
 			t.Run("ForBatchIndex#"+fmt.Sprint(cmdIndex), func(t *testing.T) {
 				_, err := db.Exec(`SELECT acca.reject_tx($1)`, txID)
-				assert.NoError(t, err)
+				require.NoError(t, err, "Failed reject tx")
 			})
 		}
 	})
@@ -215,7 +210,7 @@ func CmdRollbackExecutor(t *testing.T, state *testCaseState, cmd *cmdRollback) {
 			}
 			t.Run("ForBatchIndex#"+fmt.Sprint(cmdIndex), func(t *testing.T) {
 				_, err := db.Exec(`SELECT acca.rollback_tx($1)`, txID)
-				assert.NoError(t, err)
+				assert.NoError(t, err, "Failed rollback tx")
 			})
 		}
 	})
@@ -292,6 +287,7 @@ func CmdCheckStatusesExecutor(t *testing.T, state *testCaseState, cmd *cmdCheckS
 				var got string
 				expected := cmd.Expected[index]
 				err := db.QueryRow(`SELECT status FROM acca.transactions WHERE tx_id = $1`, txID).Scan(&got)
+				require.NoError(t, err, "Failed load tx by ID")
 				if assert.NoErrorf(t, err, "Failed get status for txID=%d", txID) {
 					assert.Equal(t, expected, got, "Not equal statuses for tx = %v, batch index = %v", txID, index)
 				}
