@@ -1,39 +1,29 @@
+# TODO: setup PGPASSWORD
 
-VERSION=v0.1
-GITHASH=`git log -1 --pretty=format:"%h" || echo "???"`
-CURDATE=`date -u +%Y%m%d.%H%M%S`
-REPO_URL=github.com
-ORG_NAME=gebv
-REPO_NAME=accounting
+setup-schema:
+	PGPASSWORD=acca  psql -U acca -q -h 127.0.0.1 -d acca -U acca -v ON_ERROR_STOP=1 -f ./schema.sql
+.PHONY: setup-schema
 
-APPVERSION=${VERSION}-${GITHASH}:${CURDATE}
+setup-functions:
+	PGPASSWORD=acca  psql -U acca -q -h 127.0.0.1 -d acca -U acca -v ON_ERROR_STOP=1 -f ./functions.sql
+.PHONY: setup-functions
 
-include .env
-export $(shell sed 's/=.*//' .env)
+setup: setup-schema setup-functions
+.PHONY: setup
 
-docker-prebuild:
-	docker build -t ${REPO_NAME}-app-builder -f Dockerfile.build .
-docker-build: docker-prebuild
-	docker run -it --rm --name ${REPO_NAME}-app-make-build \
-		-v "${PWD}":/go/src/${REPO_URL}/${ORG_NAME}/${REPO_NAME} \
-		-w /go/src/${REPO_URL}/${ORG_NAME}/${REPO_NAME} \
-		${REPO_NAME}-app-builder make build
+install:
+	go install -v ./...
+	go test -i ./...
+.PHONY: install
 
-build:
-	CGO_ENABLED=0 go build \
-			-o bin/app \
-			-v \
-			-ldflags "-X main.VERSION=${APPVERSION}" \
-			-a ./main.go
-.PHONY: build
+restart-dev-infra:
+	docker-compose down
+	docker-compose up -d
+	sleep 2
+.PHONY: restart-dev-infra
 
-gogenerate:
-	go generate ./invoices.go
-	go generate ./transactions.go
-	go generate ./accounts.go
-	go generate ./shop/order.go
-.PHONY: gogenerate
+test: install restart-dev-infra setup
+	go test -v -count 1 -race -timeout 5m ./tests
 
-test:
-	go test -v ./
+	# docker-compose down
 .PHONY: test

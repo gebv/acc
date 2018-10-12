@@ -1,49 +1,148 @@
+CREATE SCHEMA IF NOT EXISTS acca;
 
-CREATE SCHEMA IF NOT EXISTS finances;
+CREATE EXTENSION ltree;
 
-CREATE TYPE finances.account_type AS ENUM('system', 'partner', 'customer', 'bonus', 'credit');
-CREATE TABLE finances.accounts (
-    account_id bigserial PRIMARY KEY,
-    customer_id ltree NOT NULL,
-    account_type finances.account_type NOT NULL DEFAULT 'customer',
-    balance bigint NOT NULL DEFAULT 0 CHECK (balance >= 0),
-    updated_at timestamp with time zone NOT NULL DEFAULT now(),
-    UNIQUE (customer_id)
+-- money in the numeric(69, 0)
+-- for example, to store balances for WEI (ETH)
+-- change manually if you need less accuracy to
+-- NOTE: cannot be justified if used small number (<1^10*12), recomented used bigint
+
+-- currencies
+-- currencies any format
+CREATE TABLE acca.currencies (
+    curr_id bigserial PRIMARY KEY,
+    key ltree NOT NULL,
+    meta jsonb NOT NULL DEFAULT '{}'
 );
-CREATE INDEX accounts_customer_id_gist_idx ON finances.accounts USING GIST (customer_id);
+CREATE INDEX currencies_key_gist_idx ON acca.currencies USING GIST (key);
+CREATE UNIQUE INDEX currencies_key_uniq_idx ON acca.currencies (key);
 
-CREATE TABLE finances.invoices (
-    invoice_id bigserial PRIMARY KEY,
-    order_id ltree NOT NULL,
-    destination_id bigint NOT NULL REFERENCES finances.accounts(account_id),
-    source_id bigint REFERENCES finances.accounts(account_id),
-    paid boolean NOT NULL DEFAULT false,
-    amount bigint NOT NULL DEFAULT 0 CHECK (amount > 0),
-    created_at timestamp with time zone NOT NULL,
-    UNIQUE (order_id)
-);
-CREATE INDEX invoices_order_id_gist_idx ON finances.invoices USING GIST (order_id);
+COMMENT ON COLUMN acca.currencies.curr_id IS 'Currency ID.';
+COMMENT ON COLUMN acca.currencies.key IS 'Currency key (it is not primary key).';
+COMMENT ON COLUMN acca.currencies.meta IS 'Container with meta information.';
 
-CREATE TYPE finances.tx_type AS ENUM('authorization', 'accepted', 'rejected');
-CREATE TABLE finances.transactions (
-    transaction_id bigserial PRIMARY KEY,
-    invoice_id bigint NOT NULL REFERENCES finances.invoices(invoice_id),
-    amount bigint NOT NULL DEFAULT 0 CHECK (amount > 0),
-    source bigint NOT NULL REFERENCES finances.accounts(account_id),
-    destination bigint NOT NULL CHECK (destination <> source) REFERENCES finances.accounts(account_id), 
-    status finances.tx_type NOT NULL DEFAULT 'authorization',
-    created_at timestamp with time zone NOT NULL,
-    closed_at timestamp with time zone NOT NULL
+-- accounts
+-- account and related meta information and current balance
+CREATE TABLE acca.accounts (
+    acc_id bigserial PRIMARY KEY,
+    curr_id bigint REFERENCES acca.currencies(curr_id),
+    key ltree NOT NULL,
+    balance numeric(69, 00) NOT NULL DEFAULT 0 CHECK(balance >= 0),
+    meta jsonb NOT NULL DEFAULT '{}'
 );
 
-CREATE TYPE finances.bc_type AS ENUM('hold', 'refund', 'complete');
-CREATE TABLE finances.balance_changes (
-    change_id bigserial PRIMARY KEY,
-    account_id bigint NOT NULL REFERENCES finances.accounts(account_id),
-    transaction_id bigint NOT NULL REFERENCES finances.transactions(transaction_id),
-    tx_type finances.bc_type NOT NULL DEFAULT 'hold',
-    amount bigint NOT NULL CHECK (amount <> 0),
-    balance bigint NOT NULL CHECK(balance >= 0),
-    created_at timestamp with time zone NOT NULL
+COMMENT ON COLUMN acca.accounts.acc_id IS 'Account ID.';
+COMMENT ON COLUMN acca.accounts.curr_id IS 'Currency of account.';
+COMMENT ON COLUMN acca.accounts.key IS 'Account key (it is not primary key).';
+COMMENT ON COLUMN acca.accounts.balance IS 'Current balance.';
+COMMENT ON COLUMN acca.accounts.meta IS 'Container with meta information.';
+
+
+-- transaction status
+-- diagram of the transition of the statuses (see TODO: link to WIKI)
+CREATE TYPE acca.transaction_status AS enum (
+    'unknown',
+    'draft',
+    'auth',
+    'accepted',
+    'rejected',
+
+    'failed'
 );
+
+-- ALTER TYPE  acca.transaction_status ADD VALUE 'failed';
+
+-- transactions
+-- transactions and related meta information and current status
+CREATE TABLE acca.transactions (
+    tx_id bigserial PRIMARY KEY,
+    reason ltree NOT NULL,
+    meta jsonb NOT NULL DEFAULT '{}',
+    status acca.transaction_status NOT NULL DEFAULT 'unknown' CHECK (status <> 'unknown'),
+    errm text,
+    created_at timestamp without time zone NOT NULL DEFAULT now(),
+    updated_at timestamp without time zone
+);
+CREATE INDEX transactions_reason_gist_idx ON acca.transactions USING GIST (reason);
+
+COMMENT ON COLUMN acca.transactions.tx_id IS 'Transaction ID.';
+COMMENT ON COLUMN acca.transactions.reason IS 'The reason for the transfer.';
+COMMENT ON COLUMN acca.transactions.meta IS 'Container with meta information.';
+COMMENT ON COLUMN acca.transactions.status IS 'Transaction status.';
+
+-- type of operation
+-- - internal - transfer between accounts
+-- - recharge - entering funds into the system
+-- - withdraw - output funds from the system
+CREATE TYPE acca.operation_type AS enum (
+    'unknown',
+    'internal',
+    'recharge',
+    'withdraw'
+);
+
+-- status of operation
+-- diagram of the transition of the statuses (see TODO: link to WIKI)
+CREATE TYPE acca.operation_status AS enum (
+    'unknown',
+    'draft',
+    'hold',
+    'accepted',
+    'rejected'
+);
+
+-- operation included in the transaction
+CREATE TABLE acca.operations (
+    oper_id bigserial PRIMARY KEY,
+    tx_id bigint NOT NULL REFERENCES acca.transactions (tx_id),
+    src_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
+    dst_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
+    type acca.operation_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    amount numeric(69, 00) NOT NULL,
+    reason ltree NOT NULL DEFAULT '',
+    meta jsonb NOT NULL DEFAULT '{}',
+    hold boolean NOT NULL DEFAULT false,
+    hold_acc_id bigint REFERENCES acca.accounts(acc_id),
+    status acca.operation_status NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    created_at timestamp without time zone NOT NULL DEFAULT now(),
+    updated_at timestamp without time zone
+);
+CREATE INDEX operations_reason_gist_idx ON acca.operations USING GIST (reason);
+
+COMMENT ON COLUMN acca.operations.src_acc_id IS 'Withdrawal account.';
+COMMENT ON COLUMN acca.operations.dst_acc_id IS 'Deposit account.';
+COMMENT ON COLUMN acca.operations.type IS 'Type of operation.';
+COMMENT ON COLUMN acca.operations.amount IS 'Transaction amount.';
+COMMENT ON COLUMN acca.operations.reason IS 'The reason for the operation.';
+COMMENT ON COLUMN acca.operations.meta IS 'Container with meta information.';
+COMMENT ON COLUMN acca.operations.hold IS 'If true, the translation is two-step.';
+COMMENT ON COLUMN acca.operations.hold_acc_id IS 'Suspense account. Only for two-step transaction. May be NULL.';
+COMMENT ON COLUMN acca.operations.status IS 'Operation status.';
+
+CREATE TYPE acca.request_type AS enum (
+    'unknown',
+    'auth',
+    'accept',
+    'reject',
+
+    'rollback'
+);
+
+-- request for action
+CREATE TABLE acca.requests_queue (
+    tx_id bigserial REFERENCES acca.transactions (tx_id),
+    type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    created_at timestamp without time zone NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON acca.requests_queue (tx_id, type);
+
+-- history requests
+CREATE TABLE acca.requests_history (
+    tx_id bigserial REFERENCES acca.transactions (tx_id),
+    type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    created_at timestamp without time zone NOT NULL,
+    executed_at timestamp without time zone NOT NULL DEFAULT now()
+);
+
+-- TODO: balance_changes
 
