@@ -131,31 +131,31 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
                     __current_acc_id := _src_acc_id;
 
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
                     ELSE
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 WHEN 'recharge' THEN
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
                     ELSE
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 WHEN 'withdraw' THEN
                     IF _hold THEN
                         __current_acc_id := _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
 
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
                     ELSE
                         __current_acc_id := _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
 
                         __current_acc_id := _dst_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 ELSE
                     RAISE EXCEPTION 'Unexpected operation type: oper_id=%, type=%', _oper_id, _type::text;
@@ -210,23 +210,23 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
                     __current_acc_id := _hold_acc_id;
 
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 WHEN 'recharge' THEN
                     IF _hold THEN
                         __current_acc_id := _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _dst_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     END IF;
                 WHEN 'withdraw' THEN
                     IF _hold THEN
                         __current_acc_id := _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
 
                         __current_acc_id := _dst_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 ELSE
                     RAISE EXCEPTION 'Unexpected operation type: oper_id=%, type=%', _oper_id, _type::text;
@@ -279,36 +279,36 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
                     __current_acc_id := _hold_acc_id;
 
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     ELSE
                         __current_acc_id := _dst_acc_id;
 
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     END IF;
                 WHEN 'recharge' THEN
                     IF _hold THEN
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
                     ELSE
                         __current_acc_id := _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
 
                         __current_acc_id := _dst_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                     END IF;
                 WHEN 'withdraw' THEN
                     IF _hold THEN
                         __current_acc_id := _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
 
                         __current_acc_id := _src_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     ELSE
                         __current_acc_id := _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance - _amount WHERE acc_id = _hold_acc_id;
+                        UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
 
-                        UPDATE acca.accounts SET balance = balance + _amount WHERE acc_id = _src_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     END IF;
                 ELSE
                     RAISE EXCEPTION 'Unexpected operation type: oper_id=%, type=%', _oper_id, _type::text;
@@ -339,10 +339,10 @@ CREATE OR REPLACE FUNCTION acca.update_status_transaction(
     BEGIN
         -- TODO: refactoring?
         SELECT count(*) INTO num_total FROM acca.operations WHERE tx_id = _tx_id;
-        SELECT count(*) INTO num_hold FROM acca.operations WHERE tx_id = _tx_id AND status = 'hold';
+        -- SELECT count(*) INTO num_hold FROM acca.operations WHERE tx_id = _tx_id AND status = 'hold';
         SELECT count(*) INTO num_accepted FROM acca.operations WHERE tx_id = _tx_id AND status = 'accepted';
         SELECT count(*) INTO num_rejected FROM acca.operations WHERE tx_id = _tx_id AND status = 'rejected';
-        SELECT count(*) INTO num_draft FROM acca.operations WHERE tx_id = _tx_id AND status = 'draft';
+        -- SELECT count(*) INTO num_draft FROM acca.operations WHERE tx_id = _tx_id AND status = 'draft';
 
         IF num_total = num_accepted THEN
             _tx_new_status := 'accepted'::acca.transaction_status;

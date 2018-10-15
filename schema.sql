@@ -103,6 +103,10 @@ CREATE TABLE acca.operations (
 );
 CREATE INDEX operations_reason_gist_idx ON acca.operations USING GIST (reason);
 
+-- added last_oper_id into accounts table for trigger add_balance_changes_trigger
+ALTER TABLE acca.accounts ADD COLUMN last_oper_id bigint REFERENCES acca.operations(oper_id);
+COMMENT ON COLUMN acca.accounts.last_oper_id IS 'Related last operation changing balance (last_oper_id must not null if changes balance).';
+
 COMMENT ON COLUMN acca.operations.src_acc_id IS 'Withdrawal account.';
 COMMENT ON COLUMN acca.operations.dst_acc_id IS 'Deposit account.';
 COMMENT ON COLUMN acca.operations.type IS 'Type of operation.';
@@ -124,7 +128,7 @@ CREATE TYPE acca.request_type AS enum (
 
 -- request for action
 CREATE TABLE acca.requests_queue (
-    tx_id bigserial REFERENCES acca.transactions (tx_id),
+    tx_id bigint REFERENCES acca.transactions (tx_id),
     type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL DEFAULT now()
 );
@@ -132,11 +136,55 @@ CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON acca.requests_queue (tx_id, 
 
 -- history requests
 CREATE TABLE acca.requests_history (
-    tx_id bigserial REFERENCES acca.transactions (tx_id),
+    tx_id bigint REFERENCES acca.transactions (tx_id),
     type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL,
     executed_at timestamp without time zone NOT NULL DEFAULT now()
 );
 
--- TODO: balance_changes
+-- balance changes table
+CREATE TABLE acca.balance_changes (
+    ch_id bigserial PRIMARY KEY,
+    tx_id bigint NOT NULL REFERENCES acca.transactions(tx_id),
+    oper_id bigint NOT NULL REFERENCES acca.operations(oper_id),
+    acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
+    amount numeric(69, 00) NOT NULL,
+    balance numeric(69, 00) NOT NULL
+);
 
+COMMENT ON COLUMN acca.balance_changes.ch_id IS 'Change ID.';
+COMMENT ON COLUMN acca.balance_changes.tx_id IS 'Related transaction.';
+COMMENT ON COLUMN acca.balance_changes.oper_id IS 'Related operation.';
+COMMENT ON COLUMN acca.balance_changes.acc_id IS 'Related account.';
+COMMENT ON COLUMN acca.balance_changes.amount IS 'Transaction amount.';
+COMMENT ON COLUMN acca.balance_changes.balance IS 'Balance after transaction.';
+
+-- trigger for create new record to balance changes table after new record in operations table
+CREATE FUNCTION add_balance_changes() RETURNS trigger AS $add_balance_changes$
+    DECLARE
+        _src_acc_id bigint;
+        _dst_acc_id bigint;
+
+        _src_balance numeric(69, 00);
+        _dst_balance numeric(69, 00);
+
+        _amount numeric(69, 00);
+    BEGIN
+        IF NEW.balance = OLD.balance THEN
+            RETURN NEW;
+        END IF;
+
+        IF NEW.last_oper_id IS NULL THEN
+            RAISE EXCEPTION 'last_oper_id cannot be null if changes balance';
+        END IF;
+
+        _amount := OLD.balance - NEW.balance;
+
+        INSERT INTO acca.balance_changes(tx_id, oper_id, acc_id, amount, balance) VALUES(NEW.tx_id, NEW.last_oper_id, NEW.acc_id, _amount, NEW.balance);
+
+        RETURN NEW;
+    END;
+$add_balance_changes$ LANGUAGE plpgsql;
+
+CREATE TRIGGER add_balance_changes_trigger AFTER UPDATE ON acca.accounts
+    FOR EACH ROW EXECUTE PROCEDURE add_balance_changes();
