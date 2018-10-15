@@ -1,39 +1,11 @@
 package tests
 
 import (
-	"fmt"
 	"testing"
 )
 
-type accountInfo1 struct {
-	AccID   string
-	Balance uint64
-}
-
-type testCase1 struct {
-	CaseName string
-
-	InitAccounts []accountInfo1
-
-	Transfers transfers
-	MetaData  MetaData
-	Reason    string
-
-	TxID             int64
-	ExpectedBalances map[string]uint64
-
-	TxStatusBefore string
-	TxStatusAfter  string
-
-	NumProcess int
-}
-
 func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
-	prefix := "test01.01."
-	cur := prefix + "curr"
-	accID := func(accID string) string {
-		return prefix + accID
-	}
+	cur := "curr"
 
 	tests := []cmdBatch{
 		{
@@ -41,37 +13,37 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("1.1"),
+						AccKey:  "1",
 						Balance: 10,
 					},
 					{
-						AccID:   accID("1.2"),
+						AccKey:  "2",
 						Balance: 20,
 					},
 					{
-						AccID:   accID("1.3"),
+						AccKey:  "3",
 						Balance: 30,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("1.1"),
-							DstAccID: accID("1.2"),
-							Type:     Internal,
-							Amount:   9,
-							Reason:   "fortesting",
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 9,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
 							Hold: false,
 						},
 						{
-							SrcAccID: accID("1.2"),
-							DstAccID: accID("1.3"),
-							Type:     Internal,
-							Amount:   29,
-							Reason:   "fortesting",
+							SrcAcc: "2",
+							DstAcc: "3",
+							Type:   Internal,
+							Amount: 29,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -83,9 +55,9 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("1.1"): 10 - 9,
-					accID("1.2"): 20 + 9 - 29,
-					accID("1.3"): 30 + 29,
+					"1": 10 - 9,
+					"2": 20 + 9 - 29,
+					"3": 30 + 29,
 				}),
 			},
 		},
@@ -94,37 +66,37 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("2.1"),
+						AccKey:  "1",
 						Balance: 10,
 					},
 					{
-						AccID:   accID("2.2"),
+						AccKey:  "2",
 						Balance: 20,
 					},
 					{
-						AccID:   accID("2.3"),
+						AccKey:  "3",
 						Balance: 30,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("2.1"),
-							DstAccID: accID("2.2"),
-							Type:     Internal,
-							Amount:   1,
-							Reason:   "fortesting",
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 1,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
 							Hold: false,
 						},
 						{
-							SrcAccID: accID("2.2"),
-							DstAccID: accID("2.3"),
-							Type:     Internal,
-							Amount:   1000,
-							Reason:   "fortesting",
+							SrcAcc: "2",
+							DstAcc: "3",
+							Type:   Internal,
+							Amount: 1000,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -136,9 +108,9 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("failed"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"): 10,
-					accID("2.2"): 20,
-					accID("2.3"): 30,
+					"1": 10,
+					"2": 20,
+					"3": 30,
 				}),
 			},
 		},
@@ -147,15 +119,15 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("3.1"),
+						AccKey:  "1",
 						Balance: 10,
 					},
 					{
-						AccID:   accID("3.2"),
+						AccKey:  "2",
 						Balance: 20,
 					},
 					{
-						AccID:   accID("3.3"),
+						AccKey:  "3",
 						Balance: 30,
 					},
 				}),
@@ -166,9 +138,9 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("3.1"): 10,
-					accID("3.2"): 20,
-					accID("3.3"): 30,
+					"1": 10,
+					"2": 20,
+					"3": 30,
 				}),
 			},
 		},
@@ -178,22 +150,22 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("4.payment_gateway"),
+						AccKey:  "payment_gateway",
 						Balance: 0,
 					},
 					{
-						AccID:   accID("4.client"),
+						AccKey:  "client",
 						Balance: 0,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("4.payment_gateway"),
-							DstAccID: accID("4.client"),
-							Type:     Recharge,
-							Amount:   102,
-							Reason:   "fortesting",
+							SrcAcc: "payment_gateway",
+							DstAcc: "client",
+							Type:   Recharge,
+							Amount: 102,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -205,8 +177,8 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("4.payment_gateway"): 102,
-					accID("4.client"):          102,
+					"payment_gateway": 102,
+					"client":          102,
 				}),
 			},
 		},
@@ -216,22 +188,22 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("5.payment_gateway"),
+						AccKey:  "payment_gateway",
 						Balance: 100,
 					},
 					{
-						AccID:   accID("5.client"),
+						AccKey:  "client",
 						Balance: 10,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("5.client"),
-							DstAccID: accID("5.payment_gateway"),
-							Type:     Withdraw,
-							Amount:   10,
-							Reason:   "fortesting",
+							SrcAcc: "client",
+							DstAcc: "payment_gateway",
+							Type:   Withdraw,
+							Amount: 10,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -243,8 +215,8 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("5.payment_gateway"): 90,
-					accID("5.client"):          0,
+					"payment_gateway": 90,
+					"client":          0,
 				}),
 			},
 		},
@@ -254,22 +226,22 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("6.payment_gateway"),
+						AccKey:  "payment_gateway",
 						Balance: 0,
 					},
 					{
-						AccID:   accID("6.client"),
+						AccKey:  "client",
 						Balance: 10,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("6.client"),
-							DstAccID: accID("6.payment_gateway"),
-							Type:     Withdraw,
-							Amount:   10,
-							Reason:   "fortesting",
+							SrcAcc: "client",
+							DstAcc: "payment_gateway",
+							Type:   Withdraw,
+							Amount: 10,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -281,31 +253,17 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("failed"),
 				CmdCheckBalances(map[string]uint64{
-					accID("6.payment_gateway"): 0,
-					accID("6.client"):          10,
+					"payment_gateway": 0,
+					"client":          10,
 				}),
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		txIDs := []int64{}
-		for index, cmd := range tt.Commands {
-			t.Run(tt.Name+"_#"+fmt.Sprint(index+1), func(t *testing.T) {
-				cmdApply(t, cmd, &txIDs)
-			})
-		}
-		t.Run(tt.Name+"_#Destroy", func(t *testing.T) {
-			t.Logf("Tx IDs: %+v", txIDs)
-		})
-	}
+	runTests(t, tests)
 }
 func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
-	prefix := "test01.02."
-	cur := prefix + "curr"
-	accID := func(accID string) string {
-		return prefix + accID
-	}
+	cur := "curr"
 
 	tests := []cmdBatch{
 		{
@@ -313,59 +271,59 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("1.1"),
+						AccKey:  "1",
 						Balance: 10,
 					},
 					{
-						AccID:   accID("1.2"),
+						AccKey:  "2",
 						Balance: 20,
 					},
 					{
-						AccID:   accID("1.3"),
+						AccKey:  "3",
 						Balance: 30,
 					},
 					{
-						AccID:   accID("1.hold1"),
+						AccKey:  "hold1",
 						Balance: 0,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("1.1"),
-							DstAccID: accID("1.2"),
-							Type:     Internal,
-							Amount:   9,
-							Reason:   "fortesting",
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 9,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("1.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 						{
-							SrcAccID: accID("1.2"),
-							DstAccID: accID("1.3"),
-							Type:     Internal,
-							Amount:   19,
-							Reason:   "fortesting",
+							SrcAcc: "2",
+							DstAcc: "3",
+							Type:   Internal,
+							Amount: 19,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("1.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 						{
-							SrcAccID: accID("1.3"),
-							DstAccID: accID("1.1"),
-							Type:     Internal,
-							Amount:   29,
-							Reason:   "fortesting",
+							SrcAcc: "3",
+							DstAcc: "1",
+							Type:   Internal,
+							Amount: 29,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("1.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 					},
 				}),
@@ -373,19 +331,19 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("auth"),
 				CmdCheckBalances(map[string]uint64{
-					accID("1.1"):     10 - 9,
-					accID("1.2"):     20 - 19,
-					accID("1.3"):     30 - 29,
-					accID("1.hold1"): 9 + 19 + 29,
+					"1":     10 - 9,
+					"2":     20 - 19,
+					"3":     30 - 29,
+					"hold1": 9 + 19 + 29,
 				}),
 				CmdApprove(0),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("1.1"):     10 - 9 + 29,
-					accID("1.2"):     20 - 19 + 9,
-					accID("1.3"):     30 - 29 + 19,
-					accID("1.hold1"): 0,
+					"1":     10 - 9 + 29,
+					"2":     20 - 19 + 9,
+					"3":     30 - 29 + 19,
+					"hold1": 0,
 				}),
 			},
 		},
@@ -394,72 +352,72 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 			[]command{
 				CmdInitAccounts(cur, []accountInfo{
 					{
-						AccID:   accID("2.1"),
+						AccKey:  "1",
 						Balance: 10,
 					},
 					{
-						AccID:   accID("2.2"),
+						AccKey:  "2",
 						Balance: 20,
 					},
 					{
-						AccID:   accID("2.3"),
+						AccKey:  "3",
 						Balance: 30,
 					},
 					{
-						AccID:   accID("2.hold1"),
+						AccKey:  "hold1",
 						Balance: 0,
 					},
 					{
-						AccID:   accID("2.other1"),
+						AccKey:  "other1",
 						Balance: 0,
 					},
 				}),
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("2.1"),
-							DstAccID: accID("2.2"),
-							Type:     Internal,
-							Amount:   9,
-							Reason:   "fortesting",
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 9,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("2.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 						{
-							SrcAccID: accID("2.2"),
-							DstAccID: accID("2.3"),
-							Type:     Internal,
-							Amount:   19,
-							Reason:   "fortesting",
+							SrcAcc: "2",
+							DstAcc: "3",
+							Type:   Internal,
+							Amount: 19,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("2.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 						{
-							SrcAccID: accID("2.3"),
-							DstAccID: accID("2.1"),
-							Type:     Internal,
-							Amount:   29,
-							Reason:   "fortesting",
+							SrcAcc: "3",
+							DstAcc: "1",
+							Type:   Internal,
+							Amount: 29,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
-							Hold:      true,
-							HoldAccID: accID("2.hold1"),
+							Hold:    true,
+							HoldAcc: "hold1",
 						},
 					},
 					transfers{
 						{
-							SrcAccID: accID("2.hold1"),
-							DstAccID: accID("2.other1"),
-							Type:     Internal,
-							Amount:   9 + 19 + 29,
-							Reason:   "fortesting",
+							SrcAcc: "hold1",
+							DstAcc: "other1",
+							Type:   Internal,
+							Amount: 9 + 19 + 29,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -471,41 +429,41 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdExecute(2),
 				CmdCheckStatuses("auth", "accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"):      10 - 9,
-					accID("2.2"):      20 - 19,
-					accID("2.3"):      30 - 29,
-					accID("2.hold1"):  0,
-					accID("2.other1"): 9 + 19 + 29,
+					"1":      10 - 9,
+					"2":      20 - 19,
+					"3":      30 - 29,
+					"hold1":  0,
+					"other1": 9 + 19 + 29,
 				}),
 				CmdApprove(0),
 				CmdExecute(1),
 				CmdCheckStatuses("failed", "accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"):      10 - 9,
-					accID("2.2"):      20 - 19,
-					accID("2.3"):      30 - 29,
-					accID("2.hold1"):  0,
-					accID("2.other1"): 9 + 19 + 29,
+					"1":      10 - 9,
+					"2":      20 - 19,
+					"3":      30 - 29,
+					"hold1":  0,
+					"other1": 9 + 19 + 29,
 				}),
 				CmdRollback(0), // not enough money
 				CmdExecute(1),
 				CmdCheckStatuses("failed", "accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"):      10 - 9,
-					accID("2.2"):      20 - 19,
-					accID("2.3"):      30 - 29,
-					accID("2.hold1"):  0,
-					accID("2.other1"): 9 + 19 + 29,
+					"1":      10 - 9,
+					"2":      20 - 19,
+					"3":      30 - 29,
+					"hold1":  0,
+					"other1": 9 + 19 + 29,
 				}),
 				//
 				CmdTransfers([]transfers{
 					transfers{
 						{
-							SrcAccID: accID("2.other1"),
-							DstAccID: accID("2.hold1"),
-							Type:     Internal,
-							Amount:   9 + 19 + 29,
-							Reason:   "fortesting",
+							SrcAcc: "other1",
+							DstAcc: "hold1",
+							Type:   Internal,
+							Amount: 9 + 19 + 29,
+							Reason: "fortesting",
 							Meta: MetaData{
 								"foo": "bar",
 							},
@@ -516,11 +474,11 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdExecute(1),
 				CmdCheckStatuses("failed", "accepted", "accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"):      10 - 9,
-					accID("2.2"):      20 - 19,
-					accID("2.3"):      30 - 29,
-					accID("2.hold1"):  9 + 19 + 29,
-					accID("2.other1"): 0,
+					"1":      10 - 9,
+					"2":      20 - 19,
+					"3":      30 - 29,
+					"hold1":  9 + 19 + 29,
+					"other1": 0,
 				}),
 
 				CmdRollback(0), // not enough money
@@ -528,25 +486,15 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 
 				CmdCheckStatuses("rejected", "accepted", "accepted"),
 				CmdCheckBalances(map[string]uint64{
-					accID("2.1"):      10,
-					accID("2.2"):      20,
-					accID("2.3"):      30,
-					accID("2.hold1"):  0,
-					accID("2.other1"): 0,
+					"1":      10,
+					"2":      20,
+					"3":      30,
+					"hold1":  0,
+					"other1": 0,
 				}),
 			},
 		},
 	}
 
-	for _, tt := range tests {
-		txIDs := []int64{}
-		for index, cmd := range tt.Commands {
-			t.Run(tt.Name+"_#"+fmt.Sprint(index+1), func(t *testing.T) {
-				cmdApply(t, cmd, &txIDs)
-			})
-		}
-		t.Run(tt.Name+"_#Destroy", func(t *testing.T) {
-			t.Logf("Tx IDs: %+v", txIDs)
-		})
-	}
+	runTests(t, tests)
 }

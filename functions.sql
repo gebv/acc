@@ -103,16 +103,16 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
     _oper_id bigint
 ) RETURNS void AS $$
     DECLARE
-        _amount numeric(30, 5);
-        _src_acc_id ltree;
-        _dst_acc_id ltree;
-        _hold_acc_id ltree;
+        _amount numeric(69, 0);
+        _src_acc_id bigint;
+        _dst_acc_id bigint;
+        _hold_acc_id bigint;
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
         _tx_id bigint;
 
-        __current_acc_id ltree;
+        __current_acc_id bigint;
     BEGIN
         SELECT
             tx_id,
@@ -182,16 +182,16 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
     _oper_id bigint
 ) RETURNS void AS $$
     DECLARE
-        _amount numeric(30, 5);
-        _src_acc_id ltree;
-        _dst_acc_id ltree;
-        _hold_acc_id ltree;
+        _amount numeric(69, 0);
+        _src_acc_id bigint;
+        _dst_acc_id bigint;
+        _hold_acc_id bigint;
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
         _tx_id bigint;
 
-        __current_acc_id ltree;
+        __current_acc_id bigint;
     BEGIN
         SELECT
             tx_id,
@@ -251,16 +251,16 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
     _oper_id bigint
 ) RETURNS void AS $$
     DECLARE
-        _amount numeric(30, 5);
-        _src_acc_id ltree;
-        _dst_acc_id ltree;
-        _hold_acc_id ltree;
+        _amount numeric(69, 0);
+        _src_acc_id bigint;
+        _dst_acc_id bigint;
+        _hold_acc_id bigint;
         _type acca.operation_type;
         _hold boolean;
         _oper_next_status acca.operation_status;
         _tx_id bigint;
 
-        __current_acc_id ltree;
+        __current_acc_id bigint;
     BEGIN
         SELECT
             tx_id,
@@ -376,7 +376,7 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
         LOOP
             -- required remove from queue
             INSERT INTO acca.requests_history(tx_id, type, created_at, executed_at) SELECT tx_id, type, created_at, now() FROM acca.requests_queue WHERE tx_id = reqrow.tx_id;
-            DELETE FROM acca.requests_queue WHERE tx_id = reqrow.tx_id;
+            DELETE FROM acca.requests_queue WHERE tx_id = reqrow.tx_id AND type = reqrow.type;
 
             BEGIN
                 CASE reqrow.type
