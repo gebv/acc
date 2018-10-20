@@ -38,6 +38,11 @@ jobs:
             go version
 
             git diff --exit-code
+
+            mkdir -p /home/circleci/.go_workspace/src/github.com/gebv
+            cp -R /home/circleci/project /home/circleci/.go_workspace/src/github.com/gebv/acca/
+            cd /home/circleci/.go_workspace/src/github.com/gebv/acca
+
             make test
 
 workflows:
