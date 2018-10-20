@@ -11,6 +11,7 @@
   - [ ] Prevent editing data in tables - read only. Modifing via API
   - [ ] More database-level checks
     - [ ] Transaction from one to the same account
+- [ ] Added documentation
 
 # Future list
 - [ ] Process each operation and save the executed status in current operation
