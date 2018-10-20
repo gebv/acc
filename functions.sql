@@ -415,6 +415,9 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
             END IF;
 
             PERFORM pg_notify('tx_update_status', json_build_object('tx_id', reqrow.tx_id, 'new_status', _tx_new_status)::text);
+
+            failed := false;
+            failed_errm := '';
         END LOOP;
     END;
 $$ language plpgsql;
