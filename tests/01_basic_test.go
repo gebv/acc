@@ -498,3 +498,106 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 
 	runTests(t, tests)
 }
+
+func Test01Basic_03ErrorInMiddle(t *testing.T) {
+	cur := "curr"
+
+	tests := []cmdBatch{
+		{
+			"TestQueue",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccKey:  "1",
+						Balance: 10,
+					},
+					{
+						AccKey:  "2",
+						Balance: 20,
+					},
+					{
+						AccKey:  "3",
+						Balance: 30,
+					},
+					{
+						AccKey:  "hold1",
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 3,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold1",
+						},
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "2",
+							DstAcc: "3",
+							Type:   Internal,
+							Amount: 1000000,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold1",
+						},
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "3",
+							DstAcc: "1",
+							Type:   Internal,
+							Amount: 3,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold1",
+						},
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "1",
+							DstAcc: "2",
+							Type:   Internal,
+							Amount: 1,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold1",
+						},
+					},
+				}),
+
+				CmdCheckStatuses("draft", "draft", "draft", "draft"),
+				CmdExecute(4),
+				CmdCheckStatuses("auth", "failed", "auth", "auth"),
+				CmdApprove(0, 2, 3),
+				CmdExecute(3),
+				CmdCheckStatuses("accepted", "failed", "accepted", "accepted"),
+			},
+		},
+	}
+
+	runTests(t, tests)
+}
