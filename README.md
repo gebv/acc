@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/gebv/acca/tree/master.svg?style=svg)](https://circleci.com/gh/gebv/acca/tree/master)
+
 # TODO
 
 - [x] Rollback for failed transaction - rollback money for hold operations
