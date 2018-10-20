@@ -4,9 +4,9 @@
 
 - [x] Rollback for failed transaction - rollback money for hold operations
 - [x] Tests for basic functionality.
-  - [ ] CI tests.
+  - [x] CI tests.
 - [ ] Basic future
-  - [ ] Added balance_changes + tests
+  - [x] Added balance_changes + tests
   - [ ] Access to functions. For internal methods, external access is not available.
   - [ ] Prevent editing data in tables - read only. Modifing via API
   - [ ] More database-level checks
