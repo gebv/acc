@@ -31,11 +31,19 @@ func loadBalances(t *testing.T) map[string]uint64 {
 	return balances
 }
 
+type handlerResult struct {
+	NumOK  *int64
+	NumErr *int64
+}
+
 func processFromQueue(t *testing.T, limit int) {
-	_, err := db.Exec(`SELECT acca.handle_requests($1);`, limit)
+	res := handlerResult{}
+	err := db.QueryRow(`SELECT t.ok, t.err FROM acca.handle_requests($1) t;`, limit).Scan(&res.NumOK, &res.NumErr)
 	if err != nil {
 		t.Fatal("Failed process from queue", err)
 	}
+
+	t.Logf("Result handle_requests: ok=%v, err=%v", *res.NumOK, *res.NumErr)
 }
 
 var (

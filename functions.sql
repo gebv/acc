@@ -33,7 +33,7 @@ CREATE OR REPLACE FUNCTION acca.new_transfer(
             'draft'::acca.operation_status
         FROM jsonb_populate_recordset(null::acca.operations, _operations);
 
-        PERFORM pg_notify('new_transaction', json_build_object('tx_id', _tx_id)::text);
+        PERFORM pg_notify('tx_update_status', json_build_object('tx_id', _tx_id, 'new_status', 'draft'::acca.operation_status)::text);
     END;
 $$ language plpgsql;
 
@@ -359,10 +359,16 @@ CREATE OR REPLACE FUNCTION acca.update_status_transaction(
     END;
 $$ language plpgsql;
 
+CREATE TYPE handle_requests_response AS (
+    ok bigint,
+    err bigint
+);
+
 -- handler requests from queue
 CREATE OR REPLACE FUNCTION acca.handle_requests(
-    _limit bigint
-) RETURNS void AS $$
+    _limit bigint,
+    OUT _res handle_requests_response
+) RETURNS handle_requests_response AS $$
     declare
         reqrow record;
         failed boolean;
@@ -371,6 +377,9 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
         _tx_new_status acca.transaction_status;
         -- num_tx_opers bigint := 1;
     BEGIN
+        _res.ok = 0;
+        _res.err = 0;
+
         FOR reqrow IN
             SELECT tx_id, type FROM acca.requests_queue ORDER BY created_at ASC LIMIT _limit
         LOOP
@@ -403,6 +412,8 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
             IF failed THEN
                 -- TODO: add error message to transaction
 
+                _res.err := _res.err + 1;
+
                 _tx_new_status := 'failed'::acca.transaction_status;
 
                 UPDATE acca.transactions
@@ -410,6 +421,8 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
                     errm = failed_errm
                     WHERE tx_id = reqrow.tx_id;
             ELSE
+                _res.ok := _res.ok + 1;
+
                 -- upd status for tx
                 SELECT acca.update_status_transaction(reqrow.tx_id) INTO _tx_new_status;
             END IF;
