@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package acca;
+
+service Accounts {
+    rpc CreateCurrency (CreateCurrencyRequest) returns (CreateCurrencyResponse) {
+    }
+
+    rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
+    }
+
+    // TODO:
+    // - get Currenty by ID
+    // - get Account by ID
+    // - list Account by UserID
+}
+
+message CreateCurrencyRequest {
+    string key = 1;
+    map<string,string> meta = 2;
+}
+
+
+message CreateCurrencyResponse {
+    int64 currency_id = 1;
+}
+
+message CreateAccountRequest {
+    string key = 1;
+    int64 currency_id = 2;
+    map<string,string> meta = 3;
+}
+
+message CreateAccountResponse {
+    int64 acc_id = 1;
+}

@@ -2,36 +2,41 @@
 
 setup-schema:
 	PGPASSWORD=acca PGHOST=127.0.0.1 PGDATABASE=acca PGUSER=acca psql -q -v ON_ERROR_STOP=1 -f ./schema.sql
-.PHONY: setup-schema
 
 setup-functions:
 	PGPASSWORD=acca PGHOST=127.0.0.1 PGDATABASE=acca PGUSER=acca psql -q -v ON_ERROR_STOP=1 -f ./functions.sql
-.PHONY: setup-functions
 
 setup-views:
 	PGPASSWORD=acca PGHOST=127.0.0.1 PGDATABASE=acca PGUSER=acca psql -q -v ON_ERROR_STOP=1 -f ./views.sql
-.PHONY: setup-views
 
 setup-exts:
 	PGPASSWORD=acca PGHOST=127.0.0.1 PGDATABASE=acca PGUSER=acca psql -q -v ON_ERROR_STOP=1 -f ./ext.*.sql
-.PHONY: setup-ma
 
-setup: setup-schema setup-functions setup-views setup-exts
 .PHONY: setup
+setup: setup-schema setup-functions setup-views setup-exts
 
+
+init:
+	go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
+
+gen:
+	# protobuf / gRPC
+	find ./api -name '*.pb.go' -delete
+	protoc --proto_path=. --proto_path=./vendor --go_out=plugins=grpc:. ./api/acca/*.proto
+
+.PHONY: install
 install:
 	go install -v ./...
 	go test -i ./...
-.PHONY: install
 
 restart-dev-infra:
 	docker-compose down
 	docker-compose up -d
 	sleep 2
-.PHONY: restart-dev-infra
 
+.PHONY: test
 test: install restart-dev-infra setup
 	go test -v -count 1 -race -timeout 5m ./tests
 
 	# docker-compose down
-.PHONY: test
+
