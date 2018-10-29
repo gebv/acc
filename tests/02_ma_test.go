@@ -8,8 +8,8 @@ func Test02MA_01Basic(t *testing.T) {
 	// - добавить новую вьюшку в которой учитываются пользовательские аккаунты и верно их суммирует
 
 	cur := "curr"
-	user1 := "ma.u1.p2."
-	user2 := "ma.u2.p2."
+	user1 := "ma.u1."
+	user2 := "ma.u2."
 
 	tests := []cmdBatch{
 		{
