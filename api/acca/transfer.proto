@@ -16,7 +16,7 @@ service Transfer {
     rpc RollbackTx (RollbackTxRequest) returns (RollbackTxResponse) {
     }
 
-    rpc HandleRequests (HandleRequestsRequest) returns (HandleRequestsResopnse) {
+    rpc HandleRequests (HandleRequestsRequest) returns (HandleRequestsResponse) {
     }
 
     rpc GetUpdates (GetUpdatesRequest) returns (stream Update) {
@@ -69,7 +69,7 @@ message HandleRequestsRequest {
     int64 limit = 1;
 }
 
-message HandleRequestsResopnse {
+message HandleRequestsResponse {
     int64 num_ok  = 1;
     int64 num_err  = 2;
 

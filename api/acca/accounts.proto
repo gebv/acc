@@ -2,11 +2,22 @@ syntax = "proto3";
 
 package acca;
 
+import "api/acca/models.proto";
+
 service Accounts {
     rpc CreateCurrency (CreateCurrencyRequest) returns (CreateCurrencyResponse) {
     }
 
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
+    }
+
+    rpc GetAccountsByIDs (GetAccountsByIDsRequest) returns (GetAccountsByIDsResponse) {
+    }
+
+    rpc GetAccountsByKey (GetAccountsByKeyRequest) returns (GetAccountsByKeyResponse) {
+    }
+
+    rpc GetAccountsByUserID (GetAccountsByUserIDRequest) returns (GetAccountsByUserIDResponse) {
     }
 
     // TODO:
@@ -33,4 +44,28 @@ message CreateAccountRequest {
 
 message CreateAccountResponse {
     int64 acc_id = 1;
+}
+
+message GetAccountsByIDsRequest {
+    repeated int64 acc_ids = 1;
+}
+
+message GetAccountsByIDsResponse {
+    repeated Account accounts = 1;
+}
+
+message GetAccountsByKeyRequest {
+    int64 key = 1;
+}
+
+message GetAccountsByKeyResponse {
+    repeated Account accounts = 1;
+}
+
+message GetAccountsByUserIDRequest {
+    string user_id = 1;
+}
+
+message GetAccountsByUserIDResponse {
+    UserAccounts user_accounts = 1;
 }
