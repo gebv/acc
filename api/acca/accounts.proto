@@ -8,6 +8,10 @@ service Accounts {
     rpc CreateCurrency (CreateCurrencyRequest) returns (CreateCurrencyResponse) {
     }
 
+    rpc GetCurrencies (GetCurrenciesRequest) returns (GetCurrenciesResponse) {
+
+    }
+
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
     }
 
@@ -21,8 +25,6 @@ service Accounts {
     }
 
     // TODO:
-    // - get Currenty by ID
-    // - get Account by ID
     // - list Account by UserID
 }
 
@@ -34,6 +36,14 @@ message CreateCurrencyRequest {
 
 message CreateCurrencyResponse {
     int64 currency_id = 1;
+}
+
+message GetCurrenciesRequest {
+    string key = 1;
+}
+
+message GetCurrenciesResponse {
+    repeated Currency currencies = 1;
 }
 
 message CreateAccountRequest {

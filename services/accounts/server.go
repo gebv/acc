@@ -27,6 +27,30 @@ func (s *Server) CreateAccount(ctx context.Context, req *acca.CreateAccountReque
 	return res, nil
 }
 
+func (s *Server) GetCurrencies(ctx context.Context, req *acca.GetCurrenciesRequest) (*acca.GetCurrenciesResponse, error) {
+	rows, err := s.db.Query(`SELECT curr_id, key, meta FROM acca.currencies WHERE $1 @> key`, req.GetKey())
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed find currencies by key %v.", req.GetKey())
+	}
+	res := &acca.GetCurrenciesResponse{}
+	defer rows.Close()
+	for rows.Next() {
+		row := acca.Currency{}
+		m := new(Meta)
+		err := rows.Scan(
+			&row.CurrId,
+			&row.Key,
+			m,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed find currencies - scan row.")
+		}
+		row.Meta = *m
+		res.Currencies = append(res.Currencies, &row)
+	}
+	return res, nil
+}
+
 func (s *Server) CreateCurrency(ctx context.Context, req *acca.CreateCurrencyRequest) (*acca.CreateCurrencyResponse, error) {
 	res := &acca.CreateCurrencyResponse{}
 	err := s.db.QueryRow(`INSERT INTO acca.currencies(key, meta) VALUES ($1, $2) RETURNING curr_id`, req.GetKey(), MetaFrom(req.GetMeta())).Scan(&res.CurrencyId)

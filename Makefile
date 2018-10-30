@@ -39,7 +39,7 @@ build-race:
 
 .PHONY: test
 test: install restart-dev-infra setup
-	go test -v -count 1 -race -timeout 5m ./tests --run=Test0
+	go test -v -count 1 -race -timeout 5m ./tests --run=Test100
 
 	# docker-compose down
 
