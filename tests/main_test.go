@@ -10,8 +10,11 @@ import (
 )
 
 var db *sql.DB
+var accaGrpcAddr string
 
 func TestMain(m *testing.M) {
+	flag.StringVar(&accaGrpcAddr, "grpc-addr", "127.0.0.1:3030", "gRPC acca API address")
+
 	log.SetPrefix("testmain: ")
 	log.SetFlags(0)
 
