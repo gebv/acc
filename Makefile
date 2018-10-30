@@ -34,9 +34,12 @@ restart-dev-infra:
 	docker-compose up -d
 	sleep 2
 
+build-race:
+	go build -v -race -o ./bin/acca ./cmd/acca/main.go
+
 .PHONY: test
 test: install restart-dev-infra setup
-	go test -v -count 1 -race -timeout 5m ./tests
+	go test -v -count 1 -race -timeout 5m ./tests --run=Test0
 
 	# docker-compose down
 
