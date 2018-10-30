@@ -40,7 +40,7 @@ CREATE OR REPLACE VIEW acca.ma_accounts AS
     SELECT
         acca.ma_get_user_id(key) AS user_id,
         array_agg(acc_id) AS acc_ids,
-        array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key))))::jsonb
+        array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key))))::jsonb as ma_balances
     FROM acca.accounts
     WHERE 'ma' @> key
     GROUP BY user_id;
@@ -81,7 +81,7 @@ CREATE OR REPLACE VIEW acca.recent_activity AS
         bc.acc_id as acc_id,
         bc.amount as amount,
         bc.balance as balance,
-        bc.ma_balance as ma_balance,
+        bc.ma_balance as ma_balances,
 
         -- operations
         o.tx_id as tx_id,
