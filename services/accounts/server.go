@@ -61,7 +61,7 @@ func (s *Server) CreateCurrency(ctx context.Context, req *acca.CreateCurrencyReq
 }
 
 func (s *Server) GetAccountsByIDs(ctx context.Context, req *acca.GetAccountsByIDsRequest) (*acca.GetAccountsByIDsResponse, error) {
-	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta FROM acca.accounts WHERE acc_id IN ($1)`, pq.Int64Array(req.GetAccIds()))
+	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta FROM acca.accounts WHERE acc_id = ANY($1)`, pq.Int64Array(req.GetAccIds()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed find accounts by ids %v.", req.GetAccIds())
 	}
@@ -69,16 +69,18 @@ func (s *Server) GetAccountsByIDs(ctx context.Context, req *acca.GetAccountsByID
 	defer rows.Close()
 	for rows.Next() {
 		row := acca.Account{}
+		m := new(Meta)
 		err := rows.Scan(
 			&row.AccId,
 			&row.CurrId,
 			&row.Key,
 			&row.Balance,
-			&row.Meta,
+			m,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed find accounts - scan row.")
 		}
+		row.Meta = *m
 		res.Accounts = append(res.Accounts, &row)
 	}
 	return res, nil

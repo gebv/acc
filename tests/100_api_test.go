@@ -51,3 +51,38 @@ func Test100_02CreateAndGetCurrency(t *testing.T) {
 		}
 	})
 }
+
+func Test100_02CreateAndGetAccount(t *testing.T) {
+	c := acca.NewAccountsClient(Conn)
+
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+	var md metadata.MD
+
+	res, err := c.GetCurrencies(ctx, &acca.GetCurrenciesRequest{Key: "from_i.curr"}, grpc.Trailer(&md))
+	require.NoError(t, err)
+	currID := res.Currencies[0].CurrId
+	require.NotEmpty(t, currID)
+
+	var accID int64
+
+	t.Run("CreateAccount", func(t *testing.T) {
+		res, err := c.CreateAccount(ctx, &acca.CreateAccountRequest{CurrencyId: currID, Key: "ns.user1.main", Meta: map[string]string{"foo": "bar"}}, grpc.Trailer(&md))
+		require.NoError(t, err)
+		require.NotEmpty(t, res.AccId)
+		accID = res.AccId
+	})
+
+	t.Run("GetAccount", func(t *testing.T) {
+		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{accID}}, grpc.Trailer(&md))
+		require.NoError(t, err)
+		if assert.NotEmpty(t, res) {
+			if assert.Len(t, res.Accounts, 1) {
+				got := res.Accounts[0]
+				assert.Equal(t, accID, got.AccId)
+				assert.Equal(t, currID, got.CurrId)
+				assert.Equal(t, "ns.user1.main", got.Key)
+				assert.Equal(t, map[string]string{"foo": "bar"}, got.Meta)
+			}
+		}
+	})
+}

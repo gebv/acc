@@ -9,7 +9,6 @@ service Accounts {
     }
 
     rpc GetCurrencies (GetCurrenciesRequest) returns (GetCurrenciesResponse) {
-
     }
 
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
