@@ -66,13 +66,13 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 	var accID int64
 
 	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := c.CreateAccount(ctx, &acca.CreateAccountRequest{CurrencyId: currID, Key: "ns.user1.main", Meta: map[string]string{"foo": "bar"}}, grpc.Trailer(&md))
+		res, err := c.CreateAccount(ctx, &acca.CreateAccountRequest{CurrencyId: currID, Key: "ma.user1.main", Meta: map[string]string{"foo": "bar"}}, grpc.Trailer(&md))
 		require.NoError(t, err)
 		require.NotEmpty(t, res.AccId)
 		accID = res.AccId
 	})
 
-	t.Run("GetAccount", func(t *testing.T) {
+	t.Run("GetAccountByID", func(t *testing.T) {
 		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{accID}}, grpc.Trailer(&md))
 		require.NoError(t, err)
 		if assert.NotEmpty(t, res) {
@@ -80,9 +80,49 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 				got := res.Accounts[0]
 				assert.Equal(t, accID, got.AccId)
 				assert.Equal(t, currID, got.CurrId)
-				assert.Equal(t, "ns.user1.main", got.Key)
+				assert.Equal(t, "ma.user1.main", got.Key)
 				assert.Equal(t, map[string]string{"foo": "bar"}, got.Meta)
+			} else {
+				t.Fatal("Expected accounts")
 			}
+		} else {
+			t.Fatal("Expected accounts")
+		}
+	})
+
+	t.Run("GetAccountByKey", func(t *testing.T) {
+		res, err := c.GetAccountsByKey(ctx, &acca.GetAccountsByKeyRequest{Key: "ma.user1.main"}, grpc.Trailer(&md))
+		require.NoError(t, err)
+		if assert.NotEmpty(t, res) {
+			if assert.Len(t, res.Accounts, 1) {
+				got := res.Accounts[0]
+				assert.Equal(t, accID, got.AccId)
+				assert.Equal(t, currID, got.CurrId)
+				assert.Equal(t, "ma.user1.main", got.Key)
+				assert.Equal(t, map[string]string{"foo": "bar"}, got.Meta)
+			} else {
+				t.Fatal("Expected accounts")
+			}
+		} else {
+			t.Fatal("Expected accounts")
+		}
+	})
+
+	t.Run("GetAccountByUser", func(t *testing.T) {
+		res, err := c.GetAccountsByUserID(ctx, &acca.GetAccountsByUserIDRequest{UserId: "user1"}, grpc.Trailer(&md))
+		require.NoError(t, err)
+
+		if assert.NotEmpty(t, res) && assert.NotEmpty(t, res.UserAccounts) {
+			if assert.Len(t, res.UserAccounts.Balances, 1) {
+				got := res.UserAccounts.Balances[0]
+				assert.Equal(t, accID, got.AccId)
+				assert.Equal(t, "main", got.Type)
+				assert.EqualValues(t, 0, got.Balance)
+			} else {
+				t.Fatal("Expected list balances")
+			}
+		} else {
+			t.Fatal("Expected user accounts")
 		}
 	})
 }

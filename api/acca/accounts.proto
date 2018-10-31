@@ -64,7 +64,7 @@ message GetAccountsByIDsResponse {
 }
 
 message GetAccountsByKeyRequest {
-    int64 key = 1;
+    string key = 1;
 }
 
 message GetAccountsByKeyResponse {

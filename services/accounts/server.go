@@ -95,16 +95,18 @@ func (s *Server) GetAccountsByKey(ctx context.Context, req *acca.GetAccountsByKe
 	defer rows.Close()
 	for rows.Next() {
 		row := acca.Account{}
+		m := new(Meta)
 		err := rows.Scan(
 			&row.AccId,
 			&row.CurrId,
 			&row.Key,
 			&row.Balance,
-			&row.Meta,
+			m,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed find accounts - scan row.")
 		}
+		row.Meta = *m
 		res.Accounts = append(res.Accounts, &row)
 	}
 	return res, nil
