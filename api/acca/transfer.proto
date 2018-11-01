@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package acca;
 
+import "api/acca/models.proto";
+
 service Transfer {
 
     rpc NewTransfer (NewTransferRequest) returns (NewTransferResponse) {
@@ -29,17 +31,7 @@ service Transfer {
 }
 
 message NewTransferRequest {
-    message oper {
-        int64 src_acc_id = 1;
-        int64 dst_acc_id = 2;
-        string type = 3;
-        int64 amount = 4;
-        string reason = 5;
-        map<string,string> meta = 6;
-        bool hold = 7;
-        int64 hold_acc_id = 8;
-    }
-    repeated oper opers = 1;
+    repeated TxOper opers = 1;
     map<string,string> meta = 2;
 }
 

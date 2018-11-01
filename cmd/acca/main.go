@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gebv/acca/services/accounts"
+	"github.com/gebv/acca/services/transfer"
 
 	"github.com/gebv/acca/api/acca"
 	"google.golang.org/grpc"
@@ -53,8 +54,10 @@ func main() {
 	}()
 
 	accountsServer := accounts.NewServer(db)
+	transferServer := transfer.NewServer(db)
 
 	acca.RegisterAccountsServer(s, accountsServer)
+	acca.RegisterTransferServer(s, transferServer)
 
 	if err := s.Serve(lis); err != nil {
 		log.Panic(err)

@@ -2,6 +2,17 @@ syntax = "proto3";
 
 package acca;
 
+message TxOper {
+    int64 src_acc_id = 1;
+    int64 dst_acc_id = 2;
+    string type = 3;
+    int64 amount = 4;
+    string reason = 5;
+    map<string,string> meta = 6;
+    bool hold = 7;
+    int64 hold_acc_id = 8;
+}
+
 message Currency {
     int64 curr_id = 1;
     string key = 2;
