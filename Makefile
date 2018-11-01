@@ -17,7 +17,8 @@ setup: setup-schema setup-functions setup-views setup-exts
 
 
 init:
-	go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
+	# go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
+	go install -v ./vendor/github.com/gogo/protobuf/protoc-gen-gogo
 
 gen:
 	# protobuf / gRPC
@@ -39,7 +40,7 @@ build-race:
 
 .PHONY: test
 test: install restart-dev-infra setup
-	go test -v -count 1 -race -timeout 5m ./tests --run=Test100
+	go test -v -count 1 -race -timeout 5m ./tests --run=Test1
 
 	# docker-compose down
 

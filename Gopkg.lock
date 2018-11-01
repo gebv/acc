@@ -10,16 +10,48 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:b00d66edb5f40dbbdcd37292851a61c2644356e37d8fb6517394ffb4b24b1c22"
+  digest = "1:c30185d83c2a351bf3b21e7784d3c9b84281d56d0958959c2a6cd8a47f422c49"
+  name = "github.com/gogo/protobuf"
+  packages = [
+    "gogoproto",
+    "jsonpb",
+    "plugin/compare",
+    "plugin/defaultcheck",
+    "plugin/description",
+    "plugin/embedcheck",
+    "plugin/enumstringer",
+    "plugin/equal",
+    "plugin/face",
+    "plugin/gostring",
+    "plugin/marshalto",
+    "plugin/oneofcheck",
+    "plugin/populate",
+    "plugin/size",
+    "plugin/stringer",
+    "plugin/testgen",
+    "plugin/union",
+    "plugin/unmarshal",
+    "proto",
+    "protoc-gen-gogo",
+    "protoc-gen-gogo/descriptor",
+    "protoc-gen-gogo/generator",
+    "protoc-gen-gogo/generator/internal/remap",
+    "protoc-gen-gogo/grpc",
+    "protoc-gen-gogo/plugin",
+    "sortkeys",
+    "types",
+    "vanity",
+    "vanity/command",
+  ]
+  pruneopts = "UT"
+  revision = "636bf0302bc95575d69441b25a2603156ffdddf1"
+  version = "v1.1.1"
+
+[[projects]]
+  digest = "1:4c0989ca0bcd10799064318923b9bc2db6b4d6338dd75f3f2d86c3511aaaf5cf"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
-    "protoc-gen-go",
-    "protoc-gen-go/descriptor",
-    "protoc-gen-go/generator",
-    "protoc-gen-go/generator/internal/remap",
-    "protoc-gen-go/grpc",
-    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -161,8 +193,11 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/gogo/protobuf/gogoproto",
+    "github.com/gogo/protobuf/jsonpb",
+    "github.com/gogo/protobuf/proto",
+    "github.com/gogo/protobuf/protoc-gen-gogo",
     "github.com/golang/protobuf/proto",
-    "github.com/golang/protobuf/protoc-gen-go",
     "github.com/lib/pq",
     "github.com/pkg/errors",
     "github.com/stretchr/testify/assert",

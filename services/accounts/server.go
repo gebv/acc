@@ -130,6 +130,8 @@ func (s *Server) GetAccountsByUserID(ctx context.Context, req *acca.GetAccountsB
 	return res, nil
 }
 
+var _ acca.AccountsServer = (*Server)(nil)
+
 func convertBsiToAccaBsi(bsi BalancesShortInfo) []*acca.BalanceShortInfo {
 	res := make([]*acca.BalanceShortInfo, len(bsi), len(bsi))
 	for i, b := range bsi {
@@ -141,5 +143,3 @@ func convertBsiToAccaBsi(bsi BalancesShortInfo) []*acca.BalanceShortInfo {
 	}
 	return res
 }
-
-var _ acca.AccountsServer = (*Server)(nil)
