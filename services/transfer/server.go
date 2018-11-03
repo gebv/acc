@@ -3,7 +3,6 @@ package transfer
 import (
 	"context"
 	"database/sql"
-	"log"
 
 	"github.com/gebv/acca/api/acca"
 	"github.com/pkg/errors"
@@ -21,11 +20,6 @@ func (s *Server) NewTransfer(ctx context.Context, req *acca.NewTransferRequest) 
 	res := &acca.NewTransferResponse{}
 	opers := pgOpers(req.Opers)
 	meta := MetaFrom(req.Meta)
-	log.Println("DEBUG:")
-	{
-		dat, _ := opers.Value()
-		log.Printf("%s\n", dat)
-	}
 	err := s.db.QueryRow(`SELECT acca.new_transfer($1, $2, $3)`, opers, req.GetReason(), meta).Scan(&res.TxId)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed created new transfer.")
@@ -33,20 +27,37 @@ func (s *Server) NewTransfer(ctx context.Context, req *acca.NewTransferRequest) 
 	return res, nil
 }
 
-func (s *Server) AcceptTx(ctx context.Context, req *acca.AcceptTxRequest) (res *acca.AcceptTxResponse, err error) {
-	panic("not implemented")
+func (s *Server) AcceptTx(ctx context.Context, req *acca.AcceptTxRequest) (*acca.AcceptTxResponse, error) {
+	_, err := s.db.Exec(`SELECT acca.accept_tx($1)`, req.TxId)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed reject transaction %d.", req.TxId)
+	}
+	return &acca.AcceptTxResponse{}, nil
 }
 
-func (s *Server) RejectTx(ctx context.Context, req *acca.RejectTxRequest) (res *acca.RejectTxResponse, err error) {
-	panic("not implemented")
+func (s *Server) RejectTx(ctx context.Context, req *acca.RejectTxRequest) (*acca.RejectTxResponse, error) {
+	_, err := s.db.Exec(`SELECT acca.reject_tx($1)`, req.TxId)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed reject transaction %d.", req.TxId)
+	}
+	return &acca.RejectTxResponse{}, nil
 }
 
-func (s *Server) RollbackTx(ctx context.Context, req *acca.RollbackTxRequest) (res *acca.RollbackTxResponse, err error) {
-	panic("not implemented")
+func (s *Server) RollbackTx(ctx context.Context, req *acca.RollbackTxRequest) (*acca.RollbackTxResponse, error) {
+	_, err := s.db.Exec(`SELECT acca.rollback_tx($1)`, req.TxId)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Failed rollback transaction %d.", req.TxId)
+	}
+	return &acca.RollbackTxResponse{}, nil
 }
 
-func (s *Server) HandleRequests(ctx context.Context, req *acca.HandleRequestsRequest) (res *acca.HandleRequestsResponse, err error) {
-	panic("not implemented")
+func (s *Server) HandleRequests(ctx context.Context, req *acca.HandleRequestsRequest) (*acca.HandleRequestsResponse, error) {
+	res := &acca.HandleRequestsResponse{}
+	err := s.db.QueryRow(`SELECT t.ok, t.err FROM acca.handle_requests($1) t;`, req.Limit).Scan(&res.NumOk, &res.NumErr)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed handler requests from queue.")
+	}
+	return res, nil
 }
 
 func (s *Server) GetUpdates(req *acca.GetUpdatesRequest, stream acca.Transfer_GetUpdatesServer) error {

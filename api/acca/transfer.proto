@@ -27,7 +27,6 @@ service Transfer {
     // TODO:
     // - get Tx by ID with opers
     // - recent activity (offset, limit)
-
 }
 
 message NewTransferRequest {
