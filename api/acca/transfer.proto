@@ -33,6 +33,7 @@ service Transfer {
 message NewTransferRequest {
     repeated TxOper opers = 1;
     map<string,string> meta = 2;
+    string reason = 3;
 }
 
 message NewTransferResponse {

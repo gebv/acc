@@ -2,6 +2,13 @@ syntax = "proto3";
 
 package acca;
 
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.enumdecl_all) = true;
+
 message TxOper {
     int64 src_acc_id = 1;
     int64 dst_acc_id = 2;
@@ -9,7 +16,7 @@ message TxOper {
     int64 amount = 4;
     string reason = 5;
     map<string,string> meta = 6;
-    bool hold = 7;
+    bool hold = 7 [(gogoproto.jsontag) = "hold"]; // remove omitempty
     int64 hold_acc_id = 8;
 }
 
