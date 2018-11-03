@@ -15,8 +15,17 @@ import (
 var (
 	Ctx  context.Context
 	Conn *grpc.ClientConn
+
+	// list accounts
+	// key - accountID
+	// value - balance
+	accounts = map[int64]int64{}
 )
 
+// Required case for tests in this file
+//
+// init gRPC client
+// TODO: move to separate package
 func Test100_01SetupApi(t *testing.T) {
 	Ctx, _ = context.WithCancel(context.Background())
 
@@ -125,4 +134,84 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 			t.Fatal("Expected user accounts")
 		}
 	})
+}
+
+func Test100_03CreateTransfer(t *testing.T) {
+	var _, acc1ID, acc2ID int64
+	t.Run("Init", func(t *testing.T) {
+		_, acc1ID = createAccount(t, "from_i.curr", "ma.user1.main")
+		_, acc2ID = createAccount(t, "from_i.curr", "ma.user2.main")
+		loadAccountBalances(t, "ma")
+	})
+
+	require.NotEmpty(t, acc1ID)
+	require.NotEmpty(t, acc2ID)
+
+	t.Run("Transfer", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.NewTransfer(ctx, &acca.NewTransferRequest{
+			Reason: "testing",
+			Meta:   map[string]string{"foo": "bar"},
+			Opers: []*acca.TxOper{
+				{
+					SrcAccId: acc1ID,
+					DstAccId: acc2ID,
+					Type:     Recharge,
+					Amount:   20,
+					Reason:   "reacharge",
+					Meta:     map[string]string{"foo": "bar"},
+				},
+				{
+					SrcAccId: acc2ID,
+					DstAccId: acc1ID,
+					Type:     Internal,
+					Amount:   20,
+					Reason:   "internal",
+					Meta:     map[string]string{"foo": "bar"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.NotEmpty(t, res.TxId)
+	})
+}
+
+func loadAccountBalances(t *testing.T, key string) {
+	c := acca.NewAccountsClient(Conn)
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+	res, err := c.GetAccountsByKey(ctx, &acca.GetAccountsByKeyRequest{Key: key})
+	require.NoError(t, err)
+	require.NotEmpty(t, res.Accounts)
+	for _, acc := range res.Accounts {
+		accounts[acc.AccId] = acc.Balance
+	}
+}
+
+func createAccount(t *testing.T, curr, key string) (currID, accID int64) {
+	c := acca.NewAccountsClient(Conn)
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+	{
+		c.CreateCurrency(ctx, &acca.CreateCurrencyRequest{Key: key, Meta: map[string]string{"foo": "bar"}})
+	}
+
+	{
+		res, err := c.GetCurrencies(ctx, &acca.GetCurrenciesRequest{Key: key})
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Currencies)
+		currID = res.Currencies[0].CurrId
+		require.NotEmpty(t, currID)
+	}
+
+	{
+		res, err := c.CreateAccount(ctx, &acca.CreateAccountRequest{CurrencyId: currID, Key: key, Meta: map[string]string{"foo": "bar"}})
+		require.NoError(t, err)
+		require.NotEmpty(t, res.AccId)
+		accID = res.AccId
+	}
+
+	return
 }
