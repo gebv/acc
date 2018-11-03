@@ -176,6 +176,29 @@ func Test100_03CreateTransfer(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotEmpty(t, res.TxId)
 	})
+
+	t.Run("Apply", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.HandleRequests(ctx, &acca.HandleRequestsRequest{Limit: 1})
+		require.NoError(t, err)
+
+		require.EqualValues(t, 1, res.NumOk)
+		require.EqualValues(t, 0, res.NumErr)
+	})
+
+	t.Run("CheckBalances", func(t *testing.T) {
+		c := acca.NewAccountsClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{acc1ID, acc2ID}})
+		require.NoError(t, err)
+		require.Len(t, res.Accounts, 2)
+		loadAccountBalances(t, "ma")
+		require.EqualValues(t, 40, accounts[acc1ID])
+		require.EqualValues(t, 0, accounts[acc2ID])
+	})
 }
 
 func loadAccountBalances(t *testing.T, key string) {
