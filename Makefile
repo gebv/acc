@@ -19,11 +19,12 @@ setup: setup-schema setup-functions setup-views setup-exts
 init:
 	# go install -v ./vendor/github.com/golang/protobuf/protoc-gen-go
 	go install -v ./vendor/github.com/gogo/protobuf/protoc-gen-gogo
+	go install -v ./vendor/github.com/gogo/protobuf/protoc-gen-gofast
 
 gen:
 	# protobuf / gRPC
 	find ./api -name '*.pb.go' -delete
-	protoc --proto_path=. --proto_path=./vendor --go_out=plugins=grpc:. ./api/acca/*.proto
+	protoc --proto_path=. --proto_path=./vendor --gofast_out=plugins=grpc:. ./api/acca/*.proto
 
 .PHONY: install
 install:
@@ -40,7 +41,7 @@ build-race:
 
 .PHONY: test
 test: install restart-dev-infra setup
-	go test -v -count 1 -race -timeout 5m ./tests --run=Test1
+	go test -v -count 1 -race -timeout 5m ./tests --run=Test100
 
 	# docker-compose down
 

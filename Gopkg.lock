@@ -10,7 +10,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:c30185d83c2a351bf3b21e7784d3c9b84281d56d0958959c2a6cd8a47f422c49"
+  digest = "1:eba7e1e5ef5cb9973b0bba7b6571b20cd18dded0bead82208ed2d5b0160a76fc"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -32,6 +32,7 @@
     "plugin/union",
     "plugin/unmarshal",
     "proto",
+    "protoc-gen-gofast",
     "protoc-gen-gogo",
     "protoc-gen-gogo/descriptor",
     "protoc-gen-gogo/generator",
@@ -196,13 +197,12 @@
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/jsonpb",
     "github.com/gogo/protobuf/proto",
+    "github.com/gogo/protobuf/protoc-gen-gofast",
     "github.com/gogo/protobuf/protoc-gen-gogo",
-    "github.com/golang/protobuf/proto",
     "github.com/lib/pq",
     "github.com/pkg/errors",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
-    "golang.org/x/net/context",
     "google.golang.org/grpc",
     "google.golang.org/grpc/metadata",
   ]
