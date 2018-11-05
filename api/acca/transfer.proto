@@ -24,9 +24,39 @@ service Transfer {
     rpc GetUpdates (GetUpdatesRequest) returns (stream Update) {
     }
 
+    rpc GetTxByID (GetTxByIDRequest) returns (GetTxByIDResponse) {
+    }
+
+    rpc RecentActivity (RecentActivityRequest) returns (RecentActivityResponse) {
+    }
+
+    rpc MARecentActivity (MARecentActivityRequest) returns (MARecentActivityResponse) {
+    }
+}
+
+message MARecentActivityRequest {
+
+}
+
+message MARecentActivityResponse {
+
+}
+
+message GetTxByIDRequest {
+    int64 tx_id = 1;
+}
+
+message GetTxByIDResponse {
     // TODO:
-    // - get Tx by ID with opers
-    // - recent activity (offset, limit)
+}
+
+message RecentActivityRequest {
+    int64 offset = 1;
+    int64 limit = 2;
+}
+
+message RecentActivityResponse {
+
 }
 
 message NewTransferRequest {

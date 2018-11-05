@@ -64,4 +64,16 @@ func (s *Server) GetUpdates(req *acca.GetUpdatesRequest, stream acca.Transfer_Ge
 	panic("not implemented")
 }
 
+func (s *Server) GetTxByID(ctx context.Context, req *acca.GetTxByIDRequest) (*acca.GetTxByIDResponse, error) {
+	panic("not implemented")
+}
+
+func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityRequest) (*acca.RecentActivityResponse, error) {
+	panic("not implemented")
+}
+
+func (s *Server) MARecentActivity(ctx context.Context, req *acca.MARecentActivityRequest) (*acca.MARecentActivityResponse, error) {
+	panic("not implemented")
+}
+
 var _ acca.TransferServer = (*Server)(nil)

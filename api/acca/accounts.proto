@@ -22,9 +22,6 @@ service Accounts {
 
     rpc GetAccountsByUserID (GetAccountsByUserIDRequest) returns (GetAccountsByUserIDResponse) {
     }
-
-    // TODO:
-    // - list Account by UserID
 }
 
 message CreateCurrencyRequest {

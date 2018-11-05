@@ -35,7 +35,7 @@ func (m *CreateCurrencyRequest) Reset()         { *m = CreateCurrencyRequest{} }
 func (m *CreateCurrencyRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateCurrencyRequest) ProtoMessage()    {}
 func (*CreateCurrencyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{0}
+	return fileDescriptor_accounts_94c7373753829733, []int{0}
 }
 func (m *CreateCurrencyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -89,7 +89,7 @@ func (m *CreateCurrencyResponse) Reset()         { *m = CreateCurrencyResponse{}
 func (m *CreateCurrencyResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateCurrencyResponse) ProtoMessage()    {}
 func (*CreateCurrencyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{1}
+	return fileDescriptor_accounts_94c7373753829733, []int{1}
 }
 func (m *CreateCurrencyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -136,7 +136,7 @@ func (m *GetCurrenciesRequest) Reset()         { *m = GetCurrenciesRequest{} }
 func (m *GetCurrenciesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetCurrenciesRequest) ProtoMessage()    {}
 func (*GetCurrenciesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{2}
+	return fileDescriptor_accounts_94c7373753829733, []int{2}
 }
 func (m *GetCurrenciesRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -183,7 +183,7 @@ func (m *GetCurrenciesResponse) Reset()         { *m = GetCurrenciesResponse{} }
 func (m *GetCurrenciesResponse) String() string { return proto.CompactTextString(m) }
 func (*GetCurrenciesResponse) ProtoMessage()    {}
 func (*GetCurrenciesResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{3}
+	return fileDescriptor_accounts_94c7373753829733, []int{3}
 }
 func (m *GetCurrenciesResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -232,7 +232,7 @@ func (m *CreateAccountRequest) Reset()         { *m = CreateAccountRequest{} }
 func (m *CreateAccountRequest) String() string { return proto.CompactTextString(m) }
 func (*CreateAccountRequest) ProtoMessage()    {}
 func (*CreateAccountRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{4}
+	return fileDescriptor_accounts_94c7373753829733, []int{4}
 }
 func (m *CreateAccountRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -293,7 +293,7 @@ func (m *CreateAccountResponse) Reset()         { *m = CreateAccountResponse{} }
 func (m *CreateAccountResponse) String() string { return proto.CompactTextString(m) }
 func (*CreateAccountResponse) ProtoMessage()    {}
 func (*CreateAccountResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{5}
+	return fileDescriptor_accounts_94c7373753829733, []int{5}
 }
 func (m *CreateAccountResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -340,7 +340,7 @@ func (m *GetAccountsByIDsRequest) Reset()         { *m = GetAccountsByIDsRequest
 func (m *GetAccountsByIDsRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByIDsRequest) ProtoMessage()    {}
 func (*GetAccountsByIDsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{6}
+	return fileDescriptor_accounts_94c7373753829733, []int{6}
 }
 func (m *GetAccountsByIDsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -387,7 +387,7 @@ func (m *GetAccountsByIDsResponse) Reset()         { *m = GetAccountsByIDsRespon
 func (m *GetAccountsByIDsResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByIDsResponse) ProtoMessage()    {}
 func (*GetAccountsByIDsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{7}
+	return fileDescriptor_accounts_94c7373753829733, []int{7}
 }
 func (m *GetAccountsByIDsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -434,7 +434,7 @@ func (m *GetAccountsByKeyRequest) Reset()         { *m = GetAccountsByKeyRequest
 func (m *GetAccountsByKeyRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByKeyRequest) ProtoMessage()    {}
 func (*GetAccountsByKeyRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{8}
+	return fileDescriptor_accounts_94c7373753829733, []int{8}
 }
 func (m *GetAccountsByKeyRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -481,7 +481,7 @@ func (m *GetAccountsByKeyResponse) Reset()         { *m = GetAccountsByKeyRespon
 func (m *GetAccountsByKeyResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByKeyResponse) ProtoMessage()    {}
 func (*GetAccountsByKeyResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{9}
+	return fileDescriptor_accounts_94c7373753829733, []int{9}
 }
 func (m *GetAccountsByKeyResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -528,7 +528,7 @@ func (m *GetAccountsByUserIDRequest) Reset()         { *m = GetAccountsByUserIDR
 func (m *GetAccountsByUserIDRequest) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByUserIDRequest) ProtoMessage()    {}
 func (*GetAccountsByUserIDRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{10}
+	return fileDescriptor_accounts_94c7373753829733, []int{10}
 }
 func (m *GetAccountsByUserIDRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -575,7 +575,7 @@ func (m *GetAccountsByUserIDResponse) Reset()         { *m = GetAccountsByUserID
 func (m *GetAccountsByUserIDResponse) String() string { return proto.CompactTextString(m) }
 func (*GetAccountsByUserIDResponse) ProtoMessage()    {}
 func (*GetAccountsByUserIDResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_accounts_3856b41c16cc742d, []int{11}
+	return fileDescriptor_accounts_94c7373753829733, []int{11}
 }
 func (m *GetAccountsByUserIDResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2807,9 +2807,9 @@ var (
 	ErrIntOverflowAccounts   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("api/acca/accounts.proto", fileDescriptor_accounts_3856b41c16cc742d) }
+func init() { proto.RegisterFile("api/acca/accounts.proto", fileDescriptor_accounts_94c7373753829733) }
 
-var fileDescriptor_accounts_3856b41c16cc742d = []byte{
+var fileDescriptor_accounts_94c7373753829733 = []byte{
 	// 541 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x54, 0xdd, 0x8a, 0xd3, 0x40,
 	0x14, 0xee, 0x34, 0xbb, 0x75, 0x7b, 0x6a, 0x97, 0x32, 0xb6, 0x36, 0xa4, 0x1a, 0xeb, 0xa0, 0x50,
