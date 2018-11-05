@@ -29,17 +29,6 @@ service Transfer {
 
     rpc RecentActivity (RecentActivityRequest) returns (RecentActivityResponse) {
     }
-
-    rpc MARecentActivity (MARecentActivityRequest) returns (MARecentActivityResponse) {
-    }
-}
-
-message MARecentActivityRequest {
-
-}
-
-message MARecentActivityResponse {
-
 }
 
 message GetTxByIDRequest {
@@ -51,12 +40,12 @@ message GetTxByIDResponse {
 }
 
 message RecentActivityRequest {
-    int64 offset = 1;
+    int64 last_id = 1;
     int64 limit = 2;
 }
 
 message RecentActivityResponse {
-
+    repeated RecentActivity list = 1;
 }
 
 message NewTransferRequest {

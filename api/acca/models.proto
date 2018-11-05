@@ -9,6 +9,61 @@ option (gogoproto.marshaler_all) = true;
 option (gogoproto.sizer_all) = true;
 option (gogoproto.enumdecl_all) = true;
 
+enum TxStatus {
+    UNKNOWN_TS = 0;
+    DRAFT = 1;
+    AUTH = 2;
+    ACCEPTED = 3;
+    REJECTED = 4;
+    FAILED = 5;
+}
+
+enum OperType {
+    UNKNOWN_OT = 0;
+    INTERNAL = 1;
+    RECHARGE = 2;
+    WITHDRAW = 3;
+}
+
+// enum OperStatus {
+//     UNKNOWN = 0;
+//     DRAFT = 1;
+//     HOLD = 2;
+//     ACCEPTED = 3;
+//     REJECTED = 4;
+// }
+
+message Tx {
+    int64 tx_id = 1;
+    string reason = 2;
+    map<string,string> meta = 3;
+    TxStatus status = 4;
+    string errm = 5;
+    int64 created_at = 6;
+    int64 updated_at = 7;
+
+    repeated TxOper opers = 8;
+}
+
+message RecentActivity {
+    int64 id = 1;
+    int64 oper_id = 2;
+    int64 acc_id = 3;
+    int64 amount = 4;
+    int64 balance = 5;
+    repeated BalanceShortInfo ma_balances = 6;
+    int64 tx_id = 7;
+
+    int64 src_acc_id = 8;
+    int64 dst_acc_id = 9;
+    string reason = 10;
+    string tx_reason = 11;
+
+    string acc_key = 12;
+    int64 acc_curr_id = 13;
+    string acc_curr_key = 14;
+}
+
 message TxOper {
     int64 src_acc_id = 1;
     int64 dst_acc_id = 2;
@@ -27,9 +82,9 @@ message Currency {
 }
 
 message BalanceShortInfo {
-    string type = 1;
-    int64 balance = 2;
-    int64 acc_id = 3;
+    string type = 1 [(gogoproto.jsontag) = "t"];
+    int64 balance = 2 [(gogoproto.jsontag) = "b"];
+    int64 acc_id = 3 [(gogoproto.jsontag) = "id"];
 }
 
 message Account {
