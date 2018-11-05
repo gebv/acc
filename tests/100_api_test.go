@@ -238,3 +238,20 @@ func createAccount(t *testing.T, curr, key string) (currID, accID int64) {
 
 	return
 }
+
+func Test100_04RecentActivity(t *testing.T) {
+	c := acca.NewTransferClient(Conn)
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+	res, err := c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: 0, Limit: 2})
+	require.NoError(t, err)
+	require.True(t, len(res.List) > 0)
+
+	lastID := res.List[len(res.List)-1].Id
+
+	res, err = c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: lastID, Limit: 2})
+	require.NoError(t, err)
+	require.True(t, len(res.List) > 0)
+
+	// TODO: more tests
+}

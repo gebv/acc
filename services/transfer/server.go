@@ -3,8 +3,10 @@ package transfer
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/gebv/acca/api/acca"
+	"github.com/gebv/acca/services/accounts"
 	"github.com/pkg/errors"
 )
 
@@ -69,11 +71,79 @@ func (s *Server) GetTxByID(ctx context.Context, req *acca.GetTxByIDRequest) (*ac
 }
 
 func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityRequest) (*acca.RecentActivityResponse, error) {
-	panic("not implemented")
-}
+	query := `SELECT
+		id,
+		oper_id,
+		acc_id,
+		amount,
+		balance,
+		ma_balances,
+		tx_id,
+		src_acc_id,
+		dst_acc_id,
+		reason,
+		tx_reason,
+		acc_key,
+		acc_curr_id,
+		acc_curr_key
 
-func (s *Server) MARecentActivity(ctx context.Context, req *acca.MARecentActivityRequest) (*acca.MARecentActivityResponse, error) {
-	panic("not implemented")
+	FROM acca.recent_activity`
+	args := []interface{}{}
+	if req.LastId > 0 {
+		args = append(args, req.LastId)
+		query += fmt.Sprintf(` WHERE id < $%d`, len(args))
+	}
+	query += ` ORDER BY id DESC`
+	if req.Limit > 0 {
+		if req.Limit > 50 {
+			req.Limit = 50
+		}
+	} else {
+		req.Limit = 50
+	}
+	args = append(args, req.Limit)
+	query += fmt.Sprintf(` LIMIT $%d`, len(args))
+
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed get recent activity.")
+	}
+	res := &acca.RecentActivityResponse{}
+	defer rows.Close()
+	for rows.Next() {
+		row := acca.RecentActivity{}
+		var maBalances accounts.BalancesShortInfo
+		err := rows.Scan(
+			&row.Id,
+			&row.OperId,
+			&row.AccId,
+			&row.Amount,
+			&row.Balance,
+			&maBalances, // TODO
+			&row.TxId,
+			&row.SrcAccId,
+			&row.DstAccId,
+			&row.Reason,
+			&row.TxReason,
+			&row.AccKey,
+			&row.AccCurrId,
+			&row.AccCurrKey,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed scan row.")
+		}
+		if len(maBalances) > 0 {
+			row.MaBalances = maBalances
+		}
+
+		res.List = append(res.List, &row)
+	}
+
+	if rows.Err() != nil {
+		return nil, errors.Wrap(err, "Failed scan row.")
+	}
+
+	return res, nil
 }
 
 var _ acca.TransferServer = (*Server)(nil)

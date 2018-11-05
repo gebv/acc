@@ -5,6 +5,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
+
+	"github.com/gebv/acca/api/acca"
 )
 
 type Meta map[string]string
@@ -34,13 +36,7 @@ func (p *Meta) Scan(in interface{}) error {
 	}
 }
 
-type BalanceShortInfo struct {
-	Balance int64  `json:"b"`
-	Type    string `json:"t"`
-	AccID   int64  `json:"id"`
-}
-
-type BalancesShortInfo []BalanceShortInfo
+type BalancesShortInfo []*acca.BalanceShortInfo
 
 func (p BalancesShortInfo) Value() (driver.Value, error) {
 	buf := new(bytes.Buffer)
