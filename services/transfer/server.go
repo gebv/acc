@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/gebv/acca/api/acca"
 	"github.com/gebv/acca/services/accounts"
@@ -11,11 +12,14 @@ import (
 )
 
 func NewServer(db *sql.DB) *Server {
-	return &Server{db: db}
+	h := &hub{db: db}
+	go h.run(context.Background())
+	return &Server{db: db, hub: h}
 }
 
 type Server struct {
-	db *sql.DB
+	db  *sql.DB
+	hub *hub
 }
 
 func (s *Server) NewTransfer(ctx context.Context, req *acca.NewTransferRequest) (*acca.NewTransferResponse, error) {
@@ -63,7 +67,19 @@ func (s *Server) HandleRequests(ctx context.Context, req *acca.HandleRequestsReq
 }
 
 func (s *Server) GetUpdates(req *acca.GetUpdatesRequest, stream acca.Transfer_GetUpdatesServer) error {
-	panic("not implemented")
+	subID, ch := s.hub.subscribe()
+	log.Println("Successful subscribe", subID)
+	defer func() {
+		s.hub.unsubscribe(subID)
+		log.Println("Successful unsubscribe", subID)
+	}()
+
+	for u := range ch {
+		if err := stream.Send(u); err != nil {
+			return errors.Wrap(err, "Failed to send update.")
+		}
+	}
+	return nil
 }
 
 func (s *Server) GetTxByID(ctx context.Context, req *acca.GetTxByIDRequest) (*acca.GetTxByIDResponse, error) {
