@@ -2,7 +2,10 @@ package tests
 
 import (
 	"context"
+	"log"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -146,6 +149,29 @@ func Test100_03CreateTransfer(t *testing.T) {
 
 	require.NotEmpty(t, acc1ID)
 	require.NotEmpty(t, acc2ID)
+	mux := sync.RWMutex{}
+	recivedUpdates := []*acca.Update{}
+
+	t.Run("GetUpdates", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetUpdates(ctx, &acca.GetUpdatesRequest{})
+		require.NoError(t, err)
+		go func() {
+			for {
+				msg, err := res.Recv()
+				if err != nil {
+					log.Println(err)
+					return
+				}
+				mux.Lock()
+				recivedUpdates = append(recivedUpdates, msg)
+				mux.Unlock()
+			}
+		}()
+
+	})
 
 	t.Run("Transfer", func(t *testing.T) {
 		c := acca.NewTransferClient(Conn)
@@ -199,6 +225,21 @@ func Test100_03CreateTransfer(t *testing.T) {
 		require.EqualValues(t, 40, accounts[acc1ID])
 		require.EqualValues(t, 0, accounts[acc2ID])
 	})
+
+	time.Sleep(time.Millisecond * 10)
+
+	t.Run("CheckSubscribeEvents", func(t *testing.T) {
+		mux.RLock()
+		require.Len(t, recivedUpdates, 4)
+		mux.RUnlock()
+
+		// last status tx accepted
+		// first status tx draft
+
+		require.EqualValues(t, "draft", recivedUpdates[0].Type.(*acca.Update_TxStatus).TxStatus.NewStatus)
+		require.EqualValues(t, "accepted", recivedUpdates[len(recivedUpdates)-1].Type.(*acca.Update_TxStatus).TxStatus.NewStatus)
+	})
+
 }
 
 func loadAccountBalances(t *testing.T, key string) {
