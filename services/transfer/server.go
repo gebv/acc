@@ -6,13 +6,15 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/lib/pq"
+
 	"github.com/gebv/acca/api/acca"
 	"github.com/gebv/acca/services/accounts"
 	"github.com/pkg/errors"
 )
 
-func NewServer(db *sql.DB) *Server {
-	h := &hub{db: db}
+func NewServer(db *sql.DB, dbl *pq.Listener) *Server {
+	h := &hub{dbl: dbl}
 	go h.run(context.Background())
 	return &Server{db: db, hub: h}
 }

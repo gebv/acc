@@ -2,12 +2,10 @@ package transfer
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/gebv/acca/api/acca"
 	"github.com/lib/pq"
@@ -16,7 +14,7 @@ import (
 const cap = 16384
 
 type hub struct {
-	db        *sql.DB
+	dbl       *pq.Listener
 	rw        sync.RWMutex
 	subs      map[uint]chan<- *acca.Update // subID -> channel
 	lastSubID uint
@@ -63,20 +61,11 @@ func (h *hub) unsubscribe(subIDs ...uint) {
 }
 
 func (h *hub) run(ctx context.Context) {
-	reportErr := func(ev pq.ListenerEventType, err error) {
-		if err != nil {
-			log.Printf("Failed to start listener: et=%v, err=%s", ev, err)
-		}
-	}
-
-	l := pq.NewListener("postgres://acca:acca@127.0.0.1:5432/acca?sslmode=disable", 1*time.Second, 1*time.Second, reportErr)
-	defer l.Close()
-
-	h.pgSubscribe(l)
+	h.pgSubscribe(h.dbl)
 
 	for ctx.Err() == nil {
 		h.reInit()
-		h.waitUpdate(l)
+		h.waitUpdate(h.dbl)
 	}
 }
 

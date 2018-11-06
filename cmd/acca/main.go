@@ -11,6 +11,7 @@ import (
 
 	"github.com/gebv/acca/services/accounts"
 	"github.com/gebv/acca/services/transfer"
+	"github.com/lib/pq"
 
 	"github.com/gebv/acca/api/acca"
 	"google.golang.org/grpc"
@@ -21,7 +22,8 @@ var VERSION = "dev"
 var (
 	listGrpcAddrF = flag.String("grpc-addr", "127.0.0.1:3030", "gRPC server address.")
 
-	db *sql.DB
+	db  *sql.DB
+	dbl *pq.Listener
 )
 
 func main() {
@@ -36,6 +38,7 @@ func main() {
 	}
 
 	setupPostgres()
+	setupPostgresListener()
 
 	s := grpc.NewServer()
 
@@ -54,7 +57,7 @@ func main() {
 	}()
 
 	accountsServer := accounts.NewServer(db)
-	transferServer := transfer.NewServer(db)
+	transferServer := transfer.NewServer(db, dbl)
 
 	acca.RegisterAccountsServer(s, accountsServer)
 	acca.RegisterTransferServer(s, transferServer)
@@ -76,4 +79,13 @@ func setupPostgres() {
 	if err = db.Ping(); err != nil {
 		log.Panic("Failed to connect ping Postgres:", err)
 	}
+}
+
+func setupPostgresListener() {
+	reportErr := func(ev pq.ListenerEventType, err error) {
+		if err != nil {
+			log.Printf("Failed to start listener: et=%v, err=%s", ev, err)
+		}
+	}
+	dbl = pq.NewListener("postgres://acca:acca@127.0.0.1:5432/acca?sslmode=disable", 1*time.Second, 1*time.Second, reportErr)
 }
