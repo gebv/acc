@@ -28,6 +28,7 @@ var (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	flag.Parse()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

@@ -30,13 +30,16 @@ var (
 // init gRPC client
 // TODO: move to separate package
 func Test100_01SetupApi(t *testing.T) {
-	Ctx, _ = context.WithCancel(context.Background())
 
-	var err error
-	Conn, err = grpc.Dial(accaGrpcAddr, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		t.Fatal(err)
-	}
+	t.Run("ConnectToBackend", func(t *testing.T) {
+		var err error
+		t.Logf("Listen address: %v", accaGrpcAddr)
+		Conn, err = grpc.Dial(accaGrpcAddr, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+
 }
 
 func Test100_02CreateAndGetCurrency(t *testing.T) {

@@ -41,7 +41,11 @@ build-race:
 
 .PHONY: test
 test: install restart-dev-infra setup
-	go test -v -count 1 -race -timeout 5m ./tests --run=Test0
+	@echo Unit tests
+	go test -v -count 1 -race -timeout 1m ./tests --run=Test0
+
+	@echo Integration tests
+	go test -v -count 1 -race -timeout 5m ./tests --grpc-addr=127.0.0.1:3031 --run=Test1
 
 	# docker-compose down
 
