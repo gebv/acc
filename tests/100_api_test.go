@@ -243,6 +243,20 @@ func Test100_03CreateTransfer(t *testing.T) {
 		require.EqualValues(t, "accepted", recivedUpdates[len(recivedUpdates)-1].Type.(*acca.Update_TxStatus).TxStatus.NewStatus)
 	})
 
+	t.Run("LoadTxByEvents", func(t *testing.T) {
+		mux.RLock()
+		txID := recivedUpdates[0].Type.(*acca.Update_TxStatus).TxStatus.TxId
+		mux.RUnlock()
+
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetTxByID(ctx, &acca.GetTxByIDRequest{TxId: txID, WithOpers: true})
+		require.NoError(t, err)
+		require.Equal(t, txID, res.Tx.TxId)
+		require.Len(t, res.Opers, 2)
+	})
+
 }
 
 func loadAccountBalances(t *testing.T, key string) {
