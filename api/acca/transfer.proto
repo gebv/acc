@@ -33,10 +33,12 @@ service Transfer {
 
 message GetTxByIDRequest {
     int64 tx_id = 1;
+    bool with_opers = 2;
 }
 
 message GetTxByIDResponse {
-    // TODO:
+    Tx tx = 1;
+    repeated Oper opers = 2;
 }
 
 message RecentActivityRequest {
