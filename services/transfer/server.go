@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/lib/pq"
 
@@ -85,7 +86,105 @@ func (s *Server) GetUpdates(req *acca.GetUpdatesRequest, stream acca.Transfer_Ge
 }
 
 func (s *Server) GetTxByID(ctx context.Context, req *acca.GetTxByIDRequest) (*acca.GetTxByIDResponse, error) {
-	panic("not implemented")
+	qFindTx := `SELECT
+		tx_id,
+		reason,
+		meta,
+		status,
+		errm,
+		created_at,
+		updated_at
+	FROM acca.transactions WHERE tx_id = $1`
+
+	tx := &acca.Tx{}
+	{
+		m := new(Meta)
+		var status string
+		var errm *string
+		err := s.db.QueryRow(qFindTx, req.TxId).Scan(
+			&tx.TxId,
+			&tx.Reason,
+			m,
+			&status,
+			&errm,
+			&tx.CreatedAt,
+			&tx.UpdatedAt,
+		)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Failed scan tx by ID=%d.", req.TxId)
+		}
+		tx.Meta = *m
+		tx.Status = acca.TxStatus(acca.TxStatus_value[strings.ToUpper(status)])
+		if errm != nil {
+			tx.Errm = *errm
+		}
+	}
+
+	opers := []*acca.Oper{}
+	if req.WithOpers {
+		qFindOpers := `SELECT
+			oper_id,
+			tx_id,
+			src_acc_id,
+			dst_acc_id,
+			type,
+			amount,
+			reason,
+			meta,
+			hold,
+			hold_acc_id,
+			status,
+			created_at,
+			updated_at
+		FROM acca.operations WHERE tx_id = $1`
+
+		rows, err := s.db.Query(qFindOpers, req.TxId)
+		if err != nil {
+			return nil, errors.Wrapf(err, "Failed find opers by tx ID=%d.", req.TxId)
+		}
+		for rows.Next() {
+			row := &acca.Oper{}
+			m := new(Meta)
+			var status string
+			var holdAccID *int64
+			var operType string
+			err := rows.Scan(
+				&row.OperId,
+				&row.TxId,
+				&row.SrcAccId,
+				&row.DstAccId,
+				&operType,
+				&row.Amount,
+				&row.Reason,
+				m,
+				&row.Hold,
+				&holdAccID,
+				&status,
+				&row.CreatedAt,
+				&row.UpdatedAt,
+			)
+			if err != nil {
+				panic(errors.Wrapf(err, "Failed scan opers by tx ID=%d.", req.TxId)) // TODO: err log
+				break
+			}
+			row.Status = acca.OperStatus(acca.OperStatus_value[strings.ToUpper(status)])
+			row.Type = acca.OperType(acca.OperType_value[strings.ToUpper(operType)])
+			row.Meta = *m
+			if holdAccID != nil {
+				row.HoldAccId = *holdAccID
+			}
+
+			opers = append(opers, row)
+		}
+		if rows.Err() != nil {
+			return nil, errors.Wrapf(rows.Err(), "Failed scan opers by tx ID=%d.", req.TxId)
+		}
+	}
+
+	return &acca.GetTxByIDResponse{
+		Tx:    tx,
+		Opers: opers,
+	}, nil
 }
 
 func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityRequest) (*acca.RecentActivityResponse, error) {
@@ -137,7 +236,7 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 			&row.AccId,
 			&row.Amount,
 			&row.Balance,
-			&maBalances, // TODO
+			&maBalances,
 			&row.TxId,
 			&row.SrcAccId,
 			&row.DstAccId,
