@@ -97,6 +97,7 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 				assert.Equal(t, currID, got.CurrId)
 				assert.Equal(t, "ma.user1.main", got.Key)
 				assert.Equal(t, map[string]string{"foo": "bar"}, got.Meta)
+				assert.EqualValues(t, 0, got.GetBalanceAccepted())
 			} else {
 				t.Fatal("Expected accounts")
 			}
@@ -115,6 +116,7 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 				assert.Equal(t, currID, got.CurrId)
 				assert.Equal(t, "ma.user1.main", got.Key)
 				assert.Equal(t, map[string]string{"foo": "bar"}, got.Meta)
+				assert.EqualValues(t, 0, got.GetBalanceAccepted())
 			} else {
 				t.Fatal("Expected accounts")
 			}
@@ -133,6 +135,7 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 				assert.Equal(t, accID, got.AccId)
 				assert.Equal(t, "main", got.Type)
 				assert.EqualValues(t, 0, got.Balance)
+				assert.EqualValues(t, 0, got.BalanceAccepted)
 			} else {
 				t.Fatal("Expected list balances")
 			}
@@ -227,6 +230,8 @@ func Test100_03CreateTransfer(t *testing.T) {
 		loadAccountBalances(t, "ma")
 		require.EqualValues(t, 40, accounts[acc1ID])
 		require.EqualValues(t, 0, accounts[acc2ID])
+		require.EqualValues(t, 40, res.GetAccounts()[0].BalanceAccepted)
+		require.EqualValues(t, 0, res.GetAccounts()[1].BalanceAccepted)
 	})
 
 	time.Sleep(time.Millisecond * 10)
@@ -304,6 +309,9 @@ func Test100_04RecentActivity(t *testing.T) {
 	res, err := c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: 0, Limit: 2})
 	require.NoError(t, err)
 	require.True(t, len(res.List) > 0)
+	for _, v := range res.GetList() {
+		t.Log("RecentActivity: ", v)
+	}
 
 	lastID := res.List[len(res.List)-1].Id
 

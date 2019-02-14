@@ -27,7 +27,7 @@ CREATE TABLE acca.accounts (
     acc_id bigserial PRIMARY KEY,
     curr_id bigint REFERENCES acca.currencies(curr_id),
     key ltree NOT NULL,
-    balance numeric(69, 00) NOT NULL DEFAULT 0 CHECK(balance >= 0),
+    balance numeric(69, 00) NOT NULL DEFAULT 0,
     meta jsonb NOT NULL DEFAULT '{}'
 );
 

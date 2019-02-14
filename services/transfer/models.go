@@ -45,3 +45,21 @@ func (ts pgOpers) Value() (driver.Value, error) {
 	}
 	return buf.Bytes(), nil
 }
+
+var (
+	mapToApiOperStatus = map[string]acca.OperStatus{
+		"unknown":  acca.OperStatus_OPER_UNKNOWN,
+		"draft":    acca.OperStatus_OPER_DRAFT,
+		"hold":     acca.OperStatus_OPER_HOLD,
+		"accepted": acca.OperStatus_OPER_ACCEPTED,
+		"rejected": acca.OperStatus_OPER_REJECTED,
+	}
+	mapToApiTxStatus = map[string]acca.TxStatus{
+		"unknown":  acca.TxStatus_UNKNOWN_TS,
+		"draft":    acca.TxStatus_DRAFT,
+		"uth":      acca.TxStatus_AUTH,
+		"accepted": acca.TxStatus_ACCEPTED,
+		"rejected": acca.TxStatus_REJECTED,
+		"ailed":    acca.TxStatus_FAILED,
+	}
+)
