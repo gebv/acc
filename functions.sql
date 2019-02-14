@@ -125,6 +125,14 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
         INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
 
+        -- update status for operation
+        IF _hold THEN
+            _oper_next_status = 'hold';
+        ELSE
+            _oper_next_status = 'accepted';
+        END IF;
+        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
+
         BEGIN
             CASE _type
                 WHEN 'internal' THEN
@@ -165,14 +173,6 @@ CREATE OR REPLACE FUNCTION acca.auth_operation(
                 RAISE EXCEPTION 'Failed handler operation: oper_id=%, acc_id=%, errm=%.', _oper_id, __current_acc_id, SQLERRM;
         END;
 
-        -- update status for operation
-        IF _hold THEN
-            _oper_next_status = 'hold';
-        ELSE
-            _oper_next_status = 'accepted';
-        END IF;
-        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
-
         PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
@@ -203,6 +203,12 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
             type
         INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
+
+         -- update status for operation
+        IF _hold THEN
+            _oper_next_status = 'accepted';
+        END IF;
+        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
         BEGIN
             CASE _type
@@ -236,12 +242,6 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
                 RAISE EXCEPTION 'Failed handler operation: oper_id=%, acc_id=%, errm=%.', _oper_id, __current_acc_id, SQLERRM;
         END;
 
-        -- update status for operation
-        IF _hold THEN
-            _oper_next_status = 'accepted';
-        END IF;
-        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
-
         PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
 $$ language plpgsql;
@@ -272,6 +272,10 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
             type
         INTO _tx_id, _amount, _src_acc_id, _dst_acc_id, _hold, _hold_acc_id, _type
         FROM acca.operations WHERE oper_id = _oper_id;
+
+         -- update status for operation
+        _oper_next_status = 'rejected';
+        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
         BEGIN
             CASE _type
@@ -317,10 +321,6 @@ CREATE OR REPLACE FUNCTION acca.reject_operation(
             WHEN others THEN
                 RAISE EXCEPTION 'Failed handler operation: oper_id=%, acc_id=%, errm=%.', _oper_id, __current_acc_id, SQLERRM;
         END;
-
-        -- update status for operation
-        _oper_next_status = 'rejected';
-        UPDATE acca.operations SET status = _oper_next_status WHERE oper_id = _oper_id;
 
         PERFORM pg_notify('oper_update_status', json_build_object('oper_id', _oper_id, 'src_acc_id', _src_acc_id, 'dst_acc_id', _dst_acc_id, 'new_status', _oper_next_status, 'amount', _amount, 'type', _type, 'tx_id', _tx_id)::text);
     END;
