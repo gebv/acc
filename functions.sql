@@ -88,7 +88,10 @@ CREATE OR REPLACE FUNCTION acca.reject_tx(
         _tx_status acca.transaction_status;
     BEGIN
         SELECT status INTO _tx_status FROM acca.transactions WHERE tx_id = _tx_id;
-        IF _tx_status <> 'auth' THEN
+        IF _tx_status = 'draft' THEN
+            DELETE FROM acca.requests_queue WHERE tx_id = _tx_id;
+            RETURN;
+        ELSEIF _tx_status <> 'auth' THEN
             RAISE EXCEPTION 'Transaction has already closed (or not found): status=%', _tx_status::text;
         END IF;
 
