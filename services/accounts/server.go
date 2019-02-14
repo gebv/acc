@@ -61,7 +61,7 @@ func (s *Server) CreateCurrency(ctx context.Context, req *acca.CreateCurrencyReq
 }
 
 func (s *Server) GetAccountsByIDs(ctx context.Context, req *acca.GetAccountsByIDsRequest) (*acca.GetAccountsByIDsResponse, error) {
-	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta FROM acca.accounts WHERE acc_id = ANY($1)`, pq.Int64Array(req.GetAccIds()))
+	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta, balance_accepted FROM acca.accounts WHERE acc_id = ANY($1)`, pq.Int64Array(req.GetAccIds()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed find accounts by ids %v.", req.GetAccIds())
 	}
@@ -76,6 +76,7 @@ func (s *Server) GetAccountsByIDs(ctx context.Context, req *acca.GetAccountsByID
 			&row.Key,
 			&row.Balance,
 			m,
+			&row.BalanceAccepted,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed find accounts - scan row.")
@@ -87,7 +88,7 @@ func (s *Server) GetAccountsByIDs(ctx context.Context, req *acca.GetAccountsByID
 }
 
 func (s *Server) GetAccountsByKey(ctx context.Context, req *acca.GetAccountsByKeyRequest) (*acca.GetAccountsByKeyResponse, error) {
-	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta FROM acca.accounts WHERE $1 @> key`, req.GetKey())
+	rows, err := s.db.Query(`SELECT acc_id, curr_id, key, balance, meta, balance_accepted FROM acca.accounts WHERE $1 @> key`, req.GetKey())
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed find accounts by key %q.", req.GetKey())
 	}
@@ -102,6 +103,7 @@ func (s *Server) GetAccountsByKey(ctx context.Context, req *acca.GetAccountsByKe
 			&row.Key,
 			&row.Balance,
 			m,
+			&row.BalanceAccepted,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed find accounts - scan row.")

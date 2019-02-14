@@ -15,10 +15,11 @@ CREATE OR REPLACE VIEW acca.recent_activity AS
         -- o.meta as meta,
         -- o.hold as hold,
         -- o.hold_acc_id as hold_acc_id,
-        -- o.status as status,
+        o.status as op_status,
 
         -- transactions
         t.reason AS tx_reason,
+        t.status AS tx_status,
 
         -- accounts
         a.key AS acc_key,

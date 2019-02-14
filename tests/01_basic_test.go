@@ -54,7 +54,7 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"1": 10 - 9,
 					"2": 20 + 9 - 29,
 					"3": 30 + 29,
@@ -79,7 +79,7 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 					},
 				}),
 				CmdTransfers([]transfers{
-					transfers{
+					{
 						{
 							SrcAcc: "1",
 							DstAcc: "2",
@@ -106,11 +106,11 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				}),
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
-				CmdCheckStatuses("failed"),
-				CmdCheckBalances(map[string]uint64{
-					"1": 10,
-					"2": 20,
-					"3": 30,
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]int64{
+					"1": 9,
+					"2": -979,
+					"3": 1030,
 				}),
 			},
 		},
@@ -137,7 +137,7 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"1": 10,
 					"2": 20,
 					"3": 30,
@@ -176,7 +176,7 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"payment_gateway": 102,
 					"client":          102,
 				}),
@@ -214,7 +214,7 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"payment_gateway": 90,
 					"client":          0,
 				}),
@@ -251,10 +251,10 @@ func Test01Basic_01SimpleTrasnferWithoutHold(t *testing.T) {
 				}),
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
-				CmdCheckStatuses("failed"),
-				CmdCheckBalances(map[string]uint64{
-					"payment_gateway": 0,
-					"client":          10,
+				CmdCheckStatuses("accepted"),
+				CmdCheckBalances(map[string]int64{
+					"payment_gateway": -10,
+					"client":          0,
 				}),
 			},
 		},
@@ -330,7 +330,7 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdCheckStatuses("draft"),
 				CmdExecute(1),
 				CmdCheckStatuses("auth"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"1":     10 - 9,
 					"2":     20 - 19,
 					"3":     30 - 29,
@@ -339,7 +339,7 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdApprove(0),
 				CmdExecute(1),
 				CmdCheckStatuses("accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"1":     10 - 9 + 29,
 					"2":     20 - 19 + 9,
 					"3":     30 - 29 + 19,
@@ -428,7 +428,7 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				CmdCheckStatuses("draft", "draft"),
 				CmdExecute(2),
 				CmdCheckStatuses("auth", "accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					"1":      10 - 9,
 					"2":      20 - 19,
 					"3":      30 - 29,
@@ -437,24 +437,24 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 				}),
 				CmdApprove(0),
 				CmdExecute(1),
-				CmdCheckStatuses("failed", "accepted"),
-				CmdCheckBalances(map[string]uint64{
-					"1":      10 - 9,
-					"2":      20 - 19,
-					"3":      30 - 29,
-					"hold1":  0,
+				CmdCheckStatuses("accepted", "accepted"),
+				CmdCheckBalances(map[string]int64{
+					"1":      10 - 9 + 29,
+					"2":      20 + 9 - 19,
+					"3":      30 + 19 - 29,
+					"hold1":  0 - 9 - 19 - 29,
 					"other1": 9 + 19 + 29,
 				}),
-				CmdRollback(0), // not enough money
-				CmdExecute(1),
-				CmdCheckStatuses("failed", "accepted"),
-				CmdCheckBalances(map[string]uint64{
-					"1":      10 - 9,
-					"2":      20 - 19,
-					"3":      30 - 29,
-					"hold1":  0,
-					"other1": 9 + 19 + 29,
-				}),
+				//CmdRollback(0), // not enough money
+				//CmdExecute(1),
+				//CmdCheckStatuses("accepted", "accepted"),
+				//CmdCheckBalances(map[string]int64{
+				//	"1":      10 - 9,
+				//	"2":      20 - 19,
+				//	"3":      30 - 29,
+				//	"hold1":  0,
+				//	"other1": 9 + 19 + 29,
+				//}),
 				//
 				CmdTransfers([]transfers{
 					transfers{
@@ -472,23 +472,23 @@ func Test01Basic_02SimpleTransferWithHold(t *testing.T) {
 					},
 				}),
 				CmdExecute(1),
-				CmdCheckStatuses("failed", "accepted", "accepted"),
-				CmdCheckBalances(map[string]uint64{
-					"1":      10 - 9,
-					"2":      20 - 19,
-					"3":      30 - 29,
-					"hold1":  9 + 19 + 29,
+				CmdCheckStatuses("accepted", "accepted", "accepted"),
+				CmdCheckBalances(map[string]int64{
+					"1":      30,
+					"2":      10,
+					"3":      20,
+					"hold1":  0,
 					"other1": 0,
 				}),
 
-				CmdRollback(0), // not enough money
+				//CmdRollback(0), // not enough money
 				CmdExecute(1),
 
-				CmdCheckStatuses("rejected", "accepted", "accepted"),
-				CmdCheckBalances(map[string]uint64{
-					"1":      10,
-					"2":      20,
-					"3":      30,
+				CmdCheckStatuses("accepted", "accepted", "accepted"),
+				CmdCheckBalances(map[string]int64{
+					"1":      30,
+					"2":      10,
+					"3":      20,
 					"hold1":  0,
 					"other1": 0,
 				}),
@@ -591,10 +591,10 @@ func Test01Basic_03ErrorInMiddle(t *testing.T) {
 
 				CmdCheckStatuses("draft", "draft", "draft", "draft"),
 				CmdExecute(4),
-				CmdCheckStatuses("auth", "failed", "auth", "auth"),
+				CmdCheckStatuses("auth", "auth", "auth", "auth"),
 				CmdApprove(0, 2, 3),
 				CmdExecute(3),
-				CmdCheckStatuses("accepted", "failed", "accepted", "accepted"),
+				CmdCheckStatuses("accepted", "auth", "accepted", "accepted"),
 			},
 		},
 	}

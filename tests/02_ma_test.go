@@ -95,7 +95,7 @@ func Test02MA_01Basic(t *testing.T) {
 				CmdCheckStatuses("draft", "draft"),
 				CmdExecute(2),
 				CmdCheckStatuses("accepted", "accepted"),
-				CmdCheckBalances(map[string]uint64{
+				CmdCheckBalances(map[string]int64{
 					user1 + "bonus": 1000 - 9 - 9,
 					user2 + "bonus": 1000 + 9 + 9,
 
