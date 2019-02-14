@@ -40,7 +40,7 @@ CREATE OR REPLACE VIEW acca.ma_accounts AS
     SELECT
         acca.ma_get_user_id(key) AS user_id,
         array_agg(acc_id) AS acc_ids,
-        array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key))))::jsonb as ma_balances
+        array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key), 'balance_accepted', balance_accepted)))::jsonb as ma_balances
     FROM acca.accounts
     WHERE 'ma' @> key
     GROUP BY user_id;
@@ -58,7 +58,7 @@ CREATE FUNCTION ma_update_balance() RETURNS trigger AS $$
             RETURN NEW;
         END IF;
 
-        select array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key))))::jsonb INTO _ma_balances
+        select array_to_json(array_agg(json_build_object('id', acc_id, 'b',balance, 't', acca.ma_get_type(key), 'balance_accepted', balance_accepted)))::jsonb INTO _ma_balances
             FROM acca.accounts
             WHERE subltree(_key, 0, 2) @> key;
 
@@ -92,10 +92,11 @@ CREATE OR REPLACE VIEW acca.recent_activity AS
         -- o.meta as meta,
         -- o.hold as hold,
         -- o.hold_acc_id as hold_acc_id,
-        -- o.status as status,
+        o.status as oper_status,
 
         -- transactions
         t.reason AS tx_reason,
+        t.status AS tx_status,
 
         -- accounts
         a.key AS acc_key,

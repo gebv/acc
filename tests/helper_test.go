@@ -10,7 +10,7 @@ import (
 
 type accountInfo struct {
 	AccKey  string
-	Balance uint64
+	Balance int64
 }
 
 func cmdApply(t *testing.T, state *testCaseState, cmd command) {
@@ -241,7 +241,7 @@ type cmdExecute struct {
 	Limit int
 }
 
-func CmdCheckBalances(expected map[string]uint64) command {
+func CmdCheckBalances(expected map[string]int64) command {
 	return command{
 		CheckBalances: &cmdCheckBalances{
 			Expected: expected,
@@ -262,7 +262,7 @@ func CmdCheckBalancesExecutor(t *testing.T, cmd *cmdCheckBalances) {
 }
 
 type cmdCheckBalances struct {
-	Expected map[string]uint64
+	Expected map[string]int64
 }
 
 func CmdCheckStatuses(expected ...string) command {

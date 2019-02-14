@@ -77,6 +77,8 @@ message RecentActivity {
     string acc_key = 12;
     int64 acc_curr_id = 13;
     string acc_curr_key = 14;
+    OperStatus op_status = 15;
+    TxStatus tx_status = 16;
 }
 
 message TxOper {
@@ -100,6 +102,7 @@ message BalanceShortInfo {
     string type = 1 [(gogoproto.jsontag) = "t"];
     int64 balance = 2 [(gogoproto.jsontag) = "b"];
     int64 acc_id = 3 [(gogoproto.jsontag) = "id"];
+    int64 balance_accepted = 4;
 }
 
 message Account {
@@ -110,6 +113,7 @@ message Account {
     map<string,string> meta = 5;
 
     Currency curr = 6;
+    int64 balance_accepted = 7;
 }
 
 message UserAccounts {

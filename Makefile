@@ -34,7 +34,7 @@ install:
 restart-dev-infra:
 	docker-compose down
 	docker-compose up -d
-	sleep 3
+	sleep 10
 
 build-race:
 	go build -v -race -o ./bin/acca ./cmd/acca/main.go
