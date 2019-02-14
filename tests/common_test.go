@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func loadBalances(t *testing.T) map[string]uint64 {
-	var balances = map[string]uint64{}
+func loadBalances(t *testing.T) map[string]int64 {
+	var balances = map[string]int64{}
 	var accID int64
 	var key string
-	var balance uint64
+	var balance int64
 	rows, err := db.Query(`SELECT acc_id, key, balance FROM acca.accounts`)
 	require.NoError(t, err, "Failed get acccounts")
 	if assert.NoError(t, err) {
@@ -81,7 +81,7 @@ type transfer struct {
 	DstAccID  int64    `json:"dst_acc_id"`
 	DstAcc    string   `json:"-"`
 	Type      string   `json:"type"`
-	Amount    uint64   `json:"amount"`
+	Amount    int64    `json:"amount"`
 	Reason    string   `json:"reason"`
 	Meta      MetaData `json:"meta"`
 	Hold      bool     `json:"hold"`
