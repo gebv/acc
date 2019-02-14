@@ -601,3 +601,166 @@ func Test01Basic_03ErrorInMiddle(t *testing.T) {
 
 	runTests(t, tests)
 }
+
+func Test01Basic_03SimpleTransferReject(t *testing.T) {
+	cur := "curr"
+
+	tests := []cmdBatch{
+		{
+			"InternalTransferWithHoldAndReject",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccKey:  "11",
+						Balance: 10,
+					},
+					{
+						AccKey:  "22",
+						Balance: 20,
+					},
+					{
+						AccKey:  "33",
+						Balance: 30,
+					},
+					{
+						AccKey:  "hold11",
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "11",
+							DstAcc: "22",
+							Type:   Internal,
+							Amount: 9,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+						{
+							SrcAcc: "22",
+							DstAcc: "33",
+							Type:   Internal,
+							Amount: 19,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+						{
+							SrcAcc: "33",
+							DstAcc: "11",
+							Type:   Internal,
+							Amount: 29,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdExecute(1),
+				CmdCheckStatuses("auth"),
+				CmdCheckBalances(map[string]int64{
+					"11":     10 - 9,
+					"22":     20 - 19,
+					"33":     30 - 29,
+					"hold11": 9 + 19 + 29,
+				}),
+				CmdReject(0),
+				CmdExecute(1),
+				CmdCheckStatuses("rejected"),
+				CmdCheckBalances(map[string]int64{
+					"11":     10,
+					"22":     20,
+					"33":     30,
+					"hold11": 0,
+				}),
+			},
+		},
+		{
+			"InternalTransferWithHoldAndRejectInDraft",
+			[]command{
+				CmdInitAccounts(cur, []accountInfo{
+					{
+						AccKey:  "11",
+						Balance: 10,
+					},
+					{
+						AccKey:  "22",
+						Balance: 20,
+					},
+					{
+						AccKey:  "33",
+						Balance: 30,
+					},
+					{
+						AccKey:  "hold11",
+						Balance: 0,
+					},
+				}),
+				CmdTransfers([]transfers{
+					transfers{
+						{
+							SrcAcc: "11",
+							DstAcc: "22",
+							Type:   Internal,
+							Amount: 9,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+						{
+							SrcAcc: "22",
+							DstAcc: "33",
+							Type:   Internal,
+							Amount: 19,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+						{
+							SrcAcc: "33",
+							DstAcc: "11",
+							Type:   Internal,
+							Amount: 29,
+							Reason: "fortesting",
+							Meta: MetaData{
+								"foo": "bar",
+							},
+							Hold:    true,
+							HoldAcc: "hold11",
+						},
+					},
+				}),
+				CmdCheckStatuses("draft"),
+				CmdReject(0),
+				CmdExecute(1),
+				CmdCheckStatuses("draft"),
+				CmdCheckBalances(map[string]int64{
+					"11":      10,
+					"22":      20,
+					"33":      30,
+					"hold111": 0,
+				}),
+			},
+		},
+	}
+
+	runTests(t, tests)
+}
