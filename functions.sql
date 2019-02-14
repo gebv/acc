@@ -390,14 +390,14 @@ CREATE OR REPLACE FUNCTION acca.handle_requests(
             BEGIN
                 CASE reqrow.type
                     WHEN 'auth' THEN
-                        PERFORM acca.auth_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'draft';
+                        PERFORM acca.auth_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'draft' ORDER BY oper_id ASC;
                     WHEN 'accept' THEN
-                        PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        PERFORM acca.accept_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold' ORDER BY oper_id ASC;
                     WHEN 'reject' THEN
-                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold' ORDER BY oper_id ASC;
                     WHEN 'rollback' THEN
-                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold';
-                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'accepted';
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'hold' ORDER BY oper_id ASC;
+                        PERFORM acca.reject_operation(oper_id) FROM acca.operations WHERE tx_id = reqrow.tx_id AND status = 'accepted' ORDER BY oper_id ASC;
                     ELSE
                         RAISE EXCEPTION 'Unexpected request type: tx_id=%, type=%.', reqrow.tx_id, reqrow.type::text;
                 END CASE;
