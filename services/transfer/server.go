@@ -199,7 +199,9 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 		src_acc_id,
 		dst_acc_id,
 		reason,
+       	oper_status,
 		tx_reason,
+       	tx_status,
 		acc_key,
 		acc_curr_id,
 		acc_curr_key
@@ -230,6 +232,8 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 	for rows.Next() {
 		row := acca.RecentActivity{}
 		var maBalances accounts.BalancesShortInfo
+		var opStatusStr string
+		var txStatusStr string
 		err := rows.Scan(
 			&row.Id,
 			&row.OperId,
@@ -241,7 +245,9 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 			&row.SrcAccId,
 			&row.DstAccId,
 			&row.Reason,
+			&opStatusStr,
 			&row.TxReason,
+			&txStatusStr,
 			&row.AccKey,
 			&row.AccCurrId,
 			&row.AccCurrKey,
@@ -252,7 +258,8 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 		if len(maBalances) > 0 {
 			row.MaBalances = maBalances
 		}
-
+		row.OpStatus = mapToApiOperStatus[opStatusStr]
+		row.TxStatus = mapToApiTxStatus[txStatusStr]
 		res.List = append(res.List, &row)
 	}
 
