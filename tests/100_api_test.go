@@ -318,6 +318,32 @@ func Test100_04RecentActivity(t *testing.T) {
 	res, err = c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: lastID, Limit: 2})
 	require.NoError(t, err)
 	require.True(t, len(res.List) > 0)
+	for _, v := range res.GetList() {
+		t.Log("JournalActivity: ", v)
+	}
+
+	// TODO: more tests
+}
+
+func Test100_05JournalActivity(t *testing.T) {
+	c := acca.NewTransferClient(Conn)
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+	res, err := c.JournalActivity(ctx, &acca.JournalActivityRequest{LastId: 0, Limit: 2})
+	require.NoError(t, err)
+	require.True(t, len(res.GetList()) > 0)
+	for _, v := range res.GetList() {
+		t.Log("JournalActivity: ", v)
+	}
+
+	lastID := res.GetList()[len(res.GetList())-1].Id
+
+	res, err = c.JournalActivity(ctx, &acca.JournalActivityRequest{LastId: lastID, Limit: 2})
+	require.NoError(t, err)
+	require.True(t, len(res.GetList()) > 0)
+	for _, v := range res.GetList() {
+		t.Log("JournalActivity: ", v)
+	}
 
 	// TODO: more tests
 }
