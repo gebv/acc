@@ -29,6 +29,9 @@ service Transfer {
 
     rpc RecentActivity (RecentActivityRequest) returns (RecentActivityResponse) {
     }
+
+    rpc JournalActivity (JournalActivityRequest) returns (JournalActivityResponse) {
+    }
 }
 
 message GetTxByIDRequest {
@@ -47,6 +50,15 @@ message RecentActivityRequest {
 }
 
 message RecentActivityResponse {
+    repeated RecentActivity list = 1;
+}
+
+message JournalActivityRequest {
+    int64 last_id = 1;
+    int64 limit = 2;
+}
+
+message JournalActivityResponse {
     repeated RecentActivity list = 1;
 }
 

@@ -305,19 +305,69 @@ func createAccount(t *testing.T, curr, key string) (currID, accID int64) {
 func Test100_04RecentActivity(t *testing.T) {
 	c := acca.NewTransferClient(Conn)
 	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
-
+	ids := make([]int64, 0, 4)
 	res, err := c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: 0, Limit: 2})
 	require.NoError(t, err)
-	require.True(t, len(res.List) > 0)
+	require.Len(t, res.GetList(), 2)
 	for _, v := range res.GetList() {
 		t.Log("RecentActivity: ", v)
+		ids = append(ids, v.Id)
 	}
 
 	lastID := res.List[len(res.List)-1].Id
 
 	res, err = c.RecentActivity(ctx, &acca.RecentActivityRequest{LastId: lastID, Limit: 2})
 	require.NoError(t, err)
-	require.True(t, len(res.List) > 0)
+	require.Len(t, res.GetList(), 2)
+	for _, v := range res.GetList() {
+		t.Log("RecentActivity: ", v)
+		ids = append(ids, v.Id)
+	}
+
+	var lID int64
+	for i, id := range ids {
+		if i == 0 {
+			lID = id
+			continue
+		}
+		require.True(t, lID > id)
+		lID = id
+	}
+
+	// TODO: more tests
+}
+
+func Test100_05JournalActivity(t *testing.T) {
+	c := acca.NewTransferClient(Conn)
+	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+	ids := make([]int64, 0, 4)
+	res, err := c.JournalActivity(ctx, &acca.JournalActivityRequest{LastId: 0, Limit: 2})
+	require.NoError(t, err)
+	require.Len(t, res.GetList(), 2)
+	for _, v := range res.GetList() {
+		t.Log("JournalActivity: ", v)
+		ids = append(ids, v.Id)
+	}
+
+	lastID := res.GetList()[len(res.GetList())-1].Id
+
+	res, err = c.JournalActivity(ctx, &acca.JournalActivityRequest{LastId: lastID, Limit: 2})
+	require.NoError(t, err)
+	require.Len(t, res.GetList(), 2)
+	for _, v := range res.GetList() {
+		t.Log("JournalActivity: ", v)
+		ids = append(ids, v.Id)
+	}
+
+	var lID int64
+	for i, id := range ids {
+		if i == 0 {
+			lID = id
+			continue
+		}
+		require.True(t, lID < id)
+		lID = id
+	}
 
 	// TODO: more tests
 }

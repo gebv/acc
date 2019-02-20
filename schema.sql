@@ -143,7 +143,7 @@ CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON acca.requests_queue (tx_id, 
 -- history requests
 CREATE TABLE acca.requests_history (
     tx_id bigint REFERENCES acca.transactions (tx_id),
-    type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    type acca.request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL,
     executed_at timestamp without time zone NOT NULL DEFAULT now()
 );
@@ -170,7 +170,7 @@ COMMENT ON COLUMN acca.accounts.balance_accepted IS 'Accepted balance.';
 CREATE FUNCTION update_balance_accepted() RETURNS trigger AS $update_balance_accepted$
     DECLARE
         _amount numeric(69, 00);
-        _oper_status operation_status;
+        _oper_status acca.operation_status;
     BEGIN
         IF NEW.balance = OLD.balance THEN
             RETURN NEW;

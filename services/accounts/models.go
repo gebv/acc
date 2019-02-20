@@ -54,6 +54,8 @@ func (p *BalancesShortInfo) Scan(in interface{}) error {
 	case string:
 		buf := bytes.NewBufferString(v)
 		return json.NewDecoder(buf).Decode(p)
+	case nil:
+		return nil
 	default:
 		return fmt.Errorf("accounts.BalancesShortInfo: not expected type %T", in)
 	}

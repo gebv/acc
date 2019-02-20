@@ -270,4 +270,84 @@ func (s *Server) RecentActivity(ctx context.Context, req *acca.RecentActivityReq
 	return res, nil
 }
 
+func (s *Server) JournalActivity(ctx context.Context, req *acca.JournalActivityRequest) (*acca.JournalActivityResponse, error) {
+	query := `SELECT
+		id,
+		oper_id,
+		acc_id,
+		amount,
+		balance,
+		ma_balances,
+		tx_id,
+		src_acc_id,
+		dst_acc_id,
+		reason,
+       	oper_status,
+		tx_reason,
+       	tx_status,
+		acc_key,
+		acc_curr_id,
+		acc_curr_key
+
+	FROM acca.journal_activity`
+	args := []interface{}{}
+	args = append(args, req.LastId)
+	query += fmt.Sprintf(` WHERE id > $%d`, len(args))
+	if req.Limit > 0 {
+		if req.Limit > 50 {
+			req.Limit = 50
+		}
+	} else {
+		req.Limit = 50
+	}
+	args = append(args, req.Limit)
+	query += fmt.Sprintf(` LIMIT $%d`, len(args))
+
+	rows, err := s.db.Query(query, args...)
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed get recent activity.")
+	}
+	res := &acca.JournalActivityResponse{}
+	defer rows.Close()
+	for rows.Next() {
+		row := acca.RecentActivity{}
+		var maBalances accounts.BalancesShortInfo
+		var opStatusStr string
+		var txStatusStr string
+		err := rows.Scan(
+			&row.Id,
+			&row.OperId,
+			&row.AccId,
+			&row.Amount,
+			&row.Balance,
+			&maBalances,
+			&row.TxId,
+			&row.SrcAccId,
+			&row.DstAccId,
+			&row.Reason,
+			&opStatusStr,
+			&row.TxReason,
+			&txStatusStr,
+			&row.AccKey,
+			&row.AccCurrId,
+			&row.AccCurrKey,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed scan row.")
+		}
+		if len(maBalances) > 0 {
+			row.MaBalances = maBalances
+		}
+		row.OpStatus = mapToApiOperStatus[opStatusStr]
+		row.TxStatus = mapToApiTxStatus[txStatusStr]
+		res.List = append(res.List, &row)
+	}
+
+	if rows.Err() != nil {
+		return nil, errors.Wrap(err, "Failed scan row.")
+	}
+
+	return res, nil
+}
+
 var _ acca.TransferServer = (*Server)(nil)

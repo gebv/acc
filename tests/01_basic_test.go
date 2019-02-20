@@ -758,6 +758,15 @@ func Test01Basic_03SimpleTransferReject(t *testing.T) {
 					"33":      30,
 					"hold111": 0,
 				}),
+				CmdReject(0),
+				CmdExecute(1),
+				CmdCheckStatuses("draft"),
+				CmdCheckBalances(map[string]int64{
+					"11":      10,
+					"22":      20,
+					"33":      30,
+					"hold111": 0,
+				}),
 			},
 		},
 	}
