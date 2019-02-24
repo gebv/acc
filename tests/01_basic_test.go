@@ -593,6 +593,7 @@ func Test01Basic_03ErrorInMiddle(t *testing.T) {
 				CmdExecute(4),
 				CmdCheckStatuses("auth", "auth", "auth", "auth"),
 				CmdApprove(0, 2, 3),
+				// CmdApprove(0, 2, 3), // idempotency?
 				CmdExecute(3),
 				CmdCheckStatuses("accepted", "auth", "accepted", "accepted"),
 			},
@@ -750,6 +751,7 @@ func Test01Basic_03SimpleTransferReject(t *testing.T) {
 				}),
 				CmdCheckStatuses("draft"),
 				CmdReject(0),
+				// CmdReject(0), // idempotency?
 				CmdExecute(1),
 				CmdCheckStatuses("draft"),
 				CmdCheckBalances(map[string]int64{
@@ -759,6 +761,7 @@ func Test01Basic_03SimpleTransferReject(t *testing.T) {
 					"hold111": 0,
 				}),
 				CmdReject(0),
+				// CmdReject(0), // idempotency?
 				CmdExecute(1),
 				CmdCheckStatuses("draft"),
 				CmdCheckBalances(map[string]int64{

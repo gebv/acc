@@ -12,6 +12,7 @@
   - [ ] More database-level checks
     - [ ] Transaction from one to the same account
 - [ ] Added documentation
+- [ ] Idempotency operation of accept\reject tx
 
 # Future list
 - [ ] Process each operation and save the executed status in current operation
