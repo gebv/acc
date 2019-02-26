@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS acca;
 
-CREATE EXTENSION ltree;
+CREATE EXTENSION IF NOT EXISTS ltree;
 
 -- money in the numeric(69, 0)
 -- for example, to store balances for WEI (ETH)
@@ -135,7 +135,7 @@ CREATE TYPE acca.request_type AS enum (
 -- request for action
 CREATE TABLE acca.requests_queue (
     tx_id bigint REFERENCES acca.transactions (tx_id),
-    type request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
+    type acca.request_type NOT NULL DEFAULT 'unknown' CHECK (type <> 'unknown'),
     created_at timestamp without time zone NOT NULL DEFAULT now()
 );
 CREATE UNIQUE INDEX uniq_request_type_for_tx_idx ON acca.requests_queue (tx_id, type);
