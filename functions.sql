@@ -228,7 +228,7 @@ CREATE OR REPLACE FUNCTION acca.accept_operation(
                     IF _hold THEN
                         __current_acc_id := _hold_acc_id;
                         UPDATE acca.accounts SET balance = balance - _amount, last_oper_id = _oper_id WHERE acc_id = _hold_acc_id;
-                        UPDATE acca.accounts SET balance = balance + _amount, balance_accepted = balance_accepted = _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
+                        UPDATE acca.accounts SET balance = balance + _amount, balance_accepted = balance_accepted + _amount, last_oper_id = _oper_id WHERE acc_id = _dst_acc_id;
                         UPDATE acca.accounts SET balance = balance + _amount, balance_accepted = balance_accepted + _amount, last_oper_id = _oper_id WHERE acc_id = _src_acc_id;
                     END IF;
                 WHEN 'withdraw' THEN
