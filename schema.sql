@@ -166,33 +166,6 @@ COMMENT ON COLUMN acca.balance_changes.balance IS 'Balance after transaction.';
 ALTER TABLE acca.accounts ADD COLUMN balance_accepted numeric(69, 00) NOT NULL DEFAULT 0;
 COMMENT ON COLUMN acca.accounts.balance_accepted IS 'Accepted balance.';
 
--- trigger for update balance_accepted for opers with oper_status=accepted
-CREATE FUNCTION update_balance_accepted() RETURNS trigger AS $update_balance_accepted$
-    DECLARE
-        _amount numeric(69, 00);
-        _oper_status acca.operation_status;
-    BEGIN
-        IF NEW.balance = OLD.balance THEN
-            RETURN NEW;
-        END IF;
-
-        IF NEW.last_oper_id IS NULL THEN
-            RAISE EXCEPTION 'last_oper_id cannot be null if changes balance';
-        END IF;
-
-        SELECT status INTO _oper_status FROM acca.operations WHERE oper_id = NEW.last_oper_id;
-
-        IF _oper_status = 'accepted' THEN
-            NEW.balance_accepted = NEW.balance;
-        END IF;
-
-        RETURN NEW;
-    END;
-$update_balance_accepted$ LANGUAGE plpgsql;
-
-CREATE TRIGGER a_update_balance_accepted_trigger BEFORE UPDATE ON acca.accounts
-    FOR EACH ROW EXECUTE PROCEDURE update_balance_accepted();
-
 
 -- trigger for create new record to balance changes table after new record in operations table
 CREATE FUNCTION add_balance_changes() RETURNS trigger AS $add_balance_changes$

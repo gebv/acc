@@ -264,6 +264,166 @@ func Test100_03CreateTransfer(t *testing.T) {
 
 }
 
+func Test100_04CreateHoldTransfer(t *testing.T) {
+	var _, acc1ID, acc2ID, acc3ID int64
+	t.Run("Init", func(t *testing.T) {
+		_, acc1ID = createAccount(t, "from_i.curr", "ma.user10.main")
+		_, acc2ID = createAccount(t, "from_i.curr", "ma.user20.main")
+		_, acc3ID = createAccount(t, "from_i.curr", "ma.hold.main")
+		loadAccountBalances(t, "ma")
+	})
+
+	require.NotEmpty(t, acc1ID)
+	require.NotEmpty(t, acc2ID)
+	require.NotEmpty(t, acc3ID)
+
+	t.Run("Transfer", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.NewTransfer(ctx, &acca.NewTransferRequest{
+			Reason: "testing",
+			Meta:   map[string]string{"foo": "bar"},
+			Opers: []*acca.TxOper{
+				{
+					SrcAccId: acc1ID,
+					DstAccId: acc2ID,
+					Type:     Recharge,
+					Amount:   20,
+					Reason:   "reacharge",
+					Meta:     map[string]string{"foo": "bar"},
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.NotEmpty(t, res.TxId)
+	})
+
+	t.Run("Apply", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.HandleRequests(ctx, &acca.HandleRequestsRequest{Limit: 1})
+		require.NoError(t, err)
+
+		require.EqualValues(t, 1, res.NumOk)
+		require.EqualValues(t, 0, res.NumErr)
+	})
+
+	t.Run("CheckBalances", func(t *testing.T) {
+		c := acca.NewAccountsClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{acc1ID, acc2ID, acc3ID}})
+		require.NoError(t, err)
+		require.Len(t, res.Accounts, 3)
+		loadAccountBalances(t, "ma")
+		require.EqualValues(t, 20, accounts[acc1ID])
+		require.EqualValues(t, 20, accounts[acc2ID])
+		require.EqualValues(t, 0, accounts[acc3ID])
+		require.EqualValues(t, 20, res.GetAccounts()[0].Balance)
+		require.EqualValues(t, 20, res.GetAccounts()[1].Balance)
+		require.EqualValues(t, 0, res.GetAccounts()[2].Balance)
+		require.EqualValues(t, 20, res.GetAccounts()[0].BalanceAccepted)
+		require.EqualValues(t, 20, res.GetAccounts()[1].BalanceAccepted)
+		require.EqualValues(t, 0, res.GetAccounts()[2].BalanceAccepted)
+	})
+
+	var txID int64
+	t.Run("HoldTransfer", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.NewTransfer(ctx, &acca.NewTransferRequest{
+			Reason: "testing",
+			Meta:   map[string]string{"foo": "bar"},
+			Opers: []*acca.TxOper{
+				{
+					SrcAccId:  acc1ID,
+					DstAccId:  acc2ID,
+					Type:      Internal,
+					Amount:    20,
+					Reason:    "pay",
+					Meta:      map[string]string{"foo": "bar"},
+					Hold:      true,
+					HoldAccId: acc3ID,
+				},
+			},
+		})
+		require.NoError(t, err)
+		assert.NotEmpty(t, res.TxId)
+		txID = res.TxId
+	})
+
+	t.Run("Apply", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.HandleRequests(ctx, &acca.HandleRequestsRequest{Limit: 1})
+		require.NoError(t, err)
+
+		require.EqualValues(t, 1, res.NumOk)
+		require.EqualValues(t, 0, res.NumErr)
+	})
+
+	t.Run("CheckBalances", func(t *testing.T) {
+		c := acca.NewAccountsClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{acc1ID, acc2ID, acc3ID}})
+		require.NoError(t, err)
+		require.Len(t, res.Accounts, 3)
+		loadAccountBalances(t, "ma")
+		require.EqualValues(t, 0, accounts[acc1ID])
+		require.EqualValues(t, 20, accounts[acc2ID])
+		require.EqualValues(t, 20, accounts[acc3ID])
+		require.EqualValues(t, 0, res.GetAccounts()[0].Balance)
+		require.EqualValues(t, 20, res.GetAccounts()[1].Balance)
+		require.EqualValues(t, 20, res.GetAccounts()[2].Balance)
+		require.EqualValues(t, 20, res.GetAccounts()[0].BalanceAccepted)
+		require.EqualValues(t, 20, res.GetAccounts()[1].BalanceAccepted)
+		require.EqualValues(t, 0, res.GetAccounts()[2].BalanceAccepted)
+	})
+
+	t.Run("AcceptTx", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		_, err := c.AcceptTx(ctx, &acca.AcceptTxRequest{TxId: txID})
+		require.NoError(t, err)
+	})
+
+	t.Run("Apply", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.HandleRequests(ctx, &acca.HandleRequestsRequest{Limit: 1})
+		require.NoError(t, err)
+
+		require.EqualValues(t, 1, res.NumOk)
+		require.EqualValues(t, 0, res.NumErr)
+	})
+
+	t.Run("CheckBalances", func(t *testing.T) {
+		c := acca.NewAccountsClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		res, err := c.GetAccountsByIDs(ctx, &acca.GetAccountsByIDsRequest{AccIds: []int64{acc1ID, acc2ID, acc3ID}})
+		require.NoError(t, err)
+		require.Len(t, res.Accounts, 3)
+		loadAccountBalances(t, "ma")
+		require.EqualValues(t, 0, accounts[acc1ID])
+		require.EqualValues(t, 40, accounts[acc2ID])
+		require.EqualValues(t, 00, accounts[acc3ID])
+		require.EqualValues(t, 0, res.GetAccounts()[0].Balance)
+		require.EqualValues(t, 40, res.GetAccounts()[1].Balance)
+		require.EqualValues(t, 0, res.GetAccounts()[2].Balance)
+		require.EqualValues(t, 0, res.GetAccounts()[0].BalanceAccepted)
+		require.EqualValues(t, 40, res.GetAccounts()[1].BalanceAccepted)
+		require.EqualValues(t, 0, res.GetAccounts()[2].BalanceAccepted)
+	})
+}
+
 func loadAccountBalances(t *testing.T, key string) {
 	c := acca.NewAccountsClient(Conn)
 	ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
