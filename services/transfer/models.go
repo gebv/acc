@@ -57,7 +57,7 @@ var (
 	mapToApiTxStatus = map[string]acca.TxStatus{
 		"unknown":  acca.TxStatus_UNKNOWN_TS,
 		"draft":    acca.TxStatus_DRAFT,
-		"uth":      acca.TxStatus_AUTH,
+		"auth":     acca.TxStatus_AUTH,
 		"accepted": acca.TxStatus_ACCEPTED,
 		"rejected": acca.TxStatus_REJECTED,
 		"ailed":    acca.TxStatus_FAILED,
