@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/gebv/acca/api/acca"
 	"google.golang.org/grpc"
@@ -798,4 +800,31 @@ func Test100_05JournalActivity(t *testing.T) {
 	}
 
 	// TODO: more tests
+}
+
+func Test100_06BadNewTransfer(t *testing.T) {
+	var _, acc1ID, acc2ID int64
+
+	t.Run("Transfer", func(t *testing.T) {
+		c := acca.NewTransferClient(Conn)
+		ctx := metadata.NewOutgoingContext(Ctx, metadata.Pairs("foo", "bar"))
+
+		_, err := c.NewTransfer(ctx, &acca.NewTransferRequest{
+			Reason: "testing",
+			Meta:   map[string]string{"foo": "bar"},
+			Opers: []*acca.TxOper{
+				{
+					SrcAccId: acc1ID,
+					DstAccId: acc2ID,
+					Type:     Recharge,
+					Amount:   0,
+					Reason:   "reacharge",
+					Meta:     map[string]string{"foo": "bar"},
+				},
+			},
+		})
+		require.Error(t, err)
+		require.EqualValues(t, err.Error(), status.New(codes.Unknown, "Invalid amount (zero or negative)").Err().Error())
+	})
+
 }
