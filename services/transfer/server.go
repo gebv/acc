@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/gebv/acca/api/acca"
 	"github.com/gebv/acca/services/accounts"
@@ -26,6 +28,12 @@ type Server struct {
 }
 
 func (s *Server) NewTransfer(ctx context.Context, req *acca.NewTransferRequest) (*acca.NewTransferResponse, error) {
+	for _, v := range req.GetOpers() {
+		if v != nil && v.Amount < 1 {
+			return nil, status.New(codes.Unknown, "Invalid amount (zero or negative)").Err()
+		}
+	}
+
 	res := &acca.NewTransferResponse{}
 	opers := pgOpers(req.Opers)
 	meta := MetaFrom(req.Meta)
