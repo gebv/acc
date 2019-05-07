@@ -59,7 +59,7 @@ func (x TxStatus) String() string {
 	return proto.EnumName(TxStatus_name, int32(x))
 }
 func (TxStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{0}
+	return fileDescriptor_models_90cedc03606f57bc, []int{0}
 }
 
 type OperType int32
@@ -88,7 +88,7 @@ func (x OperType) String() string {
 	return proto.EnumName(OperType_name, int32(x))
 }
 func (OperType) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{1}
+	return fileDescriptor_models_90cedc03606f57bc, []int{1}
 }
 
 type OperStatus int32
@@ -120,7 +120,7 @@ func (x OperStatus) String() string {
 	return proto.EnumName(OperStatus_name, int32(x))
 }
 func (OperStatus) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{2}
+	return fileDescriptor_models_90cedc03606f57bc, []int{2}
 }
 
 type Tx struct {
@@ -140,7 +140,7 @@ func (m *Tx) Reset()         { *m = Tx{} }
 func (m *Tx) String() string { return proto.CompactTextString(m) }
 func (*Tx) ProtoMessage()    {}
 func (*Tx) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{0}
+	return fileDescriptor_models_90cedc03606f57bc, []int{0}
 }
 func (m *Tx) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -241,7 +241,7 @@ func (m *Oper) Reset()         { *m = Oper{} }
 func (m *Oper) String() string { return proto.CompactTextString(m) }
 func (*Oper) ProtoMessage()    {}
 func (*Oper) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{1}
+	return fileDescriptor_models_90cedc03606f57bc, []int{1}
 }
 func (m *Oper) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -387,7 +387,7 @@ func (m *RecentActivity) Reset()         { *m = RecentActivity{} }
 func (m *RecentActivity) String() string { return proto.CompactTextString(m) }
 func (*RecentActivity) ProtoMessage()    {}
 func (*RecentActivity) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{2}
+	return fileDescriptor_models_90cedc03606f57bc, []int{2}
 }
 func (m *RecentActivity) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -546,7 +546,7 @@ func (m *TxOper) Reset()         { *m = TxOper{} }
 func (m *TxOper) String() string { return proto.CompactTextString(m) }
 func (*TxOper) ProtoMessage()    {}
 func (*TxOper) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{3}
+	return fileDescriptor_models_90cedc03606f57bc, []int{3}
 }
 func (m *TxOper) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -644,7 +644,7 @@ func (m *Currency) Reset()         { *m = Currency{} }
 func (m *Currency) String() string { return proto.CompactTextString(m) }
 func (*Currency) ProtoMessage()    {}
 func (*Currency) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{4}
+	return fileDescriptor_models_90cedc03606f57bc, []int{4}
 }
 func (m *Currency) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -708,7 +708,7 @@ func (m *BalanceShortInfo) Reset()         { *m = BalanceShortInfo{} }
 func (m *BalanceShortInfo) String() string { return proto.CompactTextString(m) }
 func (*BalanceShortInfo) ProtoMessage()    {}
 func (*BalanceShortInfo) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{5}
+	return fileDescriptor_models_90cedc03606f57bc, []int{5}
 }
 func (m *BalanceShortInfo) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -782,7 +782,7 @@ func (m *Account) Reset()         { *m = Account{} }
 func (m *Account) String() string { return proto.CompactTextString(m) }
 func (*Account) ProtoMessage()    {}
 func (*Account) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{6}
+	return fileDescriptor_models_90cedc03606f57bc, []int{6}
 }
 func (m *Account) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -872,7 +872,7 @@ func (m *UserAccounts) Reset()         { *m = UserAccounts{} }
 func (m *UserAccounts) String() string { return proto.CompactTextString(m) }
 func (*UserAccounts) ProtoMessage()    {}
 func (*UserAccounts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_models_04535b70aa1b9e13, []int{7}
+	return fileDescriptor_models_90cedc03606f57bc, []int{7}
 }
 func (m *UserAccounts) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4208,9 +4208,9 @@ var (
 	ErrIntOverflowModels   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("api/acca/models.proto", fileDescriptor_models_04535b70aa1b9e13) }
+func init() { proto.RegisterFile("api/acca/models.proto", fileDescriptor_models_90cedc03606f57bc) }
 
-var fileDescriptor_models_04535b70aa1b9e13 = []byte{
+var fileDescriptor_models_90cedc03606f57bc = []byte{
 	// 1100 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0xcd, 0x6e, 0xdb, 0x46,
 	0x10, 0x36, 0x7f, 0x44, 0x91, 0x23, 0x59, 0x61, 0xb7, 0x49, 0xac, 0xba, 0xa9, 0x24, 0xe8, 0x10,
