@@ -35,7 +35,7 @@ func (m *GetTxByIDRequest) Reset()         { *m = GetTxByIDRequest{} }
 func (m *GetTxByIDRequest) String() string { return proto.CompactTextString(m) }
 func (*GetTxByIDRequest) ProtoMessage()    {}
 func (*GetTxByIDRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{0}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{0}
 }
 func (m *GetTxByIDRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -90,7 +90,7 @@ func (m *GetTxByIDResponse) Reset()         { *m = GetTxByIDResponse{} }
 func (m *GetTxByIDResponse) String() string { return proto.CompactTextString(m) }
 func (*GetTxByIDResponse) ProtoMessage()    {}
 func (*GetTxByIDResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{1}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{1}
 }
 func (m *GetTxByIDResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -145,7 +145,7 @@ func (m *RecentActivityRequest) Reset()         { *m = RecentActivityRequest{} }
 func (m *RecentActivityRequest) String() string { return proto.CompactTextString(m) }
 func (*RecentActivityRequest) ProtoMessage()    {}
 func (*RecentActivityRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{2}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{2}
 }
 func (m *RecentActivityRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -199,7 +199,7 @@ func (m *RecentActivityResponse) Reset()         { *m = RecentActivityResponse{}
 func (m *RecentActivityResponse) String() string { return proto.CompactTextString(m) }
 func (*RecentActivityResponse) ProtoMessage()    {}
 func (*RecentActivityResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{3}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{3}
 }
 func (m *RecentActivityResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -247,7 +247,7 @@ func (m *JournalActivityRequest) Reset()         { *m = JournalActivityRequest{}
 func (m *JournalActivityRequest) String() string { return proto.CompactTextString(m) }
 func (*JournalActivityRequest) ProtoMessage()    {}
 func (*JournalActivityRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{4}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{4}
 }
 func (m *JournalActivityRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -301,7 +301,7 @@ func (m *JournalActivityResponse) Reset()         { *m = JournalActivityResponse
 func (m *JournalActivityResponse) String() string { return proto.CompactTextString(m) }
 func (*JournalActivityResponse) ProtoMessage()    {}
 func (*JournalActivityResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{5}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{5}
 }
 func (m *JournalActivityResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -350,7 +350,7 @@ func (m *NewTransferRequest) Reset()         { *m = NewTransferRequest{} }
 func (m *NewTransferRequest) String() string { return proto.CompactTextString(m) }
 func (*NewTransferRequest) ProtoMessage()    {}
 func (*NewTransferRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{6}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{6}
 }
 func (m *NewTransferRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -411,7 +411,7 @@ func (m *NewTransferResponse) Reset()         { *m = NewTransferResponse{} }
 func (m *NewTransferResponse) String() string { return proto.CompactTextString(m) }
 func (*NewTransferResponse) ProtoMessage()    {}
 func (*NewTransferResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{7}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{7}
 }
 func (m *NewTransferResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -458,7 +458,7 @@ func (m *AcceptTxRequest) Reset()         { *m = AcceptTxRequest{} }
 func (m *AcceptTxRequest) String() string { return proto.CompactTextString(m) }
 func (*AcceptTxRequest) ProtoMessage()    {}
 func (*AcceptTxRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{8}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{8}
 }
 func (m *AcceptTxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -504,7 +504,7 @@ func (m *AcceptTxResponse) Reset()         { *m = AcceptTxResponse{} }
 func (m *AcceptTxResponse) String() string { return proto.CompactTextString(m) }
 func (*AcceptTxResponse) ProtoMessage()    {}
 func (*AcceptTxResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{9}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{9}
 }
 func (m *AcceptTxResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -544,7 +544,7 @@ func (m *RejectTxRequest) Reset()         { *m = RejectTxRequest{} }
 func (m *RejectTxRequest) String() string { return proto.CompactTextString(m) }
 func (*RejectTxRequest) ProtoMessage()    {}
 func (*RejectTxRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{10}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{10}
 }
 func (m *RejectTxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -590,7 +590,7 @@ func (m *RejectTxResponse) Reset()         { *m = RejectTxResponse{} }
 func (m *RejectTxResponse) String() string { return proto.CompactTextString(m) }
 func (*RejectTxResponse) ProtoMessage()    {}
 func (*RejectTxResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{11}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{11}
 }
 func (m *RejectTxResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -630,7 +630,7 @@ func (m *RollbackTxRequest) Reset()         { *m = RollbackTxRequest{} }
 func (m *RollbackTxRequest) String() string { return proto.CompactTextString(m) }
 func (*RollbackTxRequest) ProtoMessage()    {}
 func (*RollbackTxRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{12}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{12}
 }
 func (m *RollbackTxRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -676,7 +676,7 @@ func (m *RollbackTxResponse) Reset()         { *m = RollbackTxResponse{} }
 func (m *RollbackTxResponse) String() string { return proto.CompactTextString(m) }
 func (*RollbackTxResponse) ProtoMessage()    {}
 func (*RollbackTxResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{13}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{13}
 }
 func (m *RollbackTxResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -716,7 +716,7 @@ func (m *HandleRequestsRequest) Reset()         { *m = HandleRequestsRequest{} }
 func (m *HandleRequestsRequest) String() string { return proto.CompactTextString(m) }
 func (*HandleRequestsRequest) ProtoMessage()    {}
 func (*HandleRequestsRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{14}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{14}
 }
 func (m *HandleRequestsRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -764,7 +764,7 @@ func (m *HandleRequestsResponse) Reset()         { *m = HandleRequestsResponse{}
 func (m *HandleRequestsResponse) String() string { return proto.CompactTextString(m) }
 func (*HandleRequestsResponse) ProtoMessage()    {}
 func (*HandleRequestsResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{15}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{15}
 }
 func (m *HandleRequestsResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -817,7 +817,7 @@ func (m *GetUpdatesRequest) Reset()         { *m = GetUpdatesRequest{} }
 func (m *GetUpdatesRequest) String() string { return proto.CompactTextString(m) }
 func (*GetUpdatesRequest) ProtoMessage()    {}
 func (*GetUpdatesRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{16}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{16}
 }
 func (m *GetUpdatesRequest) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -860,7 +860,7 @@ func (m *Update) Reset()         { *m = Update{} }
 func (m *Update) String() string { return proto.CompactTextString(m) }
 func (*Update) ProtoMessage()    {}
 func (*Update) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{17}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{17}
 }
 func (m *Update) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1017,7 +1017,7 @@ func (m *Update_OperUpdateStatus) Reset()         { *m = Update_OperUpdateStatus
 func (m *Update_OperUpdateStatus) String() string { return proto.CompactTextString(m) }
 func (*Update_OperUpdateStatus) ProtoMessage()    {}
 func (*Update_OperUpdateStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{17, 0}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{17, 0}
 }
 func (m *Update_OperUpdateStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1107,7 +1107,7 @@ func (m *Update_TxUpdateStatus) Reset()         { *m = Update_TxUpdateStatus{} }
 func (m *Update_TxUpdateStatus) String() string { return proto.CompactTextString(m) }
 func (*Update_TxUpdateStatus) ProtoMessage()    {}
 func (*Update_TxUpdateStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_transfer_334055455d19fa02, []int{17, 1}
+	return fileDescriptor_transfer_053c3fb7094ccd59, []int{17, 1}
 }
 func (m *Update_TxUpdateStatus) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -4466,9 +4466,9 @@ var (
 	ErrIntOverflowTransfer   = fmt.Errorf("proto: integer overflow")
 )
 
-func init() { proto.RegisterFile("api/acca/transfer.proto", fileDescriptor_transfer_334055455d19fa02) }
+func init() { proto.RegisterFile("api/acca/transfer.proto", fileDescriptor_transfer_053c3fb7094ccd59) }
 
-var fileDescriptor_transfer_334055455d19fa02 = []byte{
+var fileDescriptor_transfer_053c3fb7094ccd59 = []byte{
 	// 834 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x56, 0xdd, 0x8e, 0xdb, 0x44,
 	0x14, 0x8e, 0xf3, 0xe3, 0xc6, 0x27, 0x55, 0x9b, 0xce, 0x6e, 0x12, 0x63, 0x9a, 0x28, 0xf2, 0x05,

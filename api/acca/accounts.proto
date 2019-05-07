@@ -69,9 +69,9 @@ message GetAccountsByKeyResponse {
 }
 
 message GetAccountsByUserIDRequest {
-    string user_id = 1;
+    repeated string user_ids = 1;
 }
 
 message GetAccountsByUserIDResponse {
-    UserAccounts user_accounts = 1;
+    repeated UserAccounts list_user_accounts = 1;
 }

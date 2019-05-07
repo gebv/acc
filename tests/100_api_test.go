@@ -128,12 +128,12 @@ func Test100_02CreateAndGetAccount(t *testing.T) {
 	})
 
 	t.Run("GetAccountByUser", func(t *testing.T) {
-		res, err := c.GetAccountsByUserID(ctx, &acca.GetAccountsByUserIDRequest{UserId: "user1"}, grpc.Trailer(&md))
+		res, err := c.GetAccountsByUserID(ctx, &acca.GetAccountsByUserIDRequest{UserIds: []string{"user1"}}, grpc.Trailer(&md))
 		require.NoError(t, err)
 
-		if assert.NotEmpty(t, res) && assert.NotEmpty(t, res.UserAccounts) {
-			if assert.Len(t, res.UserAccounts.Balances, 1) {
-				got := res.UserAccounts.Balances[0]
+		if assert.NotEmpty(t, res) && assert.NotEmpty(t, res.ListUserAccounts) && len(res.ListUserAccounts) == 1 {
+			if assert.Len(t, res.ListUserAccounts[0].Balances, 1) {
+				got := res.ListUserAccounts[0].Balances[0]
 				assert.Equal(t, accID, got.AccId)
 				assert.Equal(t, "main", got.Type)
 				assert.EqualValues(t, 0, got.Balance)
