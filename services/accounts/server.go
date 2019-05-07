@@ -3,6 +3,7 @@ package accounts
 import (
 	"context"
 	"database/sql"
+	"strings"
 
 	"github.com/lib/pq"
 
@@ -116,19 +117,29 @@ func (s *Server) GetAccountsByKey(ctx context.Context, req *acca.GetAccountsByKe
 
 func (s *Server) GetAccountsByUserID(ctx context.Context, req *acca.GetAccountsByUserIDRequest) (*acca.GetAccountsByUserIDResponse, error) {
 	res := &acca.GetAccountsByUserIDResponse{
-		UserAccounts: &acca.UserAccounts{},
+		ListUserAccounts: make([]*acca.UserAccounts, 0, len(req.GetUserIds())),
 	}
-	// balances short info
-	bsi := BalancesShortInfo{}
 
-	err := s.db.QueryRow(`SELECT ma_balances FROM acca.ma_accounts WHERE user_id = $1`, req.GetUserId()).Scan(&bsi)
+	rows, err := s.db.Query(`SELECT user_id, ma_balances FROM acca.ma_accounts WHERE user_id = ANY ($1)`, pq.StringArray(req.GetUserIds()))
 	if err != nil {
-		return nil, errors.Wrapf(err, "Failed find accounts by user ID %q.", req.GetUserId())
+		return nil, errors.Wrapf(err, "Failed find accounts by user IDs %q.", strings.Join(req.GetUserIds(), " ,"))
 	}
-
-	res.UserAccounts.UserId = req.UserId
-	res.UserAccounts.Balances = bsi
-
+	defer rows.Close()
+	for rows.Next() {
+		var userID string
+		row := BalancesShortInfo{}
+		err := rows.Scan(
+			&userID,
+			&row,
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed find accounts - scan row.")
+		}
+		res.ListUserAccounts = append(res.ListUserAccounts, &acca.UserAccounts{
+			UserId:   userID,
+			Balances: row,
+		})
+	}
 	return res, nil
 }
 
