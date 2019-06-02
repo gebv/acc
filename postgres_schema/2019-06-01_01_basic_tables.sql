@@ -18,7 +18,8 @@ CREATE TABLE acca.invoices (
     status acca.invoice_status NOT NULL CHECK (status <> 'unknown'),
     strategy varchar NOT NULL,
     total_amount numeric(23, 00) NOT NULL DEFAULT 0,
-    payload jsonb NOT NULL,
+    meta jsonb,
+    payload bytea,
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     created_at timestamp with time zone NOT NULL
 );
@@ -56,7 +57,7 @@ CREATE TYPE acca.tx_status AS enum (
 CREATE TABLE acca.transactions (
     tx_id bigserial PRIMARY KEY,
     invoice_id bigint NOT NULL REFERENCES acca.invoices(invoice_id),
-    key ltree NOT NULL,
+    key ltree,
     provider varchar NOT NULL,
     provider_oper_id varchar,
     provider_oper_status varchar,
@@ -66,6 +67,7 @@ CREATE TABLE acca.transactions (
     created_at timestamp with time zone NOT NULL
 );
 CREATE INDEX transactions_key_gist_idx ON acca.transactions USING GIST (key);
+CREATE UNIQUE INDEX transaction_invoice_key_uniq_idx ON acca.transactions (invoice_id, key);
 
 
 CREATE TYPE acca.operation_strategy AS enum (
@@ -85,13 +87,14 @@ CREATE TYPE acca.operation_status AS enum (
 
 CREATE TABLE acca.operations (
     oper_id bigserial PRIMARY KEY,
+    invoice_id bigint NOT NULL REFERENCES acca.invoices (invoice_id),
     tx_id bigint NOT NULL REFERENCES acca.transactions (tx_id),
     src_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
     hold_acc_id bigint REFERENCES acca.accounts(acc_id),
     dst_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
     strategy acca.operation_strategy NOT NULL CHECK (strategy <> 'unknown'),
     amount numeric(23, 00) NOT NULL,
-    key ltree NOT NULL,
+    key ltree,
     meta jsonb,
     status acca.operation_status NOT NULL CHECK (status <> 'unknown'),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
