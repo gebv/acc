@@ -54,6 +54,10 @@ func (m *AccountManager) UpsertCurrency(currencyName string, meta *[]byte) (curr
 }
 
 // CreateAccount create new account.
+//
+// Common errors:
+// - ErrAccountExists - exists account
+// - other errors
 func (m *AccountManager) CreateAccount(currencyID int64, accKey string, meta *[]byte) (accountID int64, err error) {
 	accKey = formatKey(accKey)
 
@@ -81,6 +85,11 @@ func (m *AccountManager) CreateAccount(currencyID int64, accKey string, meta *[]
 	return newAccount.AccountID, nil
 }
 
+// FindAccountByKey returns account by key.
+//
+// Common errors:
+// - ErrAccountNotExists - not found account
+// - other errors
 func (m *AccountManager) FindAccountByKey(currencyID int64, accKey string) (*Account, error) {
 	accKey = formatKey(accKey)
 
