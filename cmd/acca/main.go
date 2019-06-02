@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gebv/acca/engine"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -59,6 +60,39 @@ func main() {
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer()),
 		grpc.StreamInterceptor(middleware.ChainStreamServer()),
 	)
+
+	accountManager := engine.NewAccountManager(db)
+	currID, err := accountManager.UpsertCurrency("curr1", nil)
+	if err != nil {
+		zap.L().Panic("Failed create currency.", zap.Error(err))
+	}
+	acc1ID, err := accountManager.CreateAccount(currID, "first", nil)
+	if err != nil && err != engine.ErrAccountExists {
+		zap.L().Panic("Failed create account.", zap.Error(err))
+	}
+	if acc1ID == 0 {
+		acc, err := accountManager.FindAccountByKey(currID, "first")
+		if err != nil {
+			zap.L().Panic("Failed find account.", zap.Error(err))
+		}
+		acc1ID = acc.AccountID
+	}
+	acc2ID, err := accountManager.CreateAccount(currID, "second", nil)
+	if err != nil && err != engine.ErrAccountExists {
+		zap.L().Panic("Failed create account.", zap.Error(err))
+	}
+	if acc2ID == 0 {
+		acc, err := accountManager.FindAccountByKey(currID, "second")
+		if err != nil {
+			zap.L().Panic("Failed find account.", zap.Error(err))
+		}
+		acc2ID = acc.AccountID
+	}
+
+	eng := engine.NewSimpleService(db)
+	if _, err := eng.InternalTransfer(acc1ID, acc2ID, 100); err != nil {
+		zap.L().Panic("Failed to internal transfer.", zap.Error(err))
+	}
 
 	// graceful stop
 	go func() {
