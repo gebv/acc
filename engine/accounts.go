@@ -17,13 +17,14 @@ type Currency struct {
 
 //reform:acca.accounts
 type Account struct {
-	AccountID  int64     `reform:"acc_id,pk"`
-	CurrencyID int64     `reform:"curr_id"`
-	Key        string    `reform:"key"`
-	Balance    int64     `reform:"balance"`
-	Meta       *[]byte   `reform:"meta"`
-	UpdatedAt  time.Time `reform:"updated_at"`
-	CreatedAt  time.Time `reform:"created_at"`
+	AccountID       int64     `reform:"acc_id,pk"`
+	CurrencyID      int64     `reform:"curr_id"`
+	Key             string    `reform:"key"`
+	Balance         int64     `reform:"balance"`
+	BalanceAccepted int64     `reform:"balance_accepted"`
+	Meta            *[]byte   `reform:"meta"`
+	UpdatedAt       time.Time `reform:"updated_at"`
+	CreatedAt       time.Time `reform:"created_at"`
 }
 
 func (a *Account) BeforeInsert() error {

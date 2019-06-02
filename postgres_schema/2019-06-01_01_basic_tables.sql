@@ -37,6 +37,7 @@ CREATE TABLE acca.accounts (
     curr_id bigint NOT NULL  REFERENCES acca.currencies(curr_id),
     key ltree NOT NULL,
     balance numeric(23, 00) NOT NULL DEFAULT 0,
+    balance_accepted numeric(23, 00) NOT NULL DEFAULT 0,
     meta jsonb,
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     created_at timestamp with time zone NOT NULL
@@ -90,6 +91,7 @@ CREATE TABLE acca.operations (
     invoice_id bigint NOT NULL REFERENCES acca.invoices (invoice_id),
     tx_id bigint NOT NULL REFERENCES acca.transactions (tx_id),
     src_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
+    hold boolean NOT NULL DEFAULT false,
     hold_acc_id bigint REFERENCES acca.accounts(acc_id),
     dst_acc_id bigint NOT NULL REFERENCES acca.accounts(acc_id),
     strategy acca.operation_strategy NOT NULL CHECK (strategy <> 'unknown'),

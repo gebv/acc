@@ -9,6 +9,10 @@ import (
 
 type TransactionStatus string
 
+func (s TransactionStatus) Match(in TransactionStatus) bool {
+	return s == in
+}
+
 const (
 	DRAFT_TX    TransactionStatus = "draft"
 	AUTH_TX     TransactionStatus = "auth"
@@ -51,7 +55,17 @@ const (
 	WITHDRAW_OPS = "withdraw"
 )
 
+var allowedOperationStrategies = map[OperationStrategy]bool{
+	SIMPLE_OPS:   true,
+	RECHARGE_OPS: true,
+	WITHDRAW_OPS: true,
+}
+
 type OperationStatus string
+
+func (s OperationStatus) Match(in OperationStatus) bool {
+	return s == in
+}
 
 const (
 	DRAFT_OP    OperationStatus = "draft"
@@ -67,6 +81,7 @@ type Operation struct {
 	InvoiceID     int64             `reform:"invoice_id"`
 	SrcAccID      int64             `reform:"src_acc_id"`
 	DstAccID      int64             `reform:"dst_acc_id"`
+	Hold          bool              `reform:"hold"`
 	HoldAccID     *int64            `reform:"hold_acc_id"`
 	Strategy      OperationStrategy `reform:"strategy"`
 	Amount        int64             `reform:"amount"`
