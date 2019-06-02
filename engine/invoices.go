@@ -8,6 +8,10 @@ import (
 
 type InvoiceStatus string
 
+func (s InvoiceStatus) Match(in InvoiceStatus) bool {
+	return s == in
+}
+
 const (
 	AUTH_I     InvoiceStatus = "auth"
 	WAIT_I     InvoiceStatus = "wait"
