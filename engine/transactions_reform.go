@@ -163,7 +163,7 @@ func (v *operationTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *operationTableType) Columns() []string {
-	return []string{"oper_id", "tx_id", "invoice_id", "src_acc_id", "dst_acc_id", "hold_acc_id", "strategy", "amount", "key", "meta", "status", "updated_at", "created_at"}
+	return []string{"oper_id", "tx_id", "invoice_id", "src_acc_id", "dst_acc_id", "hold", "hold_acc_id", "strategy", "amount", "key", "meta", "status", "updated_at", "created_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -183,26 +183,27 @@ func (v *operationTableType) PKColumnIndex() uint {
 
 // OperationTable represents operations view or table in SQL database.
 var OperationTable = &operationTableType{
-	s: parse.StructInfo{Type: "Operation", SQLSchema: "acca", SQLName: "operations", Fields: []parse.FieldInfo{{Name: "OperationID", Type: "int64", Column: "oper_id"}, {Name: "TransactionID", Type: "int64", Column: "tx_id"}, {Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "SrcAccID", Type: "int64", Column: "src_acc_id"}, {Name: "DstAccID", Type: "int64", Column: "dst_acc_id"}, {Name: "HoldAccID", Type: "*int64", Column: "hold_acc_id"}, {Name: "Strategy", Type: "OperationStrategy", Column: "strategy"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Key", Type: "*string", Column: "key"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Status", Type: "OperationStatus", Column: "status"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Operation", SQLSchema: "acca", SQLName: "operations", Fields: []parse.FieldInfo{{Name: "OperationID", Type: "int64", Column: "oper_id"}, {Name: "TransactionID", Type: "int64", Column: "tx_id"}, {Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "SrcAccID", Type: "int64", Column: "src_acc_id"}, {Name: "DstAccID", Type: "int64", Column: "dst_acc_id"}, {Name: "Hold", Type: "bool", Column: "hold"}, {Name: "HoldAccID", Type: "*int64", Column: "hold_acc_id"}, {Name: "Strategy", Type: "OperationStrategy", Column: "strategy"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Key", Type: "*string", Column: "key"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Status", Type: "OperationStatus", Column: "status"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(Operation).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Operation) String() string {
-	res := make([]string, 13)
+	res := make([]string, 14)
 	res[0] = "OperationID: " + reform.Inspect(s.OperationID, true)
 	res[1] = "TransactionID: " + reform.Inspect(s.TransactionID, true)
 	res[2] = "InvoiceID: " + reform.Inspect(s.InvoiceID, true)
 	res[3] = "SrcAccID: " + reform.Inspect(s.SrcAccID, true)
 	res[4] = "DstAccID: " + reform.Inspect(s.DstAccID, true)
-	res[5] = "HoldAccID: " + reform.Inspect(s.HoldAccID, true)
-	res[6] = "Strategy: " + reform.Inspect(s.Strategy, true)
-	res[7] = "Amount: " + reform.Inspect(s.Amount, true)
-	res[8] = "Key: " + reform.Inspect(s.Key, true)
-	res[9] = "Meta: " + reform.Inspect(s.Meta, true)
-	res[10] = "Status: " + reform.Inspect(s.Status, true)
-	res[11] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
-	res[12] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[5] = "Hold: " + reform.Inspect(s.Hold, true)
+	res[6] = "HoldAccID: " + reform.Inspect(s.HoldAccID, true)
+	res[7] = "Strategy: " + reform.Inspect(s.Strategy, true)
+	res[8] = "Amount: " + reform.Inspect(s.Amount, true)
+	res[9] = "Key: " + reform.Inspect(s.Key, true)
+	res[10] = "Meta: " + reform.Inspect(s.Meta, true)
+	res[11] = "Status: " + reform.Inspect(s.Status, true)
+	res[12] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[13] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -215,6 +216,7 @@ func (s *Operation) Values() []interface{} {
 		s.InvoiceID,
 		s.SrcAccID,
 		s.DstAccID,
+		s.Hold,
 		s.HoldAccID,
 		s.Strategy,
 		s.Amount,
@@ -235,6 +237,7 @@ func (s *Operation) Pointers() []interface{} {
 		&s.InvoiceID,
 		&s.SrcAccID,
 		&s.DstAccID,
+		&s.Hold,
 		&s.HoldAccID,
 		&s.Strategy,
 		&s.Amount,
