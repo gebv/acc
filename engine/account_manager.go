@@ -9,7 +9,8 @@ import (
 )
 
 var (
-	ErrAccountExists = errors.New("account exists")
+	ErrAccountExists    = errors.New("account exists")
+	ErrAccountNotExists = errors.New("account not exists")
 )
 
 func NewAccountManager(db *reform.DB) *AccountManager {
@@ -26,7 +27,7 @@ type AccountManager struct {
 
 // UpsertCurrency create or update currency by key.
 func (m *AccountManager) UpsertCurrency(currencyName string, meta *[]byte) (currencyID int64, err error) {
-	currencyName = formatCurrencyName(currencyName)
+	currencyName = formatKey(currencyName)
 
 	newCurrency := &Currency{}
 	if err := m.db.FindOneTo(newCurrency, "key", currencyName); err != nil {
@@ -54,6 +55,8 @@ func (m *AccountManager) UpsertCurrency(currencyName string, meta *[]byte) (curr
 
 // CreateAccount create new account.
 func (m *AccountManager) CreateAccount(currencyID int64, accKey string, meta *[]byte) (accountID int64, err error) {
+	accKey = formatKey(accKey)
+
 	newAccount := &Account{}
 	err = m.db.SelectOneTo(newAccount, "WHERE curr_id = $1 AND key = $2", currencyID, accKey)
 	if err == nil {
@@ -78,6 +81,20 @@ func (m *AccountManager) CreateAccount(currencyID int64, accKey string, meta *[]
 	return newAccount.AccountID, nil
 }
 
-func formatCurrencyName(currencyName string) string {
+func (m *AccountManager) FindAccountByKey(currencyID int64, accKey string) (*Account, error) {
+	accKey = formatKey(accKey)
+
+	foundAccount := &Account{}
+	err := m.db.SelectOneTo(foundAccount, "WHERE curr_id = $1 AND key = $2", currencyID, accKey)
+	if err != nil {
+		if err == reform.ErrNoRows {
+			return nil, ErrAccountNotExists
+		}
+		return nil, errors.Wrap(err, "failed find account")
+	}
+	return foundAccount, nil
+}
+
+func formatKey(currencyName string) string {
 	return strings.TrimSpace(strings.ToLower(currencyName))
 }
