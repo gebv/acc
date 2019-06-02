@@ -1,7 +1,6 @@
-package acca
+package engine
 
 import (
-	"encoding/json"
 	"time"
 )
 
@@ -18,14 +17,15 @@ const (
 
 //reform:acca.invoices
 type Invoice struct {
-	InvoiceID   int64           `reform:"invoice_id,pk"`
-	Key         string          `reform:"key"`
-	Strategy    string          `reform:"strategy"`
-	Status      InvoiceStatus   `reform:"status"`
-	TotalAmount int64           `reform:"total_amount"`
-	Payload     json.RawMessage `reform:"payload"`
-	UpdatedAt   time.Time       `reform:"updated_at"`
-	CreatedAt   time.Time       `reform:"created_at"`
+	InvoiceID   int64         `reform:"invoice_id,pk"`
+	Key         string        `reform:"key"`
+	Status      InvoiceStatus `reform:"status"`
+	TotalAmount int64         `reform:"total_amount"`
+	Strategy    string        `reform:"strategy"`
+	Meta        *[]byte       `reform:"meta"`
+	Payload     *[]byte       `reform:"payload"`
+	UpdatedAt   time.Time     `reform:"updated_at"`
+	CreatedAt   time.Time     `reform:"created_at"`
 }
 
 func (i *Invoice) BeforeInsert() error {

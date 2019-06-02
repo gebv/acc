@@ -1,7 +1,7 @@
-package acca
+package engine
 
 import (
-	"encoding/json"
+	"errors"
 	"time"
 )
 
@@ -21,11 +21,11 @@ const (
 type Transaction struct {
 	TransactionID      int64             `reform:"tx_id,pk"`
 	InvoiceID          int64             `reform:"invoice_id"`
-	Key                string            `reform:"key"`
+	Key                *string           `reform:"key"`
 	Provider           string            `reform:"provider"`
 	ProviderOperID     *string           `reform:"provider_oper_id"`
 	ProviderOperStatus *string           `reform:"provider_oper_status"`
-	Meta               json.RawMessage   `reform:"meta"`
+	Meta               *[]byte           `reform:"meta"`
 	Status             TransactionStatus `reform:"status"`
 	UpdatedAt          time.Time         `reform:"updated_at"`
 	CreatedAt          time.Time         `reform:"created_at"`
@@ -64,13 +64,14 @@ const (
 type Operation struct {
 	OperationID   int64             `reform:"oper_id,pk"`
 	TransactionID int64             `reform:"tx_id"`
+	InvoiceID     int64             `reform:"invoice_id"`
 	SrcAccID      int64             `reform:"src_acc_id"`
 	DstAccID      int64             `reform:"dst_acc_id"`
 	HoldAccID     *int64            `reform:"hold_acc_id"`
 	Strategy      OperationStrategy `reform:"strategy"`
 	Amount        int64             `reform:"amount"`
-	Key           string            `reform:"key"`
-	Meta          json.RawMessage   `reform:"meta"`
+	Key           *string           `reform:"key"`
+	Meta          *[]byte           `reform:"meta"`
 	Status        OperationStatus   `reform:"status"`
 	UpdatedAt     time.Time         `reform:"updated_at"`
 	CreatedAt     time.Time         `reform:"created_at"`
@@ -80,6 +81,9 @@ func (o *Operation) BeforeInsert() error {
 	o.UpdatedAt = time.Now()
 	o.CreatedAt = time.Now()
 	o.Status = DRAFT_OP
+	if o.Strategy == OperationStrategy("") {
+		return errors.New("empty strategy of operation")
+	}
 	return nil
 }
 
