@@ -20,6 +20,7 @@ const (
 type Invoice struct {
 	InvoiceID   int64           `reform:"invoice_id,pk"`
 	Key         string          `reform:"key"`
+	Strategy    string          `reform:"strategy"`
 	Status      InvoiceStatus   `reform:"status"`
 	TotalAmount int64           `reform:"total_amount"`
 	Payload     json.RawMessage `reform:"payload"`
@@ -30,6 +31,7 @@ type Invoice struct {
 func (i *Invoice) BeforeInsert() error {
 	i.UpdatedAt = time.Now()
 	i.CreatedAt = time.Now()
+	i.Status = AUTH_I
 	return nil
 }
 

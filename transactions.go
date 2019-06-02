@@ -34,6 +34,7 @@ type Transaction struct {
 func (t *Transaction) BeforeInsert() error {
 	t.UpdatedAt = time.Now()
 	t.CreatedAt = time.Now()
+	t.Status = DRAFT_TX
 	return nil
 }
 
@@ -78,6 +79,7 @@ type Operation struct {
 func (o *Operation) BeforeInsert() error {
 	o.UpdatedAt = time.Now()
 	o.CreatedAt = time.Now()
+	o.Status = DRAFT_OP
 	return nil
 }
 

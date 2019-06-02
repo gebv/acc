@@ -16,6 +16,7 @@ CREATE TABLE acca.invoices (
     invoice_id bigserial PRIMARY KEY,
     key ltree NOT NULL,
     status acca.invoice_status NOT NULL CHECK (status <> 'unknown'),
+    strategy varchar NOT NULL,
     total_amount numeric(23, 00) NOT NULL DEFAULT 0,
     payload jsonb NOT NULL,
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
