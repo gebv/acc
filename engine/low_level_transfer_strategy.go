@@ -8,7 +8,6 @@ func newLowLevelMoneyTransferStrategy() *lowLevelMoneyTransferStrategy {
 	m := &lowLevelMoneyTransferStrategy{
 		accountBalances:         make(listBalances),
 		accountAcceptedBalances: make(listBalances),
-		allowedSetNextStatus:    true,
 		execMap:                 make(map[lowLevelMoneyTransferStrategy__execKey]func(nextTxStatus TransactionStatus, oper *Operation)),
 	}
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{SIMPLE_OPS, AUTH_TX}] = m.simpleTransfer_auth
@@ -25,16 +24,9 @@ func newLowLevelMoneyTransferStrategy() *lowLevelMoneyTransferStrategy {
 	return m
 }
 
-func newLowLevelMoneyTransferStrategy_withoutChangeOperStatus() *lowLevelMoneyTransferStrategy {
-	m := newLowLevelMoneyTransferStrategy()
-	m.allowedSetNextStatus = false
-	return m
-}
-
 type lowLevelMoneyTransferStrategy struct {
 	accountBalances         listBalances
 	accountAcceptedBalances listBalances
-	allowedSetNextStatus    bool
 	execMap                 map[lowLevelMoneyTransferStrategy__execKey]func(nextTxStatus TransactionStatus, oper *Operation)
 }
 
@@ -68,19 +60,17 @@ func (t *lowLevelMoneyTransferStrategy) Process(nextTxStatus TransactionStatus, 
 
 	exec(nextTxStatus, oper)
 
-	if t.allowedSetNextStatus {
-		switch nextTxStatus {
-		case AUTH_TX:
-			if oper.Hold {
-				oper.Status = HOLD_OP
-			} else {
-				oper.Status = ACCEPTED_OP
-			}
-		case ACCEPTED_TX:
+	switch nextTxStatus {
+	case AUTH_TX:
+		if oper.Hold {
+			oper.Status = HOLD_OP
+		} else {
 			oper.Status = ACCEPTED_OP
-		case REJECTED_TX:
-			oper.Status = REJECTED_OP
 		}
+	case ACCEPTED_TX:
+		oper.Status = ACCEPTED_OP
+	case REJECTED_TX:
+		oper.Status = REJECTED_OP
 	}
 
 	return nil
