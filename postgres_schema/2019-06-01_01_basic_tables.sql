@@ -6,6 +6,7 @@ CREATE EXTENSION IF NOT EXISTS ltree;
 
 CREATE TYPE acca.invoice_status AS enum (
     'unknown',
+    'draft',
     'auth',
     'wait',
     'accepted',

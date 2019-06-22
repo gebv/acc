@@ -18,7 +18,7 @@ const (
 	AUTH_TX     TransactionStatus = "auth"
 	ACCEPTED_TX TransactionStatus = "accepted"
 	REJECTED_TX TransactionStatus = "rejected"
-	FAILED_TX   TransactionStatus = "FAILED"
+	FAILED_TX   TransactionStatus = "failed"
 )
 
 //reform:acca.transactions

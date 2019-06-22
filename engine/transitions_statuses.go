@@ -11,8 +11,9 @@ var transactionStatusTransitionChart = TransactionStatusTransitionChart{
 }
 
 var transitionsStatusesOfInvoice = InvoicesStatusTransitionChart{
-	AUTH_I: {WAIT_I, ACCEPTED_I, REJECTED_I},
-	WAIT_I: {ACCEPTED_I, REJECTED_I},
+	DRAFT_I: {AUTH_I},
+	AUTH_I:  {WAIT_I, ACCEPTED_I, REJECTED_I},
+	WAIT_I:  {ACCEPTED_I, REJECTED_I},
 }
 
 type OperationStatusTransitionChart map[OperationStatus][]OperationStatus

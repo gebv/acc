@@ -13,6 +13,7 @@ func (s InvoiceStatus) Match(in InvoiceStatus) bool {
 }
 
 const (
+	DRAFT_I    InvoiceStatus = "draft"
 	AUTH_I     InvoiceStatus = "auth"
 	WAIT_I     InvoiceStatus = "wait"
 	ACCEPTED_I InvoiceStatus = "accepted"
@@ -35,7 +36,7 @@ type Invoice struct {
 func (i *Invoice) BeforeInsert() error {
 	i.UpdatedAt = time.Now()
 	i.CreatedAt = time.Now()
-	i.Status = AUTH_I
+	i.Status = DRAFT_I
 	return nil
 }
 

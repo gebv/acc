@@ -45,7 +45,7 @@ func Test_lowLevelMoneyTransferStrategy_Process(t *testing.T) {
 		{SIMPLE_OPS, ACCEPTED_OP, ACCEPTED_OP, DRAFT_TX, true, []int64{0, 0, 0}, []int64{0, 0, 0}, true},
 		{SIMPLE_OPS, REJECTED_OP, REJECTED_OP, DRAFT_TX, true, []int64{0, 0, 0}, []int64{0, 0, 0}, true},
 
-		{SIMPLE_OPS, DRAFT_OP, HOLD_OP, AUTH_TX, true, []int64{-10, 0, 10}, []int64{0, 0, 0}, false}, // simple
+		{SIMPLE_OPS, DRAFT_OP, HOLD_OP, AUTH_TX, true, []int64{-10, 0, 10}, []int64{0, 0, 0}, false}, // hold
 		{SIMPLE_OPS, HOLD_OP, HOLD_OP, AUTH_TX, true, []int64{0, 0, 0}, []int64{0, 0, 0}, true},
 		{SIMPLE_OPS, ACCEPTED_OP, ACCEPTED_OP, AUTH_TX, true, []int64{0, 0, 0}, []int64{0, 0, 0}, true},
 		{SIMPLE_OPS, REJECTED_OP, REJECTED_OP, AUTH_TX, true, []int64{0, 0, 0}, []int64{0, 0, 0}, true},
