@@ -16,22 +16,27 @@ type SimpleService struct {
 }
 
 func (s *SimpleService) InternalTransfer(srcAccID, dstAccID, amount int64) (int64, error) {
-	newInvoice := &Invoice{
-		Key:         "simple1",
-		Strategy:    "simple",
-		TotalAmount: amount,
-	}
-	newTransaction := &Transaction{
-		Provider: "internal",
-	}
+	var newInvoiceID int64
+
 	err := s.db.InTransaction(func(tx *reform.TX) error {
+		newInvoice := &Invoice{
+			Key:         "simple1",
+			Strategy:    "simple",
+			TotalAmount: amount,
+		}
 		if err := s.db.Insert(newInvoice); err != nil {
 			return errors.Wrap(err, "failed insert new invoice")
 		}
-		newTransaction.InvoiceID = newInvoice.InvoiceID
+
+		newInvoiceID = newInvoice.InvoiceID
+		newTransaction := &Transaction{
+			Provider:  "internal",
+			InvoiceID: newInvoiceID,
+		}
 		if err := s.db.Insert(newTransaction); err != nil {
 			return errors.Wrap(err, "failed insert new transaction")
 		}
+
 		opers := []*Operation{
 			{
 				SrcAccID: srcAccID,
@@ -49,9 +54,10 @@ func (s *SimpleService) InternalTransfer(srcAccID, dstAccID, amount int64) (int6
 		}
 		return nil
 	})
+
 	if err != nil {
 		return 0, err
 	}
 
-	return newInvoice.InvoiceID, nil
+	return newInvoiceID, nil
 }
