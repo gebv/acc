@@ -60,14 +60,41 @@ func (t *TransactionProcessor) process(tx *reform.TX, msg *transactionProcessorM
 	if err != nil {
 		return errors.Wrap(err, "failed find operations")
 	}
+
 	sm := newLowLevelMoneyTransferStrategy()
 	for _, ioper := range opers {
 		oper := ioper.(*Operation)
+
 		if err := sm.Process(msg.nextStatus, oper); err != nil {
-			return errors.Wrapf(err, "failed peocess operation %d", oper.OperationID)
+			return errors.Wrapf(err, "failed process operation %d", oper.OperationID)
+		}
+
+		// store operation status after process
+		if err := tx.UpdateColumns(oper, "updated_at", "status"); err != nil {
+			return errors.Wrapf(err, "failed update operation %d after process", oper.OperationID)
 		}
 	}
-	// TODO: сохранить балансы
+
+	// store changed balances after process
+	for accID, balance := range sm.accountBalances {
+		if balance == 0 {
+			// to skip if the balance didn't change
+			continue
+		}
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = $1 WHERE acc_id = $2`, balance, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance for account %d", accID)
+		}
+	}
+	for accID, balance := range sm.accountAcceptedBalances {
+		if balance == 0 {
+			// to skip if the balance didn't change
+			continue
+		}
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = $1 WHERE acc_id = $2`, balance, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID)
+		}
+	}
+
 	return nil
 }
 
