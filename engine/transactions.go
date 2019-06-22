@@ -50,9 +50,9 @@ func (t *Transaction) BeforeUpdate() error {
 type OperationStrategy string
 
 const (
-	SIMPLE_OPS   = "simple_transfer"
-	RECHARGE_OPS = "recharge"
-	WITHDRAW_OPS = "withdraw"
+	SIMPLE_OPS   OperationStrategy = "simple_transfer"
+	RECHARGE_OPS OperationStrategy = "recharge"
+	WITHDRAW_OPS OperationStrategy = "withdraw"
 )
 
 var allowedOperationStrategies = map[OperationStrategy]bool{
