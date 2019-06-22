@@ -82,45 +82,45 @@ func (t *lowLevelMoneyTransferStrategy) Process(nextTxStatus TransactionStatus, 
 
 func (t *lowLevelMoneyTransferStrategy) simpleTransfer_auth(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Inc(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.inc(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Dec(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.DstAccID, oper.Amount)
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) recharge_auth(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		if oper.HoldAccID != nil {
-			t.accountBalances.Inc(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.inc(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.DstAccID, oper.Amount)
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) withdraw_auth(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Inc(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.inc(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Dec(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Dec(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.DstAccID, oper.Amount)
+		t.accountBalances.dec(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.DstAccID, oper.Amount)
 	}
 }
 
@@ -130,38 +130,38 @@ func (t *lowLevelMoneyTransferStrategy) withdraw_auth(nextTxStatus TransactionSt
 
 func (t *lowLevelMoneyTransferStrategy) simpleTransfer_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) recharge_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.DstAccID, oper.Amount)
 
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) withdraw_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Dec(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.DstAccID, oper.Amount)
+		t.accountBalances.dec(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	}
 }
@@ -172,44 +172,44 @@ func (t *lowLevelMoneyTransferStrategy) withdraw_accepted(nextTxStatus Transacti
 
 func (t *lowLevelMoneyTransferStrategy) simpleTransfer_rejected(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Dec(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.DstAccID, oper.Amount)
+		t.accountBalances.dec(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.DstAccID, oper.Amount)
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) recharge_rejected(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Dec(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Dec(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Dec(oper.DstAccID, oper.Amount)
+		t.accountBalances.dec(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.dec(oper.DstAccID, oper.Amount)
 	}
 }
 
 func (t *lowLevelMoneyTransferStrategy) withdraw_rejected(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
 		if oper.HoldAccID != nil {
-			t.accountBalances.Dec(*oper.HoldAccID, oper.Amount)
+			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
 	} else {
-		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.SrcAccID, oper.Amount)
 
-		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
-		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
+		t.accountAcceptedBalances.inc(oper.DstAccID, oper.Amount)
 	}
 }

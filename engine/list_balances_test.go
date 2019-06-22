@@ -31,7 +31,7 @@ func Test_listBalances_Inc(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.b.Inc(tt.id, tt.amount)
+			tt.b.inc(tt.id, tt.amount)
 			if !reflect.DeepEqual(tt.b, tt.want) {
 				t.Error("not equal")
 			}
@@ -65,7 +65,7 @@ func Test_listBalances_Dec(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.b.Dec(tt.id, tt.amount)
+			tt.b.dec(tt.id, tt.amount)
 			if !reflect.DeepEqual(tt.b, tt.want) {
 				t.Error("not equal")
 			}

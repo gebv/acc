@@ -103,7 +103,7 @@ func Test_lowLevelMoneyTransferStrategy_Process(t *testing.T) {
 
 			for i, balance := range tt.wantBalances {
 				accountID := int64(i + 1)
-				gotBalance := ll.accountBalances.Get(accountID)
+				gotBalance := ll.accountBalances.get(accountID)
 				if gotBalance != balance {
 					t.Errorf("accountBalances[id=%d] = %d, want %d", accountID, gotBalance, balance)
 				}
@@ -111,7 +111,7 @@ func Test_lowLevelMoneyTransferStrategy_Process(t *testing.T) {
 
 			for i, balance := range tt.wantAcceptedBalances {
 				accountID := int64(i + 1)
-				gotBalance := ll.accountAcceptedBalances.Get(accountID)
+				gotBalance := ll.accountAcceptedBalances.get(accountID)
 				if gotBalance != balance {
 					t.Errorf("accountAcceptedBalances[id=%d] = %d, want %d", accountID, gotBalance, balance)
 				}
