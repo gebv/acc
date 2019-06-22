@@ -8,6 +8,7 @@ func newLowLevelMoneyTransferStrategy() *lowLevelMoneyTransferStrategy {
 	m := &lowLevelMoneyTransferStrategy{
 		accountBalances:         make(listBalances),
 		accountAcceptedBalances: make(listBalances),
+		allowedSetNextStatus:    true,
 		execMap:                 make(map[lowLevelMoneyTransferStrategy__execKey]func(nextTxStatus TransactionStatus, oper *Operation)),
 	}
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{SIMPLE_OPS, AUTH_TX}] = m.simpleTransfer_auth
@@ -24,9 +25,16 @@ func newLowLevelMoneyTransferStrategy() *lowLevelMoneyTransferStrategy {
 	return m
 }
 
+func newLowLevelMoneyTransferStrategy_withoutChangeOperStatus() *lowLevelMoneyTransferStrategy {
+	m := newLowLevelMoneyTransferStrategy()
+	m.allowedSetNextStatus = false
+	return m
+}
+
 type lowLevelMoneyTransferStrategy struct {
 	accountBalances         listBalances
 	accountAcceptedBalances listBalances
+	allowedSetNextStatus    bool
 	execMap                 map[lowLevelMoneyTransferStrategy__execKey]func(nextTxStatus TransactionStatus, oper *Operation)
 }
 
@@ -49,6 +57,8 @@ func (t *lowLevelMoneyTransferStrategy) Process(nextTxStatus TransactionStatus, 
 		if oper.Status != HOLD_OP {
 			return errors.New("not allowed - operation is not in the allowed status")
 		}
+	default:
+		return errors.New("not allowed - operation is not in the allowed status")
 	}
 
 	exec, exists := t.execMap[lowLevelMoneyTransferStrategy__execKey{oper.Strategy, nextTxStatus}]
@@ -57,6 +67,21 @@ func (t *lowLevelMoneyTransferStrategy) Process(nextTxStatus TransactionStatus, 
 	}
 
 	exec(nextTxStatus, oper)
+
+	if t.allowedSetNextStatus {
+		switch nextTxStatus {
+		case AUTH_TX:
+			if oper.Hold {
+				oper.Status = HOLD_OP
+			} else {
+				oper.Status = ACCEPTED_OP
+			}
+		case ACCEPTED_TX:
+			oper.Status = ACCEPTED_OP
+		case REJECTED_TX:
+			oper.Status = REJECTED_OP
+		}
+	}
 
 	return nil
 }
@@ -116,6 +141,7 @@ func (t *lowLevelMoneyTransferStrategy) withdraw_auth(nextTxStatus TransactionSt
 func (t *lowLevelMoneyTransferStrategy) simpleTransfer_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+
 		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
 		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
@@ -128,6 +154,7 @@ func (t *lowLevelMoneyTransferStrategy) recharge_accepted(nextTxStatus Transacti
 	if oper.Hold {
 		t.accountBalances.Inc(oper.SrcAccID, oper.Amount)
 		t.accountAcceptedBalances.Inc(oper.SrcAccID, oper.Amount)
+
 		t.accountBalances.Inc(oper.DstAccID, oper.Amount)
 		t.accountAcceptedBalances.Inc(oper.DstAccID, oper.Amount)
 
@@ -140,6 +167,7 @@ func (t *lowLevelMoneyTransferStrategy) recharge_accepted(nextTxStatus Transacti
 func (t *lowLevelMoneyTransferStrategy) withdraw_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		t.accountAcceptedBalances.Dec(oper.SrcAccID, oper.Amount)
+
 		t.accountBalances.Dec(oper.DstAccID, oper.Amount)
 		t.accountAcceptedBalances.Dec(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
