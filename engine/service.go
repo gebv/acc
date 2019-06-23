@@ -36,8 +36,30 @@ func (s *Service) NewInvoice(key, strategy string, totalAmount int64, meta, payl
 	return newInvoice.InvoiceID, nil
 }
 
-func (s *Service) AddTransaction(invoiceID int64) error {
-	panic("not implemented")
+func (s *Service) AddTransaction(invoiceID int64, key, provider string, meta *[]byte) (int64, error) {
+	invoice := &Invoice{InvoiceID: invoiceID}
+	if err := s.db.Reload(invoice); err != nil {
+		return 0, errors.Wrap(err, "failed find invocie by ID")
+	}
+	if !invoice.Status.Match(DRAFT_I) {
+		return 0, errors.New("not allowed add transaction (invoice is not draft)")
+	}
+
+	newTransaction := &Transaction{
+		InvoiceID: invoiceID,
+
+		// TODO
+		// - внутренний перевод
+		// - перевод с карты
+		Provider: provider, // TODO: валидация провайдера
+
+		Meta: meta,
+		// TODO: add key field
+	}
+	if err := s.db.Insert(newTransaction); err != nil {
+		return 0, errors.Wrap(err, "failed insert new transaction")
+	}
+	return newTransaction.TransactionID, nil
 }
 
 func (s *Service) AuthInvoice(invoiceID int64) error {

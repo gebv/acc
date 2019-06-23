@@ -17,7 +17,7 @@ const (
 func NewTransactionProcessor(db *reform.DB) *transactionProcessor {
 	p := &transactionProcessor{
 		db:        db,
-		toProcess: make(chan *transactionProcessorMessage, toProcessCap),
+		toProcess: make(chan *processorCommand, toProcessCap),
 		l:         zap.L().Named("tx_processor"),
 		// TODO: add prometheus metrics
 	}
@@ -30,42 +30,49 @@ func NewTransactionProcessor(db *reform.DB) *transactionProcessor {
 type transactionProcessor struct {
 	db        *reform.DB
 	wg        sync.WaitGroup
-	toProcess chan *transactionProcessorMessage
+	toProcess chan *processorCommand
 	l         *zap.Logger
 }
 
-type transactionProcessorMessage struct {
+type processorCommand struct {
 	txID          int64
 	currentStatus TransactionStatus
 	nextStatus    TransactionStatus
 	updatedAt     time.Time
+
+	// TODO: расширить модель и добавить
+	// - смена статуса для транзакции
+	// - проверка закрытия всех транзакций в инвйосе и смена статуса инвойса
 }
 
 func (p *transactionProcessor) runPocessor() error {
 	defer p.wg.Done()
 	var err error
-	for m := range p.toProcess {
+	for cmd := range p.toProcess {
 		err = p.db.InTransaction(func(tx *reform.TX) error {
-			currentTx := &Transaction{TransactionID: m.txID}
+			currentTx := &Transaction{TransactionID: cmd.txID}
 			if err := tx.Reload(currentTx); err != nil {
 				return errors.Wrap(err, "failed find transaction")
 			}
 
-			if currentTx.UpdatedAt.UnixNano() != m.updatedAt.UnixNano() {
+			if currentTx.UpdatedAt.UnixNano() != cmd.updatedAt.UnixNano() {
 				return errors.New("transaction is rejected by the processor - not matched updated_at")
 			}
-			if !currentTx.Status.Match(m.currentStatus) {
+			if !currentTx.Status.Match(cmd.currentStatus) {
 				return errors.New("transaction is rejected by the processor - not matched status")
 			}
-			if !transactionStatusTransitionChart.Allowed(m.currentStatus, m.nextStatus) {
+			if !transactionStatusTransitionChart.Allowed(cmd.currentStatus, cmd.nextStatus) {
 				return errors.New("transaction is rejected by the processor - not allowed transition status")
 			}
 
-			if err := p.process(tx, m); err != nil {
+			// TODO: в зависимости от провайдера процедура
+			// - Сбербанк, в случае статуса AUTH авторизация операции в сбербанке (получение OperID, OperStatus)
+
+			if err := p.processingOperations(tx, cmd); err != nil {
 				return errors.Wrap(err, "failed process")
 			}
 
-			currentTx.Status = m.nextStatus
+			currentTx.Status = cmd.nextStatus
 			if err := tx.UpdateColumns(currentTx, "updated_at", "status"); err != nil {
 				return errors.Wrap(err, "failed update transaction")
 			}
@@ -73,7 +80,7 @@ func (p *transactionProcessor) runPocessor() error {
 			return nil
 		})
 		if err != nil {
-			p.l.Error("failed process transaction", zap.Error(err), zap.Int64("tx_id", m.txID), zap.Time("tx_version_at", m.updatedAt))
+			p.l.Error("failed process transaction", zap.Error(err), zap.Int64("tx_id", cmd.txID), zap.Time("tx_version_at", cmd.updatedAt))
 			continue
 		}
 	}
@@ -86,7 +93,8 @@ func (t *transactionProcessor) Stop() {
 	t.l.Info("Stopped.")
 }
 
-func (t *transactionProcessor) process(tx *reform.TX, msg *transactionProcessorMessage) error {
+// обработка операций в транзакции
+func (t *transactionProcessor) processingOperations(tx *reform.TX, msg *processorCommand) error {
 	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", msg.txID)
 	if err != nil {
 		return errors.Wrap(err, "failed find operations")
@@ -250,7 +258,7 @@ func (t *transactionProcessor) RejectTx(txID int64) error {
 }
 
 func (t *transactionProcessor) Process(txID int64, updatedAt time.Time, currentStatus, nextStatus TransactionStatus) error {
-	msg := &transactionProcessorMessage{
+	msg := &processorCommand{
 		txID:          txID,
 		updatedAt:     updatedAt,
 		currentStatus: currentStatus,
