@@ -1,5 +1,7 @@
 package engine
 
+// TODO: перенести в сервис
+
 import (
 	"strings"
 

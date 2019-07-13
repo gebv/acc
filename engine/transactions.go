@@ -1,11 +1,68 @@
 package engine
 
 import (
-	"errors"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 //go:generate reform
+
+//reform:acca.transactions
+type Transaction struct {
+	// TransactionID внутренний идентификатор транзакции.
+	TransactionID int64 `reform:"tx_id,pk"`
+
+	// InvoiceID связанный с транзакцией инвойс.
+	InvoiceID int64 `reform:"invoice_id"`
+
+	// Key Уникальный внешний идентификатор транзакции (опционально).
+	Key *string `reform:"key"`
+
+	// Provider Тип провайдера обслуживающий транзакцию.
+	Provider Provider `reform:"provider"`
+
+	// ProviderOperID Идентификатор связанной с транзакцией операции во внешней системе.
+	ProviderOperID *string `reform:"provider_oper_id"`
+
+	// ProviderOperStatus Статус связанной с транзакцией операции во внешней системе.
+	ProviderOperStatus *string `reform:"provider_oper_status"`
+
+	// Meta мета информация связанная с транзакцией (учавствующая в логике).
+	Meta *[]byte `reform:"meta"`
+
+	// Status статус транзакции.
+	Status TransactionStatus `reform:"status"`
+
+	UpdatedAt time.Time `reform:"updated_at"`
+	CreatedAt time.Time `reform:"created_at"`
+}
+
+func (t *Transaction) BeforeInsert() error {
+	t.UpdatedAt = time.Now()
+	t.CreatedAt = time.Now()
+	t.Status = DRAFT_TX
+	if t.Provider == UNKNOWN_PROVIDER {
+		return errors.New("unknown provider")
+	}
+	return nil
+}
+
+func (t *Transaction) BeforeUpdate() error {
+	t.UpdatedAt = time.Now()
+	return nil
+}
+
+type Provider string
+
+func (p Provider) Match(in Provider) bool {
+	return p == in
+}
+
+const (
+	UNKNOWN_PROVIDER Provider = ""
+	INTERNAL         Provider = "internal"
+)
 
 type TransactionStatus string
 
@@ -20,89 +77,3 @@ const (
 	REJECTED_TX TransactionStatus = "rejected"
 	FAILED_TX   TransactionStatus = "failed"
 )
-
-//reform:acca.transactions
-type Transaction struct {
-	TransactionID      int64             `reform:"tx_id,pk"`
-	InvoiceID          int64             `reform:"invoice_id"`
-	Key                *string           `reform:"key"`
-	Provider           string            `reform:"provider"`
-	ProviderOperID     *string           `reform:"provider_oper_id"`
-	ProviderOperStatus *string           `reform:"provider_oper_status"`
-	Meta               *[]byte           `reform:"meta"`
-	Status             TransactionStatus `reform:"status"`
-	UpdatedAt          time.Time         `reform:"updated_at"`
-	CreatedAt          time.Time         `reform:"created_at"`
-}
-
-func (t *Transaction) BeforeInsert() error {
-	t.UpdatedAt = time.Now()
-	t.CreatedAt = time.Now()
-	t.Status = DRAFT_TX
-	return nil
-}
-
-func (t *Transaction) BeforeUpdate() error {
-	t.UpdatedAt = time.Now()
-	return nil
-}
-
-type OperationStrategy string
-
-const (
-	SIMPLE_OPS   OperationStrategy = "simple_transfer"
-	RECHARGE_OPS OperationStrategy = "recharge"
-	WITHDRAW_OPS OperationStrategy = "withdraw"
-)
-
-var allowedOperationStrategies = map[OperationStrategy]bool{
-	SIMPLE_OPS:   true,
-	RECHARGE_OPS: true,
-	WITHDRAW_OPS: true,
-}
-
-type OperationStatus string
-
-func (s OperationStatus) Match(in OperationStatus) bool {
-	return s == in
-}
-
-const (
-	DRAFT_OP    OperationStatus = "draft"
-	HOLD_OP     OperationStatus = "hold"
-	ACCEPTED_OP OperationStatus = "accepted"
-	REJECTED_OP OperationStatus = "rejected"
-)
-
-//reform:acca.operations
-type Operation struct {
-	OperationID   int64             `reform:"oper_id,pk"`
-	TransactionID int64             `reform:"tx_id"`
-	InvoiceID     int64             `reform:"invoice_id"`
-	SrcAccID      int64             `reform:"src_acc_id"`
-	DstAccID      int64             `reform:"dst_acc_id"`
-	Hold          bool              `reform:"hold"`
-	HoldAccID     *int64            `reform:"hold_acc_id"`
-	Strategy      OperationStrategy `reform:"strategy"`
-	Amount        int64             `reform:"amount"`
-	Key           *string           `reform:"key"`
-	Meta          *[]byte           `reform:"meta"`
-	Status        OperationStatus   `reform:"status"`
-	UpdatedAt     time.Time         `reform:"updated_at"`
-	CreatedAt     time.Time         `reform:"created_at"`
-}
-
-func (o *Operation) BeforeInsert() error {
-	o.UpdatedAt = time.Now()
-	o.CreatedAt = time.Now()
-	o.Status = DRAFT_OP
-	if o.Strategy == OperationStrategy("") {
-		return errors.New("empty strategy of operation")
-	}
-	return nil
-}
-
-func (o *Operation) BeforeUpdate() error {
-	o.UpdatedAt = time.Now()
-	return nil
-}

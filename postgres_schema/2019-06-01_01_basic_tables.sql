@@ -18,7 +18,7 @@ CREATE TABLE acca.invoices (
     key ltree NOT NULL,
     status acca.invoice_status NOT NULL CHECK (status <> 'unknown'),
     strategy varchar NOT NULL,
-    total_amount numeric(23, 00) NOT NULL DEFAULT 0,
+    -- total_amount numeric(23, 00) NOT NULL DEFAULT 0,
     meta jsonb,
     payload bytea,
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
@@ -105,5 +105,6 @@ CREATE TABLE acca.operations (
 );
 
 CREATE INDEX operations_key_gist_idx ON acca.operations USING GIST (key);
+CREATE UNIQUE INDEX operations_invoice_key_uniq_idx ON acca.operations (invoice_id, key);
 
 COMMIT;

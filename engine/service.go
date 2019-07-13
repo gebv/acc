@@ -19,16 +19,15 @@ type Service struct {
 }
 
 // NewInvoice новый счет на оплату
-func (s *Service) NewInvoice(key, strategy string, totalAmount int64, meta, payload *[]byte) (int64, error) {
+func (s *Service) NewInvoice(key, strategy string, meta, payload *[]byte) (int64, error) {
 	key = strings.TrimSpace(strings.ToLower(key))
 	strategy = strings.TrimSpace(strings.ToLower(strategy))
 
 	newInvoice := &Invoice{
-		Key:         key,
-		Strategy:    strategy,
-		TotalAmount: totalAmount,
-		Meta:        meta,
-		Payload:     payload,
+		Key:      key,
+		Strategy: strategy,
+		Meta:     meta,
+		Payload:  payload,
 	}
 	if err := s.db.Insert(newInvoice); err != nil {
 		return 0, errors.Wrap(err, "failed insert new invoice")
@@ -51,7 +50,7 @@ func (s *Service) AddTransaction(invoiceID int64, key, provider string, meta *[]
 		// TODO
 		// - внутренний перевод
 		// - перевод с карты
-		Provider: provider, // TODO: валидация провайдера
+		Provider: Provider(provider), // TODO: валидация провайдера
 
 		Meta: meta,
 		// TODO: add key field

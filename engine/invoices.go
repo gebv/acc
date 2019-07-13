@@ -6,6 +6,7 @@ import (
 
 //go:generate reform
 
+// InvoiceStatus состояние инвойса.
 type InvoiceStatus string
 
 func (s InvoiceStatus) Match(in InvoiceStatus) bool {
@@ -13,24 +14,49 @@ func (s InvoiceStatus) Match(in InvoiceStatus) bool {
 }
 
 const (
-	DRAFT_I    InvoiceStatus = "draft"
-	AUTH_I     InvoiceStatus = "auth"
-	WAIT_I     InvoiceStatus = "wait"
+	// DRAFT_I статус инвойса в черновике. В этом статусе позволено
+	// вносить изменения в инвойс и входящие в него транзакции.
+	// Только в этом статусе позволено вручную менять состав инвойса.
+	DRAFT_I InvoiceStatus = "draft"
+
+	// AUTH_I статус инвойса когда он прошел первичную валидацию и готов к дальнейшей обработке.
+	AUTH_I InvoiceStatus = "auth"
+
+	// WAIT_I статус инвойса в ожидании подтверждения чего либо. Служит для двух-этапных операций.
+	WAIT_I InvoiceStatus = "wait"
+
+	// ACCEPTED_I конечный статус инвойса. Весь инвойс принят и успешно исполнен.
 	ACCEPTED_I InvoiceStatus = "accepted"
+
+	// ACCEPTED_I конечный статус инвойса. Весь инвойс отклонен.
 	REJECTED_I InvoiceStatus = "rejected"
 )
 
 //reform:acca.invoices
 type Invoice struct {
-	InvoiceID   int64         `reform:"invoice_id,pk"`
-	Key         string        `reform:"key"`
-	Status      InvoiceStatus `reform:"status"`
-	TotalAmount int64         `reform:"total_amount"`
-	Strategy    string        `reform:"strategy"`
-	Meta        *[]byte       `reform:"meta"`
-	Payload     *[]byte       `reform:"payload"`
-	UpdatedAt   time.Time     `reform:"updated_at"`
-	CreatedAt   time.Time     `reform:"created_at"`
+	// InvoiceID внутренний идентификатор инвойса.
+	InvoiceID int64 `reform:"invoice_id,pk"`
+
+	// Key внешний уникальный идентицитора инвойса.
+	Key string `reform:"key"`
+
+	// Status состояние инвойса.
+	Status InvoiceStatus `reform:"status"`
+
+	// Strategy стратегия работы с инвойсом.
+	Strategy string `reform:"strategy"`
+
+	// Meta мета информация инвойса (учавствующая в логике).
+	Meta *[]byte `reform:"meta"`
+
+	// Payload контенйре с информацией связанной с инвойсом (не учавствтующая в логике).
+	Payload *[]byte `reform:"payload"`
+
+	// UpdatedAt дата последнего обновления инвойса (без учета входязих в нее сущеностей).
+	UpdatedAt time.Time `reform:"updated_at"`
+
+	// CreatedAt дата создания инвойса.
+	CreatedAt time.Time `reform:"created_at"`
 }
 
 func (i *Invoice) BeforeInsert() error {

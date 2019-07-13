@@ -34,17 +34,6 @@ type transactionProcessor struct {
 	l         *zap.Logger
 }
 
-type processorCommand struct {
-	txID          int64
-	currentStatus TransactionStatus
-	nextStatus    TransactionStatus
-	updatedAt     time.Time
-
-	// TODO: расширить модель и добавить
-	// - смена статуса для транзакции
-	// - проверка закрытия всех транзакций в инвйосе и смена статуса инвойса
-}
-
 func (p *transactionProcessor) runPocessor() error {
 	defer p.wg.Done()
 	var err error
@@ -68,7 +57,7 @@ func (p *transactionProcessor) runPocessor() error {
 			// TODO: в зависимости от провайдера процедура
 			// - Сбербанк, в случае статуса AUTH авторизация операции в сбербанке (получение OperID, OperStatus)
 
-			if err := p.processingOperations(tx, cmd); err != nil {
+			if err := processingOperations(tx, cmd); err != nil {
 				return errors.Wrap(err, "failed process")
 			}
 
@@ -91,50 +80,6 @@ func (t *transactionProcessor) Stop() {
 	close(t.toProcess)
 	t.wg.Wait()
 	t.l.Info("Stopped.")
-}
-
-// обработка операций в транзакции
-func (t *transactionProcessor) processingOperations(tx *reform.TX, msg *processorCommand) error {
-	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", msg.txID)
-	if err != nil {
-		return errors.Wrap(err, "failed find operations")
-	}
-
-	sm := newLowLevelMoneyTransferStrategy()
-	for _, ioper := range opers {
-		oper := ioper.(*Operation)
-
-		if err := sm.Process(msg.nextStatus, oper); err != nil {
-			return errors.Wrapf(err, "failed process operation %d", oper.OperationID)
-		}
-
-		// store operation status after process
-		if err := tx.UpdateColumns(oper, "updated_at", "status"); err != nil {
-			return errors.Wrapf(err, "failed update operation %d after process", oper.OperationID)
-		}
-	}
-
-	// store changed balances after process
-	for accID, balance := range sm.accountBalances {
-		if balance == 0 {
-			// to skip if the balance didn't change
-			continue
-		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = $1 WHERE acc_id = $2`, balance, accID); err != nil {
-			return errors.Wrapf(err, "failed update balance for account %d", accID)
-		}
-	}
-	for accID, balance := range sm.accountAcceptedBalances {
-		if balance == 0 {
-			// to skip if the balance didn't change
-			continue
-		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = $1 WHERE acc_id = $2`, balance, accID); err != nil {
-			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID)
-		}
-	}
-
-	return nil
 }
 
 // AuthInvoice авторизация счета.
@@ -269,6 +214,50 @@ func (t *transactionProcessor) Process(txID int64, updatedAt time.Time, currentS
 	case t.toProcess <- msg:
 	default:
 		return errors.New("Processor can't keep up.")
+	}
+
+	return nil
+}
+
+// обработка операций в транзакции
+func processingOperations(tx *reform.TX, cmd *processorCommand) error {
+	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", cmd.txID)
+	if err != nil {
+		return errors.Wrap(err, "failed find operations")
+	}
+
+	sm := newLowLevelMoneyTransferStrategy()
+	for _, ioper := range opers {
+		oper := ioper.(*Operation)
+
+		if err := sm.Process(cmd.nextStatus, oper); err != nil {
+			return errors.Wrapf(err, "failed process operation %d", oper.OperationID)
+		}
+
+		// store operation status after process
+		if err := tx.UpdateColumns(oper, "updated_at", "status"); err != nil {
+			return errors.Wrapf(err, "failed update operation %d after process", oper.OperationID)
+		}
+	}
+
+	// store changed balances after process
+	for accID, balance := range sm.accountBalances {
+		if balance == 0 {
+			// to skip if the balance didn't change
+			continue
+		}
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = $1 WHERE acc_id = $2`, balance, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance for account %d", accID)
+		}
+	}
+	for accID, balance := range sm.accountAcceptedBalances {
+		if balance == 0 {
+			// to skip if the balance didn't change
+			continue
+		}
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = $1 WHERE acc_id = $2`, balance, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID)
+		}
 	}
 
 	return nil
