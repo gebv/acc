@@ -43,6 +43,9 @@ type Invoice struct {
 	// Status состояние инвойса.
 	Status InvoiceStatus `reform:"status"`
 
+	// Status куда переходит инвойс.
+	NextStatus *InvoiceStatus `reform:"next_status"`
+
 	// Strategy стратегия работы с инвойсом.
 	Strategy string `reform:"strategy"`
 

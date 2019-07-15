@@ -19,6 +19,9 @@ type Transaction struct {
 	// Key Уникальный внешний идентификатор транзакции (опционально).
 	Key *string `reform:"key"`
 
+	// Strategy стратегия работы с инвойсом.
+	Strategy string `reform:"strategy"`
+
 	// Provider Тип провайдера обслуживающий транзакцию.
 	Provider Provider `reform:"provider"`
 
@@ -33,6 +36,9 @@ type Transaction struct {
 
 	// Status статус транзакции.
 	Status TransactionStatus `reform:"status"`
+
+	// Status статус транзакции куда происходит переход.
+	NextStatus *TransactionStatus `reform:"next_status"`
 
 	UpdatedAt time.Time `reform:"updated_at"`
 	CreatedAt time.Time `reform:"created_at"`
@@ -62,6 +68,7 @@ func (p Provider) Match(in Provider) bool {
 const (
 	UNKNOWN_PROVIDER Provider = ""
 	INTERNAL         Provider = "internal"
+	SBERBANK         Provider = "sberbank"
 )
 
 type TransactionStatus string
@@ -73,6 +80,7 @@ func (s TransactionStatus) Match(in TransactionStatus) bool {
 const (
 	DRAFT_TX    TransactionStatus = "draft"
 	AUTH_TX     TransactionStatus = "auth"
+	HOLD_TX     TransactionStatus = "hold"
 	ACCEPTED_TX TransactionStatus = "accepted"
 	REJECTED_TX TransactionStatus = "rejected"
 	FAILED_TX   TransactionStatus = "failed"
