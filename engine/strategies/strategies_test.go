@@ -1,100 +1,300 @@
 package strategies
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/gebv/acca/engine"
+	"github.com/stretchr/testify/require"
 )
 
-func TestStrategy(t *testing.T) {
-	ptrTrStatus := func(s engine.TransactionStatus) *engine.TransactionStatus { return &s }
-	ptrTrStatusToStr := func(s *engine.TransactionStatus) string {
-		if s != nil {
-			return string(*s)
-		}
-		return ""
-	}
-	ptrInvStatus := func(s engine.InvoiceStatus) *engine.InvoiceStatus { return &s }
-	ptrInvStatusToStr := func(s *engine.InvoiceStatus) string {
-		if s != nil {
-			return string(*s)
-		}
-		return ""
-	}
-
-	if S == nil {
-		t.Error("S is nil ")
-	}
-	tests := []struct {
-		invStatus     *engine.InvoiceStatus
-		trStatus      *engine.TransactionStatus
-		hold          bool
-		wantInvStatus engine.InvoiceStatus
-		wantTrStatus  engine.TransactionStatus
-		wantErr       bool
-	}{
-		{
-			invStatus:     nil,
-			trStatus:      ptrTrStatus(engine.AUTH_TX),
-			hold:          false,
-			wantInvStatus: engine.AUTH_I,
-			wantTrStatus:  engine.AUTH_TX,
-			wantErr:       false,
-		},
-		{
-			invStatus:     ptrInvStatus(engine.ACCEPTED_I),
-			trStatus:      nil,
-			hold:          false,
-			wantInvStatus: engine.ACCEPTED_I,
-			wantTrStatus:  engine.ACCEPTED_TX,
-			wantErr:       false,
-		},
-		{
-			invStatus:     ptrInvStatus(engine.REJECTED_I),
-			trStatus:      nil,
-			hold:          false,
-			wantInvStatus: engine.ACCEPTED_I,
-			wantTrStatus:  engine.ACCEPTED_TX,
-			wantErr:       true,
-		},
-		{
-			invStatus:     nil,
-			trStatus:      ptrTrStatus(engine.REJECTED_TX),
-			hold:          false,
-			wantInvStatus: engine.ACCEPTED_I,
-			wantTrStatus:  engine.ACCEPTED_TX,
-			wantErr:       true,
-		},
-	}
-	for _, tt := range tests {
-		tname := fmt.Sprintf("invStatus: %s trStatus: %s setInvStatus: %s setTrStatus: %s wantInvStatus: %s wanTrStatus: %s wantErr: %v",
-			noDbFromTest.inv.Status,
-			noDbFromTest.tr.Status,
-			ptrInvStatusToStr(tt.invStatus),
-			ptrTrStatusToStr(tt.trStatus),
-			tt.wantInvStatus,
-			tt.wantTrStatus,
-			tt.wantErr,
-		)
-		t.Run(tname, func(t *testing.T) {
-			if tt.invStatus != nil {
-				if err := SetInvoiceStatus(noDbFromTest.inv.InvoiceID, *tt.invStatus); (err != nil) != tt.wantErr {
-					t.Errorf("SetInvoiceStatus() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			} else if tt.trStatus != nil {
-				if err := SetTransactionStatus(noDbFromTest.tr.TransactionID, *tt.trStatus); (err != nil) != tt.wantErr {
-					t.Errorf("SetTransactionStatus() error = %v, wantErr %v", err, tt.wantErr)
-				}
-			} else {
-				t.Error("Set status is nil")
-			}
-			if noDbFromTest.inv.Status != tt.wantInvStatus {
-				t.Errorf("Invoice status = %v, wantStatus %v", noDbFromTest.inv.Status, tt.wantInvStatus)
-			}
-			if noDbFromTest.tr.Status != tt.wantTrStatus {
-				t.Errorf("Transaction status = %v, wantStatus %v", noDbFromTest.tr.Status, tt.wantTrStatus)
-			}
+func TestSimpleStrategy(t *testing.T) {
+	t.Run("ACCEPT", func(t *testing.T) {
+		noDbFromTest = newNoDbFromTest()
+		inv := noDbFromTest.GetInv(1)
+		require.EqualValues(t, engine.DRAFT_I, inv.Status)
+		tr1 := noDbFromTest.GetTr(1)
+		require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+		tr2 := noDbFromTest.GetTr(2)
+		require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.AUTH_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
 		})
-	}
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.AUTH_I)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+			require.NoError(t, err)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.ACCEPTED_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr2.Status)
+		})
+	})
+	t.Run("ACCEPT_WITH_HOLD", func(t *testing.T) {
+		noDbFromTest = newNoDbFromTest()
+		inv := noDbFromTest.GetInv(1)
+		require.EqualValues(t, engine.DRAFT_I, inv.Status)
+		tr1 := noDbFromTest.GetTr(1)
+		require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+		tr2 := noDbFromTest.GetTr(2)
+		require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.AUTH_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		})
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.AUTH_I)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+			require.NoError(t, err)
+		})
+		t.Run("SET-HOLD_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.HOLD_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.WAIT_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.HOLD_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+		})
+		t.Run("SET-HOLD_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.HOLD_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.WAIT_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.WAIT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.HOLD_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.HOLD_TX, tr2.Status)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.WAIT_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.HOLD_TX, tr2.Status)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.ACCEPTED_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr2.Status)
+
+		})
+	})
+	t.Run("REJECTED", func(t *testing.T) {
+		noDbFromTest = newNoDbFromTest()
+		inv := noDbFromTest.GetInv(1)
+		require.EqualValues(t, engine.DRAFT_I, inv.Status)
+		tr1 := noDbFromTest.GetTr(1)
+		require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+		tr2 := noDbFromTest.GetTr(2)
+		require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		t.Run("SET-REJECTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(1, engine.REJECTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.REJECTED_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.REJECTED_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		})
+		t.Run("SET-REJECTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(2, engine.REJECTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(1, engine.REJECTED_I)
+			inv := noDbFromTest.GetInv(1)
+			require.EqualValues(t, engine.REJECTED_TX, inv.Status)
+			tr1 := noDbFromTest.GetTr(1)
+			require.EqualValues(t, engine.REJECTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(2)
+			require.EqualValues(t, engine.REJECTED_TX, tr2.Status)
+			require.NoError(t, err)
+		})
+	})
+}
+
+func TestSberbankStrategy(t *testing.T) {
+	t.Run("ACCEPT", func(t *testing.T) {
+		noDbFromTest = newNoDbFromTest()
+		inv := noDbFromTest.GetInv(2)
+		require.EqualValues(t, engine.DRAFT_I, inv.Status)
+		tr1 := noDbFromTest.GetTr(3)
+		require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+		tr2 := noDbFromTest.GetTr(4)
+		require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			simRequestToSberbank.setFailRequest(true)
+			err := SetTransactionStatus(3, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.AUTH_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+			simRequestToSberbank.setFailRequest(false)
+			err = SetTransactionStatus(3, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.AUTH_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		})
+		t.Run("SET-AUTH_TX", func(t *testing.T) {
+			err := SetTransactionStatus(4, engine.AUTH_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.AUTH_I)
+			inv := noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+			require.NoError(t, err)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			simRequestToSberbank.setFailRequest(true)
+			err := SetTransactionStatus(3, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.AUTH_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+			simRequestToSberbank.setFailRequest(false)
+			err = SetTransactionStatus(3, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.AUTH_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.AUTH_TX, tr2.Status)
+		})
+		t.Run("SET-ACCEPTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(4, engine.ACCEPTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.ACCEPTED_I)
+			require.NoError(t, err)
+			inv := noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.ACCEPTED_I, inv.Status)
+			tr1 := noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.ACCEPTED_TX, tr2.Status)
+		})
+	})
+	t.Run("REJECTED", func(t *testing.T) {
+		noDbFromTest = newNoDbFromTest()
+		inv := noDbFromTest.GetInv(2)
+		require.EqualValues(t, engine.DRAFT_I, inv.Status)
+		tr1 := noDbFromTest.GetTr(3)
+		require.EqualValues(t, engine.DRAFT_TX, tr1.Status)
+		tr2 := noDbFromTest.GetTr(4)
+		require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		t.Run("SET-REJECTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(3, engine.REJECTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.REJECTED_I)
+			require.NoError(t, err)
+			inv = noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.DRAFT_I, inv.Status)
+			tr1 = noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.REJECTED_TX, tr1.Status)
+			tr2 = noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.DRAFT_TX, tr2.Status)
+		})
+		t.Run("SET-REJECTED_TX", func(t *testing.T) {
+			err := SetTransactionStatus(4, engine.REJECTED_TX)
+			require.NoError(t, err)
+			err = SetInvoiceStatus(2, engine.REJECTED_I)
+			inv := noDbFromTest.GetInv(2)
+			require.EqualValues(t, engine.REJECTED_TX, inv.Status)
+			tr1 := noDbFromTest.GetTr(3)
+			require.EqualValues(t, engine.REJECTED_TX, tr1.Status)
+			tr2 := noDbFromTest.GetTr(4)
+			require.EqualValues(t, engine.REJECTED_TX, tr2.Status)
+			require.NoError(t, err)
+		})
+	})
 }
