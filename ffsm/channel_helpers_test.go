@@ -11,10 +11,15 @@ func Test_WaitString(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
-
+	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
+	if err != nil {
+		t.Error("context with timeout err: ", err)
+	}
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, err := context.WithTimeout(context.Background(), d)
+		if err != nil {
+			t.Error("context with timeout err: ", err)
+		}
 		return ctx
 	}
 
@@ -30,8 +35,8 @@ func Test_WaitString(t *testing.T) {
 		name    string
 		ctx     context.Context
 		msg     string
-		hasSend bool
 		want    string
+		hasSend bool
 		ok      bool
 	}{
 		{
@@ -112,10 +117,15 @@ func Test_WaitStruct(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
-
+	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
+	if err != nil {
+		t.Error("context with timeout err: ", err)
+	}
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, err := context.WithTimeout(context.Background(), d)
+		if err != nil {
+			t.Error("context with timeout err: ", err)
+		}
 		return ctx
 	}
 
@@ -131,8 +141,8 @@ func Test_WaitStruct(t *testing.T) {
 		name    string
 		ctx     context.Context
 		msg     ChannelMsgStruct
-		hasSend bool
 		want    ChannelMsgStruct
+		hasSend bool
 		ok      bool
 	}{
 		{
@@ -213,10 +223,15 @@ func Test_WaitInterface(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
-
+	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
+	if err != nil {
+		t.Error("context with timeout err: ", err)
+	}
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, err := context.WithTimeout(context.Background(), d)
+		if err != nil {
+			t.Error("context with timeout err: ", err)
+		}
 		return ctx
 	}
 
@@ -232,8 +247,8 @@ func Test_WaitInterface(t *testing.T) {
 		name    string
 		ctx     context.Context
 		msg     Stringer
-		hasSend bool
 		want    Stringer
+		hasSend bool
 		ok      bool
 	}{
 		{

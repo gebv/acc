@@ -92,7 +92,6 @@ func MachineFrom(wf Stack, obj interface{}) *MachineState {
 	default:
 		panic(fmt.Sprintf("Not supported type %T", obj))
 	}
-	return nil
 }
 
 type MachineState struct {
