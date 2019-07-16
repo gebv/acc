@@ -20,5 +20,8 @@ gen:
 	find ./engine -name '*_reform.go' -delete
 	go generate ./engine/...
 
+lint: install
+	golangci-lint run ./...
+
 setup:
 	./scripts/pg_exec_files.sh ${PWD}/postgres_schema/*.sql
