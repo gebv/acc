@@ -16,6 +16,10 @@ install:
 	go test -i ./...
 
 gen:
+	# protobuf / gRPC
+	find ./api -name '*.pb.go' -delete
+	protoc --proto_path=. --proto_path=./vendor --govalidators_out=. --gogofast_out=plugins=grpc:. ./api/*.proto
+
 	# reform
 	find ./engine -name '*_reform.go' -delete
 	go generate ./engine/...
