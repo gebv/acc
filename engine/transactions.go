@@ -78,10 +78,14 @@ func (s TransactionStatus) Match(in TransactionStatus) bool {
 }
 
 const (
-	DRAFT_TX    TransactionStatus = "draft"
-	AUTH_TX     TransactionStatus = "auth"
-	HOLD_TX     TransactionStatus = "hold"
-	ACCEPTED_TX TransactionStatus = "accepted"
-	REJECTED_TX TransactionStatus = "rejected"
-	FAILED_TX   TransactionStatus = "failed"
+	DRAFT_TX     TransactionStatus = "draft"
+	AUTH_TX      TransactionStatus = "auth"
+	WAUTH_TX     TransactionStatus = "auth_wait"
+	HOLD_TX      TransactionStatus = "hold"
+	WHOLD_TX     TransactionStatus = "hold_wait"
+	ACCEPTED_TX  TransactionStatus = "accepted"
+	WACCEPTED_TX TransactionStatus = "accepted_wait"
+	REJECTED_TX  TransactionStatus = "rejected"
+	WREJECTED_TX TransactionStatus = "rejected_wait"
+	FAILED_TX    TransactionStatus = "failed"
 )
