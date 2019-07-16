@@ -18,7 +18,7 @@
   version = "v1.1.1"
 
 [[projects]]
-  digest = "1:d097b07ae26559979aa9f557e982bf1f42cca1d2a9d63da434c444dabf8e286b"
+  digest = "1:6db6257067f779731a9bd789a4a1ffd40b2bf289453e0a8b39fb2df75b9f6505"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -45,6 +45,8 @@
     "protoc-gen-gogo/grpc",
     "protoc-gen-gogo/plugin",
     "protoc-gen-gogofast",
+    "sortkeys",
+    "types",
     "vanity",
     "vanity/command",
   ]
@@ -53,7 +55,7 @@
   version = "v1.2.1"
 
 [[projects]]
-  digest = "1:64c2b533ffd17023738c534548ab2455d7f519bc15ed4225145425ed2222448b"
+  digest = "1:cf0608a4d324260ef753cd04a1977ccca36937b9a6a5544ab08e804325e9cdc0"
   name = "github.com/golang/protobuf"
   packages = [
     "proto",
@@ -62,6 +64,7 @@
     "ptypes/any",
     "ptypes/duration",
     "ptypes/timestamp",
+    "ptypes/wrappers",
   ]
   pruneopts = "UT"
   revision = "b5d812f8a3706043e23a9cd5babf2e5423744d30"
@@ -333,9 +336,16 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/gogo/protobuf/gogoproto",
+    "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogofast",
+    "github.com/gogo/protobuf/types",
+    "github.com/golang/protobuf/proto",
+    "github.com/golang/protobuf/ptypes/timestamp",
+    "github.com/golang/protobuf/ptypes/wrappers",
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/lib/pq",
+    "github.com/mwitkow/go-proto-validators",
     "github.com/mwitkow/go-proto-validators/protoc-gen-govalidators",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
