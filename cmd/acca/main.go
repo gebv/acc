@@ -12,13 +12,18 @@ import (
 	"time"
 
 	"github.com/gebv/acca/engine"
+	_ "github.com/gebv/acca/engine/strategies/isimple"
+	_ "github.com/gebv/acca/engine/strategies/tsimple"
+	"github.com/gebv/acca/engine/worker"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gopkg.in/nats-io/gnatsd.v2/server"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 )
@@ -56,10 +61,42 @@ func main() {
 		zap.L().Panic("Failed to listen.", zap.Error(err))
 	}
 
+	sNats, err := server.NewServer(&server.Options{
+		Host:           "127.0.0.1",
+		Port:           4222,
+		NoLog:          true,
+		NoSigs:         true,
+		MaxControlLine: 2048,
+	})
+	if err != nil || sNats == nil {
+		panic(fmt.Sprintf("No NATS Server object returned: %v", err))
+	}
+
+	// Run server in Go routine.
+	go sNats.Start()
+
+	// Wait for accept loop(s) to be started
+	if !sNats.ReadyForConnections(10 * time.Second) {
+		panic("Unable to start NATS Server in Go Routine")
+	}
+
 	s := grpc.NewServer(
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer()),
 		grpc.StreamInterceptor(middleware.ChainStreamServer()),
 	)
+
+	go func() {
+		nc, err := nats.Connect(nats.DefaultURL)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		worker.SubToNATS(nc, db)
+
+		<-ctx.Done()
+
+		defer nc.Drain()
+	}()
 
 	accountManager := engine.NewAccountManager(db)
 	currID, err := accountManager.UpsertCurrency("curr1", nil)
@@ -106,6 +143,7 @@ func main() {
 
 		}()
 		s.GracefulStop()
+		sNats.Shutdown()
 	}()
 
 	// TODO: Registry servers
