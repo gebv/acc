@@ -19,17 +19,11 @@ const (
 	// Только в этом статусе позволено вручную менять состав инвойса.
 	DRAFT_I InvoiceStatus = "draft"
 
-	MDRAFT_I InvoiceStatus = "manual_draft"
-
 	// AUTH_I статус инвойса когда он прошел первичную валидацию и готов к дальнейшей обработке.
 	AUTH_I InvoiceStatus = "auth"
 
-	MAUTH_I InvoiceStatus = "manual_auth"
-
 	// WAIT_I статус инвойса в ожидании подтверждения чего либо. Служит для двух-этапных операций.
 	WAIT_I InvoiceStatus = "wait"
-
-	MWAIT_I InvoiceStatus = "manual_wait"
 
 	// ACCEPTED_I конечный статус инвойса. Весь инвойс принят и успешно исполнен.
 	ACCEPTED_I InvoiceStatus = "accepted"
