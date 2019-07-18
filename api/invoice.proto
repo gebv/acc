@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package api;
+
+import "api/models.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/wrappers.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.enumdecl_all) = true;
+
+service Invoices {
+
+    rpc NewInvoice (NewInvoiceRequest) returns (NewInvoiceResponse) {
+    }
+
+    rpc GetInvoiceByID (GetInvoiceByIDRequest) returns (GetInvoiceByIDResponse) {
+    }
+
+    rpc AddTransactionToInvoice (AddTransactionToInvoiceRequest) returns (AddTransactionToInvoiceResponse) {
+    }
+
+    rpc GetTransactionByID (GetTransactionByIDRequest) returns (GetTransactionByIDResponse) {
+    }
+
+    rpc AddOperationToTx (AddOperationToTxRequest) returns (AddOperationToTxResponse) {
+    }
+
+    rpc GetOperationByID (GetOperationByIDRequest) returns (GetOperationByIDResponse) {
+    }
+
+    rpc AuthInvoice (AuthInvoiceRequest) returns (AuthInvoiceResponse) {
+    }
+
+    rpc AcceptInvoice (AcceptInvoiceRequest) returns (AcceptInvoiceResponse) {
+    }
+
+    rpc RejectInvoice (RejectInvoiceRequest) returns (RejectInvoiceResponse) {
+    }
+}
+
+message NewInvoiceRequest {
+    // key внешний уникальный идентицитора инвойса.
+    string key = 1;
+    // status состояние инвойса.
+    InvoiceStatus status = 2;
+    // strategy стратегия работы с инвойсом.
+    string strategy = 3;
+    google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
+}
+message NewInvoiceResponse {
+    int64 invoice_id = 1;
+}
+
+message GetInvoiceByIDRequest {
+    int64 invoice_id = 1;
+}
+message GetInvoiceByIDResponse {
+    Invoice invoice = 1;
+}
+
+message AddTransactionToInvoiceRequest {
+    // invoice_id связанный с транзакцией инвойс.
+    int64 invoice_id = 1;
+    // key Уникальный внешний идентификатор транзакции (опционально).
+    google.protobuf.StringValue key = 2 [(gogoproto.wktpointer) = true];
+    // strategy стратегия работы с инвойсом.
+    string strategy = 3;
+    google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
+}
+message AddTransactionToInvoiceResponse {
+    int64 tx_id = 1;
+}
+
+message GetTransactionByIDRequest {
+    int64 tx_id = 1;
+}
+message GetTransactionByIDResponse {
+    Tx tx = 1;
+}
+
+message AddOperationToTxRequest {
+    int64 tx_id = 2;
+    int64 src_acc_id = 3;
+    int64 dst_acc_id = 4;
+    OperStrategy strategy = 5;
+    int64 amount = 6;
+    string reason = 7;
+    google.protobuf.BytesValue meta = 8 [(gogoproto.wktpointer) = true];
+    bool hold = 9;
+    int64 hold_acc_id = 10;
+}
+message AddOperationToTxResponse {
+    int64 oper_id = 1;
+}
+
+message GetOperationByIDRequest {
+    int64 oper_id = 1;
+}
+message GetOperationByIDResponse {
+    Oper oper = 1;
+}
+
+message AuthInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message AuthInvoiceResponse {
+}
+
+message AcceptInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message AcceptInvoiceResponse {
+}
+
+message RejectInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message RejectInvoiceResponse {
+}

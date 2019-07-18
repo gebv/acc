@@ -1,0 +1,138 @@
+syntax = "proto3";
+
+package api;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.enumdecl_all) = true;
+
+enum InvoiceStatus {
+    UNKNOWN_I = 0;
+    // DRAFT_I статус инвойса в черновике. В этом статусе позволено
+    // вносить изменения в инвойс и входящие в него транзакции.
+    // Только в этом статусе позволено вручную менять состав инвойса.
+    DRAFT_I = 1;
+    // AUTH_I статус инвойса когда он прошел первичную валидацию и готов к дальнейшей обработке.
+    AUTH_I = 2;
+    // WAIT_I статус инвойса в ожидании подтверждения чего либо. Служит для двух-этапных операций.
+    WAIT_I = 3;
+    // ACCEPTED_I конечный статус инвойса. Весь инвойс принят и успешно исполнен.
+    ACCEPTED_I = 4;
+    // REJECTED_I конечный статус инвойса. Весь инвойс отклонен.
+    REJECTED_I = 5;
+}
+
+enum TxStatus {
+    UNKNOWN_TX = 0;
+    DRAFT_TX = 1;
+    AUTH_TX = 2;
+    HOLD_TX = 4;
+    ACCEPTED_TX = 6;
+    WACCEPTED_TX = 7;
+    REJECTED_TX = 8;
+    WREJECTED_TX = 9;
+    FAILED_TX = 10;
+}
+
+enum Provider {
+    UNKNOWN_PROVIDER = 0;
+    INTERNAL_PROVIDER = 1;
+    SBERBANK_PROVIDER = 2;
+}
+
+enum OperStrategy {
+    UNKNOW_OPS = 0;
+    // SIMPLE_OPS простой внутренний перевод с SRC->DST
+    SIMPLE_OPS = 1;
+    // RECHARGE_OPS ввод в систему средст из внешней среду.
+    RECHARGE_OPS = 2;
+    // WITHDRAW_OPS вывод из системы средств во внешнюю среду.
+    WITHDRAW_OPS = 3;
+}
+
+enum OperStatus {
+    UNKNOWN_OP = 0;
+    DRAFT_OP = 1;
+    HOLD_OP = 2;
+    ACCEPTED_OP = 3;
+    REJECTED_OP = 4;
+}
+
+message Currency {
+    int64 curr_id = 1;
+    string key = 2;
+    google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
+}
+
+message Account {
+    int64 acc_id = 1;
+    int64 curr_id = 2;
+    string key = 3;
+    int64 balance = 4;
+    int64 balance_accepted = 5;
+    google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+    google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+    google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = true];
+}
+
+message Invoice {
+    // invoice_id внутренний идентификатор инвойса.
+    int64 invoice_id = 1;
+    // key внешний уникальный идентицитора инвойса.
+    string key = 2;
+    // status состояние инвойса.
+    InvoiceStatus status = 3;
+    // next_status куда переходит инвойс.
+    InvoiceStatus next_status = 4;
+    // strategy стратегия работы с инвойсом.
+    string strategy = 5;
+    google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+    google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true];
+}
+
+message Tx {
+    // tx_id внутренний идентификатор транзакции.
+    int64 tx_id = 1;
+    // invoice_id связанный с транзакцией инвойс.
+    int64 invoice_id = 2;
+    // key Уникальный внешний идентификатор транзакции (опционально).
+    google.protobuf.StringValue key = 3 [(gogoproto.wktpointer) = true];
+    // strategy стратегия работы с инвойсом.
+    string strategy = 4;
+    // provider Тип провайдера обслуживающий транзакцию.
+    Provider provider = 5;
+    // provider_oper_id Идентификатор связанной с транзакцией операции во внешней системе.
+    google.protobuf.StringValue provider_oper_id = 6 [(gogoproto.wktpointer) = true];
+    // provider_oper_status Статус связанной с транзакцией операции во внешней системе.
+    google.protobuf.StringValue provider_oper_status = 7 [(gogoproto.wktpointer) = true];
+    google.protobuf.BytesValue meta = 8 [(gogoproto.wktpointer) = true];
+    // status статус транзакции.
+    TxStatus status = 9;
+    // next_status статус транзакции куда происходит переход.
+    TxStatus next_status = 10;
+    google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 12 [(gogoproto.stdtime) = true];
+}
+
+message Oper {
+    int64 oper_id = 1;
+    int64 invoice_id = 2;
+    int64 tx_id = 3;
+    int64 src_acc_id = 4;
+    bool hold = 5;
+    int64 hold_acc_id = 6;
+    int64 dst_acc_id = 7;
+    OperStrategy strategy = 8;
+    int64 amount = 9;
+    string key = 10;
+    google.protobuf.BytesValue meta = 11 [(gogoproto.wktpointer) = true];
+    OperStatus status = 12;
+    google.protobuf.Timestamp created_at = 13 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
+    google.protobuf.Timestamp updated_at = 14 [(gogoproto.stdtime) = true, (gogoproto.nullable) = true];
+}
