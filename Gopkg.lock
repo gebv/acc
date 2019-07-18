@@ -111,6 +111,54 @@
   revision = "1f388280e944c97cc59c75d8c84a704097d1f1d6"
 
 [[projects]]
+  digest = "1:a69a45dc2496e9601abc3a90d2889319e90311f2ae9ed932000a1d9ad02f9872"
+  name = "github.com/nats-io/jwt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a0b714b7c0d173cfa841645539fb055f38bf7fc9"
+  version = "v0.2.10"
+
+[[projects]]
+  digest = "1:3cd995ba51100416e90d974f4a8ae6002796f4dd7ca7bfaec2983d77404192c5"
+  name = "github.com/nats-io/nats-server"
+  packages = [
+    "conf",
+    "logger",
+    "server/pse",
+  ]
+  pruneopts = "UT"
+  revision = "6a40503f972e032881e43e1a1bcf30f2efe0e2e4"
+  version = "v2.0.2"
+
+[[projects]]
+  digest = "1:8de5a74ac9ff41ba07e18c5053ab631549b46bb3064ddba30027e774af1ff31f"
+  name = "github.com/nats-io/nats.go"
+  packages = [
+    ".",
+    "encoders/builtin",
+    "util",
+  ]
+  pruneopts = "UT"
+  revision = "e2837a2879e82886f6e21715e3a0217fdc46d370"
+  version = "v1.8.1"
+
+[[projects]]
+  digest = "1:237d85e4f5e91ac6cfc13bad508627570ff29efa28f523d41aac2d39ca15950f"
+  name = "github.com/nats-io/nkeys"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0073b400419be3ffb022ef46b675805e92534a34"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:599f3202ce0a754144ddc4be4c6df9c6ab27b1d722a63ede6b2e0c3a2cc338a8"
+  name = "github.com/nats-io/nuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94"
+  version = "v1.0.1"
+
+[[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -212,6 +260,19 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:3c51ccce1bee3a6f06db4658e02dfa62030b1f4250b8b2bee1b3ee4a829a4c30"
+  name = "golang.org/x/crypto"
+  packages = [
+    "bcrypt",
+    "blowfish",
+    "ed25519",
+    "ed25519/internal/edwards25519",
+  ]
+  pruneopts = "UT"
+  revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
+
+[[projects]]
+  branch = "master"
   digest = "1:aa51a5bed0c7c26aadfcc5bf5b2b62c0f43032af5d786a02247f87dfce23cb06"
   name = "golang.org/x/net"
   packages = [
@@ -228,11 +289,16 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e456eadc3fc18795bdaf836c3a8f25d678cfdd52a5164cf1d3a64ffe23b8df1a"
+  digest = "1:421536f2be889f185189765573d53f3725c2e5b955bd1c44f180041512a2e275"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
+    "windows/registry",
+    "windows/svc",
+    "windows/svc/debug",
+    "windows/svc/eventlog",
+    "windows/svc/mgr",
   ]
   pruneopts = "UT"
   revision = "4c4f7f33c9ed00de01c4c741d2177abfcfe19307"
@@ -314,6 +380,14 @@
   version = "v1.21.0"
 
 [[projects]]
+  digest = "1:c5ccad165dbc2489ac031fbc2e5ed22b0071acac62c495593ddabc366f725e44"
+  name = "gopkg.in/nats-io/gnatsd.v2"
+  packages = ["server"]
+  pruneopts = "UT"
+  revision = "d779a0bd38a5302e4cefe2c36fa784c2f2cdb8b3"
+  version = "v2.0.0-RC14"
+
+[[projects]]
   digest = "1:983ee542fd90363daa402830d3436db4a5aa154aea59f1282d25cf520f70d3fa"
   name = "gopkg.in/reform.v1"
   packages = [
@@ -347,6 +421,7 @@
     "github.com/lib/pq",
     "github.com/mwitkow/go-proto-validators",
     "github.com/mwitkow/go-proto-validators/protoc-gen-govalidators",
+    "github.com/nats-io/nats.go",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/stretchr/testify/assert",
@@ -356,6 +431,7 @@
     "golang.org/x/sys/unix",
     "google.golang.org/grpc",
     "google.golang.org/grpc/reflection",
+    "gopkg.in/nats-io/gnatsd.v2/server",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
     "gopkg.in/reform.v1/parse",
