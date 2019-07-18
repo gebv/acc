@@ -6,29 +6,43 @@ import (
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/ffsm"
-	"github.com/pkg/errors"
+	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 )
 
-type StrategyName string
+type TrStrategyName string
 
-func (s StrategyName) String() string { return string(s) }
+func (s TrStrategyName) String() string { return string(s) }
+
+type InvStrategyName string
+
+func (s InvStrategyName) String() string { return string(s) }
 
 const (
-	UNDEFINED          StrategyName = ""
-	contextReformKeyTX              = "reform_key_tx"
+	UNDEFINED_TR       TrStrategyName  = ""
+	UNDEFINED_INV      InvStrategyName = ""
+	contextReformKeyTX                 = "reform_key_tx"
+	contextNatsKey                     = "nats_key"
+
+	UPDATE_INVOICE_SUBJECT     = "update_invoice_subject"
+	UPDATE_TRANSACTION_SUBJECT = "update_transaction_subject"
 )
 
 var mutex sync.RWMutex
-var storeTr map[StrategyName]Strategy
-var storeInv map[StrategyName]Strategy
+var storeTr map[TrStrategyName]TrStrategy
+var storeInv map[InvStrategyName]InvStrategy
 
-type Strategy interface {
+type TrStrategy interface {
 	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
-	Name() StrategyName
+	Name() TrStrategyName
 }
 
-func RegTransactionStrategy(s Strategy) {
+type InvStrategy interface {
+	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
+	Name() InvStrategyName
+}
+
+func RegTransactionStrategy(s TrStrategy) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := storeTr[s.Name()]; ok {
@@ -37,7 +51,7 @@ func RegTransactionStrategy(s Strategy) {
 	storeTr[s.Name()] = s
 }
 
-func RegInvoiceStrategy(s Strategy) {
+func RegInvoiceStrategy(s InvStrategy) {
 	mutex.Lock()
 	defer mutex.Unlock()
 	if _, ok := storeInv[s.Name()]; ok {
@@ -46,56 +60,34 @@ func RegInvoiceStrategy(s Strategy) {
 	storeInv[s.Name()] = s
 }
 
-func ExistTrName(name string) StrategyName {
+func ExistTrName(name string) TrStrategyName {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if s, ok := storeTr[StrategyName(name)]; ok {
+	if s, ok := storeTr[TrStrategyName(name)]; ok {
 		return s.Name()
 	}
-	return UNDEFINED
+	return UNDEFINED_TR
 }
 
-func ExistInvName(name string) StrategyName {
+func ExistInvName(name string) InvStrategyName {
 	mutex.Lock()
 	defer mutex.Unlock()
-	if s, ok := storeInv[StrategyName(name)]; ok {
+	if s, ok := storeInv[InvStrategyName(name)]; ok {
 		return s.Name()
 	}
-	return UNDEFINED
+	return UNDEFINED_INV
 }
 
-func GetTransactionStrategy(name StrategyName) Strategy {
+func GetTransactionStrategy(name TrStrategyName) TrStrategy {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	return storeTr[name]
 }
 
-func GetInvoiceStrategy(name StrategyName) Strategy {
+func GetInvoiceStrategy(name InvStrategyName) InvStrategy {
 	mutex.RLock()
 	defer mutex.RUnlock()
 	return storeInv[name]
-}
-
-// TODO убрать метод, содержимое перенести в место вызова.
-func DispatchInvoice(ctx context.Context, invID int64, status ffsm.State) error {
-	inv := engine.Invoice{}
-	if name := ExistInvName(inv.Strategy); name != UNDEFINED {
-		if str := GetInvoiceStrategy(name); str != nil {
-			return str.Dispatch(ctx, status, invID)
-		}
-	}
-	return errors.New("not_found_strategy_from_invoice:" + inv.Strategy)
-}
-
-// TODO убрать метод, содержимое перенести в место вызова.
-func DispatchTransaction(ctx context.Context, txID int64, status ffsm.State) error {
-	tr := engine.Transaction{}
-	if name := ExistTrName(tr.Strategy); name != UNDEFINED {
-		if str := GetTransactionStrategy(name); str != nil {
-			return str.Dispatch(ctx, status, txID)
-		}
-	}
-	return errors.New("not_found_strategy_from_transaction:" + tr.Strategy)
 }
 
 func SetTXContext(ctx context.Context, tx *reform.TX) context.Context {
@@ -104,4 +96,24 @@ func SetTXContext(ctx context.Context, tx *reform.TX) context.Context {
 
 func GetTXContext(ctx context.Context) *reform.TX {
 	return ctx.Value(contextReformKeyTX).(*reform.TX)
+}
+
+func SetNatsToContext(ctx context.Context, nc *nats.Conn) context.Context {
+	return context.WithValue(ctx, contextNatsKey, nc)
+}
+
+func GetNatsFromContext(ctx context.Context) *nats.Conn {
+	return ctx.Value(contextNatsKey).(*nats.Conn)
+}
+
+type MessageUpdateTransaction struct {
+	TransactionID int64
+	Strategy      string
+	Status        engine.TransactionStatus
+}
+
+type MessageUpdateInvoice struct {
+	InvoiceID int64
+	Strategy  string
+	Status    engine.InvoiceStatus
 }
