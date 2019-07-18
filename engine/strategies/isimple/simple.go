@@ -2,6 +2,7 @@ package isimple
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"sync"
 
@@ -11,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const simpleStrategy strategies.StrategyName = "invoice_simple_strategy"
+const nameStrategy strategies.InvStrategyName = "invoice_simple_strategy"
 
 func init() {
 	s := &Strategy{
@@ -26,8 +27,8 @@ type Strategy struct {
 	syncOnce sync.Once
 }
 
-func (s *Strategy) Name() strategies.StrategyName {
-	return simpleStrategy
+func (s *Strategy) Name() strategies.InvStrategyName {
+	return nameStrategy
 }
 
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
@@ -45,14 +46,14 @@ func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.
 	}
 	st := ffsm.State(inv.Status)
 	fsm := ffsm.MachineFrom(s.s, &st)
-	err := fsm.Dispatch(context.Background(), state, payload)
+	err := fsm.Dispatch(ctx, state, payload)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-var _ strategies.Strategy = (*Strategy)(nil)
+var _ strategies.InvStrategy = (*Strategy)(nil)
 
 func (s *Strategy) load() {
 	s.syncOnce.Do(func() {
@@ -73,8 +74,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.DRAFT_I {
 					return ctx, errors.New("Invoice status not draft.")
@@ -85,26 +86,34 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				next := true
 				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					if !tr.Status.Match(engine.AUTH_TX) {
-						next = false
-						break
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.AUTH_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
 					}
-				}
-				if !next {
-					return ctx, nil
-				}
-				// Установить статус после проделанных операций
-				inv.Status = engine.AUTH_I
-				inv.NextStatus = nil
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
@@ -127,8 +136,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.DRAFT_I {
 					return ctx, errors.New("Invoice status not draft.")
@@ -181,8 +190,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -235,8 +244,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -289,8 +298,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -343,8 +352,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -397,8 +406,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -435,157 +444,6 @@ func (s *Strategy) load() {
 			"wait>rejected",
 		)
 		s.s.Add(
-			ffsm.State(engine.WAIT_I),
-			ffsm.State(engine.DRAFT_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.WAIT_I {
-					return ctx, errors.New("Invoice status not wait.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.DRAFT_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					if !tr.Status.Match(engine.DRAFT_TX) {
-						next = false
-						break
-					}
-				}
-				if !next {
-					return ctx, nil
-				}
-				// Установить статус после проделанных операций
-				inv.Status = engine.DRAFT_I
-				inv.NextStatus = nil
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				return ctx, nil
-			},
-			"wait>draft",
-		)
-		s.s.Add(
-			ffsm.State(engine.AUTH_TX),
-			ffsm.State(engine.DRAFT_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.AUTH_I {
-					return ctx, errors.New("Invoice status not auth.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.DRAFT_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					if !tr.Status.Match(engine.DRAFT_TX) {
-						next = false
-						break
-					}
-				}
-				if !next {
-					return ctx, nil
-				}
-				// Установить статус после проделанных операций
-				inv.Status = engine.DRAFT_I
-				inv.NextStatus = nil
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				return ctx, nil
-			},
-			"auth>draft",
-		)
-		// стратегии перевода инвойса вручную
-		s.s.Add(
-			ffsm.State(engine.DRAFT_I),
-			ffsm.State(engine.MAUTH_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.DRAFT_I {
-					return ctx, errors.New("Invoice status not draft.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.AUTH_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
-				}
-				return ctx, nil
-			},
-			"draft>manual_auth",
-		)
-		s.s.Add(
 			ffsm.State(engine.DRAFT_I),
 			ffsm.State(engine.MREJECTED_I),
 			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
@@ -602,8 +460,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.DRAFT_I {
 					return ctx, errors.New("Invoice status not draft.")
@@ -618,56 +476,34 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.REJECTED_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
 			"draft>manual_rejected",
-		)
-		s.s.Add(
-			ffsm.State(engine.AUTH_I),
-			ffsm.State(engine.MWAIT_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.AUTH_I {
-					return ctx, errors.New("Invoice status not auth.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.WAIT_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
-				}
-				return ctx, nil
-			},
-			"auth>manual_wait",
 		)
 		s.s.Add(
 			ffsm.State(engine.AUTH_I),
@@ -686,8 +522,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -702,10 +538,30 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.ACCEPTED_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
@@ -728,8 +584,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -744,10 +600,30 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.REJECTED_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
@@ -770,8 +646,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -786,10 +662,30 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.ACCEPTED_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
@@ -812,8 +708,8 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -828,98 +724,34 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
+				nc := strategies.GetNatsFromContext(ctx)
+				if nc == nil {
+					return ctx, errors.New("Not nats connection in context.")
+				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
+					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.REJECTED_TX,
+					})
+					if err != nil {
+						log.Println("Failed marshal. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
+					if err != nil {
+						log.Println("Failed publish to nats. InvoiceID: ", invID,
+							", TransactionID: ", tr.TransactionID,
+							", err: ", err)
+						continue
+					}
 				}
 				return ctx, nil
 			},
 			"wait>manual_rejected",
-		)
-		s.s.Add(
-			ffsm.State(engine.WAIT_I),
-			ffsm.State(engine.MDRAFT_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.WAIT_I {
-					return ctx, errors.New("Invoice status not wait.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.DRAFT_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
-				}
-				return ctx, nil
-			},
-			"wait>manual_draft",
-		)
-		s.s.Add(
-			ffsm.State(engine.AUTH_TX),
-			ffsm.State(engine.MDRAFT_I),
-			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
-				invID, ok := payload.(int64)
-				if !ok {
-					log.Println("Invoice bad Payload: ", payload)
-					return
-				}
-				tx := strategies.GetTXContext(ctx)
-				if tx == nil {
-					return ctx, errors.New("Not reform tx in context.")
-				}
-				inv := engine.Invoice{InvoiceID: invID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				if inv.Strategy != simpleStrategy.String() {
-					return ctx, errors.New("Invoice strategy not simpleStrategy.")
-				}
-				if inv.Status != engine.AUTH_I {
-					return ctx, errors.New("Invoice status not auth.")
-				}
-				// Установить статус куда происходит переход
-				ns := engine.DRAFT_I
-				inv.NextStatus = &ns
-				if err := tx.Save(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
-				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
-				}
-				for _, v := range list {
-					tr := v.(*engine.Transaction)
-					// TODO отправить сообщение в очередь о смене статуса у транзакции.
-					log.Println("InvoiceID: ", invID, ", TransactionID: ", tr.TransactionID)
-				}
-				return ctx, nil
-			},
-			"auth>manual_draft",
 		)
 	})
 }
