@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -11,13 +13,22 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gebv/acca/engine"
+	"github.com/gebv/acca/api"
 	_ "github.com/gebv/acca/engine/strategies/isimple"
 	_ "github.com/gebv/acca/engine/strategies/tsimple"
 	"github.com/gebv/acca/engine/worker"
+	"github.com/gebv/acca/interceptors/auth"
+	"github.com/gebv/acca/interceptors/recover"
+	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
+	"github.com/gebv/acca/services"
+	"github.com/gebv/acca/services/accounts"
+	"github.com/gebv/acca/services/auditor"
+	"github.com/gebv/acca/services/invoices"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	_ "github.com/lib/pq"
 	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sys/unix"
@@ -56,11 +67,6 @@ func main() {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
 	}
 
-	lis, err := net.Listen("tcp", *grpcAddrsF)
-	if err != nil {
-		zap.L().Panic("Failed to listen.", zap.Error(err))
-	}
-
 	sNats, err := server.NewServer(&server.Options{
 		Host:           "127.0.0.1",
 		Port:           4222,
@@ -80,60 +86,55 @@ func main() {
 		panic("Unable to start NATS Server in Go Routine")
 	}
 
+	nc, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	worker.SubToNATS(c, db)
+
+	lis, err := net.Listen("tcp", *grpcAddrsF)
+	if err != nil {
+		zap.L().Panic("Failed to listen.", zap.Error(err))
+	}
+
+	// аудитор http запросов (сохраняет в БД все реквесты и респонсы)
+	httpAuditor := auditor.NewHttpAuditor(sqlDB)
+	defer httpAuditor.Stop()
+	prometheus.MustRegister(httpAuditor)
+
+	serv := services.NewService(db)
+
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.ChainUnaryServer()),
-		grpc.StreamInterceptor(middleware.ChainStreamServer()),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			grpc_prometheus.UnaryServerInterceptor,
+			settingsInterceptor.Unary(VERSION),
+			recover.Unary(),
+			auth.Unary(serv, httpAuditor),
+		)),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			grpc_prometheus.StreamServerInterceptor,
+			settingsInterceptor.Stream(VERSION),
+			recover.Stream(),
+			auth.Stream(serv),
+		)),
 	)
 
-	go func() {
-		nc, err := nats.Connect(nats.DefaultURL)
-		if err != nil {
-			log.Fatal(err)
-		}
+	accServ := accounts.NewServer(db)
+	invServ := invoices.NewServer(db, c)
 
-		worker.SubToNATS(nc, db)
-
-		<-ctx.Done()
-
-		defer nc.Drain()
-	}()
-
-	accountManager := engine.NewAccountManager(db)
-	currID, err := accountManager.UpsertCurrency("curr1", nil)
-	if err != nil {
-		zap.L().Panic("Failed create currency.", zap.Error(err))
-	}
-	acc1ID, err := accountManager.CreateAccount(currID, "first", nil)
-	if err != nil && err != engine.ErrAccountExists {
-		zap.L().Panic("Failed create account.", zap.Error(err))
-	}
-	if acc1ID == 0 {
-		acc, err := accountManager.FindAccountByKey(currID, "first")
-		if err != nil {
-			zap.L().Panic("Failed find account.", zap.Error(err))
-		}
-		acc1ID = acc.AccountID
-	}
-	acc2ID, err := accountManager.CreateAccount(currID, "second", nil)
-	if err != nil && err != engine.ErrAccountExists {
-		zap.L().Panic("Failed create account.", zap.Error(err))
-	}
-	if acc2ID == 0 {
-		acc, err := accountManager.FindAccountByKey(currID, "second")
-		if err != nil {
-			zap.L().Panic("Failed find account.", zap.Error(err))
-		}
-		acc2ID = acc.AccountID
-	}
-
-	eng := engine.NewSimpleService(db)
-	if _, err := eng.InternalTransfer(acc1ID, acc2ID, 100); err != nil {
-		zap.L().Panic("Failed to internal transfer.", zap.Error(err))
-	}
+	api.RegisterAccountsServer(s, accServ)
+	api.RegisterInvoicesServer(s, invServ)
 
 	// graceful stop
 	go func() {
 		<-ctx.Done()
+		c.Drain()
+		nc.Drain()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()

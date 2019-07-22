@@ -2,7 +2,6 @@ package isimple
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"sync"
 
@@ -86,7 +85,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -96,24 +95,22 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.AUTH_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
 							", err: ", err)
 						continue
 					}
+				}
+				inv.Status = engine.AUTH_I
+				inv.NextStatus = nil
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				return ctx, nil
 			},
@@ -149,7 +146,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -203,7 +200,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -257,7 +254,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -311,7 +308,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -365,7 +362,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -419,7 +416,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
 				next := true
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -472,7 +469,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -482,18 +479,12 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
@@ -534,7 +525,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -544,18 +535,11 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.ACCEPTED_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
@@ -596,7 +580,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -606,18 +590,11 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
@@ -658,7 +635,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -668,18 +645,11 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.ACCEPTED_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
@@ -720,7 +690,7 @@ func (s *Strategy) load() {
 				if err := tx.Save(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
 				}
-				list, err := tx.SelectAllFrom(engine.TransactionTable, "invoice_id", invID)
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
@@ -730,18 +700,11 @@ func (s *Strategy) load() {
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(strategies.MessageUpdateTransaction{
+					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,
 					})
-					if err != nil {
-						log.Println("Failed marshal. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
-						continue
-					}
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, b)
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,

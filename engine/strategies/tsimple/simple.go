@@ -2,7 +2,6 @@ package tsimple
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
@@ -114,16 +113,11 @@ func (s *Strategy) load() {
 				if nc == nil {
 					return ctx, errors.New("Not nats connection in context.")
 				}
-				b, err := json.Marshal(strategies.MessageUpdateInvoice{
+				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    invStatus,
 				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed marshal.")
-
-				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, b)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed publish to nats.")
 				}
@@ -182,16 +176,11 @@ func (s *Strategy) load() {
 				if nc == nil {
 					return ctx, errors.New("Not nats connection in context.")
 				}
-				b, err := json.Marshal(strategies.MessageUpdateInvoice{
+				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.ACCEPTED_I,
 				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed marshal.")
-
-				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, b)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed publish to nats.")
 				}
@@ -250,16 +239,11 @@ func (s *Strategy) load() {
 				if nc == nil {
 					return ctx, errors.New("Not nats connection in context.")
 				}
-				b, err := json.Marshal(strategies.MessageUpdateInvoice{
+				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,
 				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed marshal.")
-
-				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, b)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed publish to nats.")
 				}
@@ -304,15 +288,11 @@ func (s *Strategy) load() {
 				if nc == nil {
 					return ctx, errors.New("Not nats connection in context.")
 				}
-				b, err := json.Marshal(strategies.MessageUpdateInvoice{
+				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,
 				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed marshal.")
-				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, b)
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed publish to nats.")
 				}

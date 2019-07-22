@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"time"
 
@@ -12,14 +11,8 @@ import (
 	"gopkg.in/reform.v1"
 )
 
-func SubToNATS(nc *nats.Conn, db *reform.DB) {
-	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(msg *nats.Msg) {
-		var m strategies.MessageUpdateInvoice
-		err := json.Unmarshal(msg.Data, &m)
-		if err != nil {
-			log.Println("Failed unmarshal msg.")
-			return
-		}
+func SubToNATS(nc *nats.EncodedConn, db *reform.DB) {
+	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		tx, err := db.Begin()
 		if err != nil {
 			log.Println("Failed begin transaction DB.")
@@ -45,13 +38,7 @@ func SubToNATS(nc *nats.Conn, db *reform.DB) {
 			}
 		}
 	})
-	nc.QueueSubscribe(strategies.UPDATE_TRANSACTION_SUBJECT, "queue", func(msg *nats.Msg) {
-		var m strategies.MessageUpdateTransaction
-		err := json.Unmarshal(msg.Data, &m)
-		if err != nil {
-			log.Println("Failed unmarshal msg.")
-			return
-		}
+	nc.QueueSubscribe(strategies.UPDATE_TRANSACTION_SUBJECT, "queue", func(m *strategies.MessageUpdateTransaction) {
 		tx, err := db.Begin()
 		if err != nil {
 			log.Println("Failed begin transaction DB.")
