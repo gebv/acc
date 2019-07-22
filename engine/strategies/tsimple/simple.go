@@ -31,6 +31,19 @@ func (s *Strategy) Name() strategies.TrStrategyName {
 	return nameStrategy
 }
 
+func (s *Strategy) Provider() engine.Provider {
+	return engine.INTERNAL
+}
+
+func (s *Strategy) MetaValidation(meta *[]byte) error {
+	if meta == nil {
+		return nil
+	}
+	// TODO добавить проверку структуры в meta для стратегии
+	//  и проверку полученных полей.
+	return nil
+}
+
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
 	trID, ok := payload.(int64)
 	if !ok {

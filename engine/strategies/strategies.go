@@ -35,11 +35,14 @@ var storeInv = make(map[InvStrategyName]InvStrategy)
 type TrStrategy interface {
 	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
 	Name() TrStrategyName
+	Provider() engine.Provider
+	MetaValidation(meta *[]byte) error
 }
 
 type InvStrategy interface {
 	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
 	Name() InvStrategyName
+	MetaValidation(meta *[]byte) error
 }
 
 func RegTransactionStrategy(s TrStrategy) {
