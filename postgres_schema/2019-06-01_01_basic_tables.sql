@@ -20,7 +20,7 @@ CREATE TABLE acca.invoices
     invoice_id  bigserial PRIMARY KEY,
     key         ltree                    NOT NULL,
     status      acca.invoice_status      NOT NULL CHECK (status <> 'unknown'),
-    next_status acca.invoice_status      NOT NULL CHECK (status <> 'unknown'),
+    next_status acca.invoice_status,
     strategy    varchar                  NOT NULL,
     -- total_amount numeric(23, 00) NOT NULL DEFAULT 0,
     meta        jsonb,
@@ -77,7 +77,7 @@ CREATE TABLE acca.transactions
     provider_oper_status varchar,
     meta                 jsonb,
     status               acca.tx_status           NOT NULL CHECK (status <> 'unknown'),
-    next_status          acca.tx_status           NOT NULL CHECK (status <> 'unknown'),
+    next_status          acca.tx_status,
     updated_at           timestamp with time zone NOT NULL DEFAULT now(),
     created_at           timestamp with time zone NOT NULL
 );
