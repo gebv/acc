@@ -79,6 +79,14 @@
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:9b7a07ac7577787a8ecc1334cb9f34df1c76ed82a917d556c5713d3ab84fbc43"
+  name = "github.com/grpc-ecosystem/go-grpc-prometheus"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c225b8c3b01faf2899099b768856a9e916e5087b"
+  version = "v1.2.0"
+
+[[projects]]
   digest = "1:bdd53b87de8185da386bae179c84d4848854c6870bacacf6a154fe63e2e750f7"
   name = "github.com/lib/pq"
   packages = [
@@ -175,11 +183,12 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:7097829edd12fd7211fca0d29496b44f94ef9e6d72f88fb64f3d7b06315818ad"
+  digest = "1:eb04f69c8991e52eff33c428bd729e04208bf03235be88e4df0d88497c6861b9"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
     "prometheus/internal",
+    "prometheus/promhttp",
   ]
   pruneopts = "UT"
   revision = "4ab88e80c249ed361d3299e2930427d9ac43ef8d"
@@ -217,9 +226,12 @@
   version = "v0.0.3"
 
 [[projects]]
-  digest = "1:972c2427413d41a1e06ca4897e8528e5a1622894050e2f527b38ddf0f343f759"
+  digest = "1:5da8ce674952566deae4dbc23d07c85caafc6cfa815b0b3e03e41979cedb8750"
   name = "github.com/stretchr/testify"
-  packages = ["assert"]
+  packages = [
+    "assert",
+    "require",
+  ]
   pruneopts = "UT"
   revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
   version = "v1.3.0"
@@ -415,18 +427,23 @@
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/golang/protobuf/ptypes/wrappers",
     "github.com/grpc-ecosystem/go-grpc-middleware",
+    "github.com/grpc-ecosystem/go-grpc-prometheus",
     "github.com/lib/pq",
     "github.com/mwitkow/go-proto-validators",
     "github.com/mwitkow/go-proto-validators/protoc-gen-govalidators",
     "github.com/nats-io/nats.go",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
+    "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
     "go.uber.org/zap",
     "go.uber.org/zap/zapcore",
     "golang.org/x/sys/unix",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
+    "google.golang.org/grpc/metadata",
+    "google.golang.org/grpc/peer",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
     "gopkg.in/nats-io/gnatsd.v2/server",
