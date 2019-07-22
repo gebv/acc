@@ -10,6 +10,7 @@ import (
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
 	"gopkg.in/reform.v1"
 )
 
@@ -28,6 +29,14 @@ type Server struct {
 func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*api.NewInvoiceResponse, error) {
 	key := strings.TrimSpace(strings.ToLower(req.GetKey()))
 	strategy := strings.TrimSpace(strings.ToLower(req.GetStrategy()))
+
+	if name := strategies.ExistInvName(strategy); name != strategies.UNDEFINED_INV {
+		if str := strategies.GetInvoiceStrategy(name); str != nil && str.MetaValidation(req.GetMeta()) != nil {
+			return nil, api.MakeError(codes.InvalidArgument, "Meta is not validate.")
+		}
+	} else {
+		return nil, api.MakeError(codes.NotFound, "Strategy is not found.")
+	}
 
 	inv := &engine.Invoice{
 		Key:      key,
@@ -75,6 +84,16 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 	}
 
 	strategy := strings.TrimSpace(strings.ToLower(req.GetStrategy()))
+
+	name := strategies.ExistTrName(strategy)
+	if name == strategies.UNDEFINED_TR {
+		return nil, api.MakeError(codes.NotFound, "Strategy is not found.")
+	}
+	str := strategies.GetTransactionStrategy(name)
+	if str != nil && str.MetaValidation(req.GetMeta()) != nil {
+		return nil, api.MakeError(codes.InvalidArgument, "Meta is not validate.")
+	}
+
 	var txID int64
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		tr := &engine.Transaction{
@@ -83,8 +102,7 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 			Key:       req.GetKey(),
 			Meta:      req.GetMeta(),
 			Status:    engine.DRAFT_TX,
-			// TODO заполнить провайдер, по идее из стратегии
-			Provider: engine.INTERNAL,
+			Provider:  str.Provider(),
 		}
 		if req.GetKey() != nil {
 			key := strings.TrimSpace(strings.ToLower(*req.GetKey()))
