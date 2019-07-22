@@ -27,5 +27,18 @@ gen:
 lint: install
 	golangci-lint run ./...
 
+test-short: install
+	go test -v -short ./...
+
+test: install
+	# go test -v -count 1 -race -short ./...
+	go test -v -count 1 -race -timeout 30m ./tests
+
+up:
+	docker-compose up --detach --force-recreate --renew-anon-volumes --remove-orphans
+
+down:
+	docker-compose down --volumes --remove-orphans
+
 setup:
 	./scripts/pg_exec_files.sh ${PWD}/postgres_schema/*.sql
