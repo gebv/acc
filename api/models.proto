@@ -23,8 +23,10 @@ enum InvoiceStatus {
     WAIT_I = 3;
     // ACCEPTED_I конечный статус инвойса. Весь инвойс принят и успешно исполнен.
     ACCEPTED_I = 4;
+    MACCEPTED_I = 5;
     // REJECTED_I конечный статус инвойса. Весь инвойс отклонен.
-    REJECTED_I = 5;
+    REJECTED_I = 6;
+    MREJECTED_I = 7;
 }
 
 enum TxStatus {
@@ -37,6 +39,7 @@ enum TxStatus {
     REJECTED_TX = 8;
     WREJECTED_TX = 9;
     FAILED_TX = 10;
+    WHOLD_TX = 11;
 }
 
 enum Provider {
@@ -76,8 +79,8 @@ message Account {
     int64 balance = 4;
     int64 balance_accepted = 5;
     google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
-    google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-    google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true, (gogoproto.nullable) = true];
+    google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true];
 }
 
 message Invoice {
@@ -116,8 +119,9 @@ message Tx {
     TxStatus status = 9;
     // next_status статус транзакции куда происходит переход.
     TxStatus next_status = 10;
-    google.protobuf.Timestamp created_at = 11 [(gogoproto.stdtime) = true];
-    google.protobuf.Timestamp updated_at = 12 [(gogoproto.stdtime) = true];
+    repeated Oper operations = 11;
+    google.protobuf.Timestamp created_at = 12 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 13 [(gogoproto.stdtime) = true];
 }
 
 message Oper {
@@ -126,13 +130,13 @@ message Oper {
     int64 tx_id = 3;
     int64 src_acc_id = 4;
     bool hold = 5;
-    int64 hold_acc_id = 6;
+    google.protobuf.Int64Value hold_acc_id = 6 [(gogoproto.wktpointer) = true];
     int64 dst_acc_id = 7;
     OperStrategy strategy = 8;
     int64 amount = 9;
-    string key = 10;
+    google.protobuf.StringValue key = 10 [(gogoproto.wktpointer) = true];
     google.protobuf.BytesValue meta = 11 [(gogoproto.wktpointer) = true];
     OperStatus status = 12;
-    google.protobuf.Timestamp created_at = 13 [(gogoproto.stdtime) = true, (gogoproto.nullable) = false];
-    google.protobuf.Timestamp updated_at = 14 [(gogoproto.stdtime) = true, (gogoproto.nullable) = true];
+    google.protobuf.Timestamp created_at = 13 [(gogoproto.stdtime) = true];
+    google.protobuf.Timestamp updated_at = 14 [(gogoproto.stdtime) = true];
 }

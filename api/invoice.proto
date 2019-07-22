@@ -25,12 +25,6 @@ service Invoices {
     rpc GetTransactionByID (GetTransactionByIDRequest) returns (GetTransactionByIDResponse) {
     }
 
-    rpc AddOperationToTx (AddOperationToTxRequest) returns (AddOperationToTxResponse) {
-    }
-
-    rpc GetOperationByID (GetOperationByIDRequest) returns (GetOperationByIDResponse) {
-    }
-
     rpc AuthInvoice (AuthInvoiceRequest) returns (AuthInvoiceResponse) {
     }
 
@@ -39,16 +33,23 @@ service Invoices {
 
     rpc RejectInvoice (RejectInvoiceRequest) returns (RejectInvoiceResponse) {
     }
+
+    rpc AuthTx (AuthTxRequest) returns (AuthTxResponse) {
+    }
+
+    rpc AcceptTx (AcceptTxRequest) returns (AcceptTxResponse) {
+    }
+
+    rpc RejectTx (RejectTxRequest) returns (RejectTxResponse) {
+    }
 }
 
 message NewInvoiceRequest {
     // key внешний уникальный идентицитора инвойса.
     string key = 1;
-    // status состояние инвойса.
-    InvoiceStatus status = 2;
     // strategy стратегия работы с инвойсом.
-    string strategy = 3;
-    google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
+    string strategy = 2;
+    google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
 }
 message NewInvoiceResponse {
     int64 invoice_id = 1;
@@ -62,6 +63,16 @@ message GetInvoiceByIDResponse {
 }
 
 message AddTransactionToInvoiceRequest {
+    message Oper {
+        int64 src_acc_id = 1;
+        int64 dst_acc_id = 2;
+        OperStrategy strategy = 3;
+        int64 amount = 4;
+        google.protobuf.StringValue key = 5 [(gogoproto.wktpointer) = true];
+        google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+        bool hold = 7;
+        google.protobuf.Int64Value hold_acc_id = 8 [(gogoproto.wktpointer) = true];
+    }
     // invoice_id связанный с транзакцией инвойс.
     int64 invoice_id = 1;
     // key Уникальный внешний идентификатор транзакции (опционально).
@@ -69,6 +80,7 @@ message AddTransactionToInvoiceRequest {
     // strategy стратегия работы с инвойсом.
     string strategy = 3;
     google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
+    repeated Oper operations = 5;
 }
 message AddTransactionToInvoiceResponse {
     int64 tx_id = 1;
@@ -79,28 +91,6 @@ message GetTransactionByIDRequest {
 }
 message GetTransactionByIDResponse {
     Tx tx = 1;
-}
-
-message AddOperationToTxRequest {
-    int64 tx_id = 2;
-    int64 src_acc_id = 3;
-    int64 dst_acc_id = 4;
-    OperStrategy strategy = 5;
-    int64 amount = 6;
-    string reason = 7;
-    google.protobuf.BytesValue meta = 8 [(gogoproto.wktpointer) = true];
-    bool hold = 9;
-    int64 hold_acc_id = 10;
-}
-message AddOperationToTxResponse {
-    int64 oper_id = 1;
-}
-
-message GetOperationByIDRequest {
-    int64 oper_id = 1;
-}
-message GetOperationByIDResponse {
-    Oper oper = 1;
 }
 
 message AuthInvoiceRequest {
@@ -119,4 +109,22 @@ message RejectInvoiceRequest {
     int64 invoice_id = 1;
 }
 message RejectInvoiceResponse {
+}
+
+message AuthTxRequest {
+    int64 tx_id = 1;
+}
+message AuthTxResponse {
+}
+
+message AcceptTxRequest {
+    int64 tx_id = 1;
+}
+message AcceptTxResponse {
+}
+
+message RejectTxRequest {
+    int64 tx_id = 1;
+}
+message RejectTxResponse {
 }
