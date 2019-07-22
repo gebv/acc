@@ -52,6 +52,31 @@ func (this *AddTransactionToInvoiceRequest) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
 		}
 	}
+	for _, item := range this.Operations {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Operations", err)
+			}
+		}
+	}
+	return nil
+}
+func (this *AddTransactionToInvoiceRequest_Oper) Validate() error {
+	if this.Key != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Key); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Key", err)
+		}
+	}
+	if this.Meta != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
+		}
+	}
+	if this.HoldAccId != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HoldAccId); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HoldAccId", err)
+		}
+	}
 	return nil
 }
 func (this *AddTransactionToInvoiceResponse) Validate() error {
@@ -64,28 +89,6 @@ func (this *GetTransactionByIDResponse) Validate() error {
 	if this.Tx != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Tx); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("Tx", err)
-		}
-	}
-	return nil
-}
-func (this *AddOperationToTxRequest) Validate() error {
-	if this.Meta != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
-		}
-	}
-	return nil
-}
-func (this *AddOperationToTxResponse) Validate() error {
-	return nil
-}
-func (this *GetOperationByIDRequest) Validate() error {
-	return nil
-}
-func (this *GetOperationByIDResponse) Validate() error {
-	if this.Oper != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Oper); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Oper", err)
 		}
 	}
 	return nil
@@ -106,5 +109,23 @@ func (this *RejectInvoiceRequest) Validate() error {
 	return nil
 }
 func (this *RejectInvoiceResponse) Validate() error {
+	return nil
+}
+func (this *AuthTxRequest) Validate() error {
+	return nil
+}
+func (this *AuthTxResponse) Validate() error {
+	return nil
+}
+func (this *AcceptTxRequest) Validate() error {
+	return nil
+}
+func (this *AcceptTxResponse) Validate() error {
+	return nil
+}
+func (this *RejectTxRequest) Validate() error {
+	return nil
+}
+func (this *RejectTxResponse) Validate() error {
 	return nil
 }

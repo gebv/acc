@@ -85,6 +85,13 @@ func (this *Tx) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
 		}
 	}
+	for _, item := range this.Operations {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Operations", err)
+			}
+		}
+	}
 	if this.CreatedAt != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.CreatedAt); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("CreatedAt", err)
@@ -98,6 +105,16 @@ func (this *Tx) Validate() error {
 	return nil
 }
 func (this *Oper) Validate() error {
+	if this.HoldAccId != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HoldAccId); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HoldAccId", err)
+		}
+	}
+	if this.Key != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Key); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Key", err)
+		}
+	}
 	if this.Meta != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
