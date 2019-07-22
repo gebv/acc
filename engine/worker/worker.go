@@ -7,11 +7,16 @@ import (
 
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
+	"github.com/gebv/acca/provider/sberbank"
 	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 )
 
-func SubToNATS(nc *nats.EncodedConn, db *reform.DB) {
+func SubToNATS(
+	nc *nats.EncodedConn,
+	db *reform.DB,
+	providerSber *sberbank.Provider,
+) {
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		tx, err := db.Begin()
 		if err != nil {
@@ -36,6 +41,9 @@ func SubToNATS(nc *nats.EncodedConn, db *reform.DB) {
 					log.Println("Failed tx commit. ", err)
 				}
 			}
+		}
+		if err := tx.Rollback(); err != nil {
+			log.Println("Failed tx rollback. ", err)
 		}
 	})
 	nc.QueueSubscribe(strategies.UPDATE_TRANSACTION_SUBJECT, "queue", func(m *strategies.MessageUpdateTransaction) {
@@ -63,5 +71,9 @@ func SubToNATS(nc *nats.EncodedConn, db *reform.DB) {
 				}
 			}
 		}
+		if err := tx.Rollback(); err != nil {
+			log.Println("Failed tx rollback. ", err)
+		}
 	})
+	nc.QueueSubscribe(sberbank.SUBJECT, "queue", providerSber.NatsHandler())
 }
