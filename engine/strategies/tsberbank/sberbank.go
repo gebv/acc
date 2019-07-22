@@ -6,20 +6,19 @@ import (
 	"sync"
 
 	"github.com/gebv/acca/engine"
-	"github.com/gebv/acca/engine/strategies/for_testing"
-	"github.com/gebv/acca/engine/strategies/store"
+	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/pkg/errors"
 )
 
-const TrSberbankStrategy store.StrategyName = "transaction_sberbank_strategy"
+const nameStrategy strategies.TrStrategyName = "transaction_sberbank_strategy"
 
 func init() {
 	s := &Strategy{
 		s: make(ffsm.Stack),
 	}
 	s.load()
-	store.Reg(TrSberbankStrategy, s)
+	strategies.RegTransactionStrategy(s)
 }
 
 type Strategy struct {
@@ -27,12 +26,23 @@ type Strategy struct {
 	syncOnce sync.Once
 }
 
+func (s *Strategy) Name() strategies.TrStrategyName {
+	return nameStrategy
+}
+
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
 	txID, ok := payload.(int64)
 	if !ok {
 		return errors.New("bad_payload")
 	}
-	tr := for_testing.NoDbFromTest.GetTr(txID)
+	tx := strategies.GetTXContext(ctx)
+	if tx == nil {
+		return errors.New("Not reform tx.")
+	}
+	tr := engine.Transaction{TransactionID: txID}
+	if err := tx.Reload(&tr); err != nil {
+		return errors.Wrap(err, "Failed reload transaction by ID.")
+	}
 	st := ffsm.State(tr.Status)
 	fsm := ffsm.MachineFrom(s.s, &st)
 	err := fsm.Dispatch(ctx, state, payload)
@@ -42,7 +52,7 @@ func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.
 	return nil
 }
 
-var _ store.Strategy = (*Strategy)(nil)
+var _ strategies.TrStrategy = (*Strategy)(nil)
 
 func (s *Strategy) load() {
 	s.syncOnce.Do(func() {
@@ -56,12 +66,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.DRAFT_TX {
@@ -70,17 +83,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.AUTH_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"draft>auth",
@@ -95,12 +107,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.DRAFT_TX {
@@ -109,17 +124,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.REJECTED_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"draft>rejected",
@@ -134,12 +148,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.AUTH_TX {
@@ -148,17 +165,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.ACCEPTED_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>accepted",
@@ -173,12 +189,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.AUTH_TX {
@@ -187,17 +206,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.REJECTED_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>rejected",
@@ -212,12 +230,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.DRAFT_TX {
@@ -226,17 +247,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.FAILED_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.FAILED_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"draft>failed",
@@ -251,12 +271,15 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				tr := for_testing.NoDbFromTest.GetTr(trID)
-				if tr == nil {
-					log.Println("Transaction not found id: ", trID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if tr.Strategy != TrSberbankStrategy.String() {
+				tr := engine.Transaction{TransactionID: trID}
+				if err := tx.Reload(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
+				}
+				if tr.Strategy != nameStrategy.String() {
 					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
 				}
 				if tr.Status != engine.AUTH_TX {
@@ -265,17 +288,16 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.FAILED_TX
 				tr.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveTr(tr)
-				// TODO добавить необходимые операции по транзакции.
-				if for_testing.SimRequestToSberbank.RequestToSberbank() {
-					log.Println("Fail request to sberbank")
-					return ctx, nil
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
+				// TODO добавить необходимые операции по транзакции.
 				// Установить статус после проделанных операций
-				tr = for_testing.NoDbFromTest.GetTr(trID)
 				tr.Status = engine.FAILED_TX
 				tr.NextStatus = nil
-				for_testing.NoDbFromTest.SaveTr(tr)
+				if err := tx.Save(&tr); err != nil {
+					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>failed",

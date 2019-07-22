@@ -6,20 +6,19 @@ import (
 	"sync"
 
 	"github.com/gebv/acca/engine"
-	"github.com/gebv/acca/engine/strategies/for_testing"
-	"github.com/gebv/acca/engine/strategies/store"
+	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/pkg/errors"
 )
 
-const InvRechargeStrategy store.StrategyName = "invoice_recharge_strategy"
+const nameStrategy strategies.InvStrategyName = "invoice_recharge_strategy"
 
 func init() {
 	s := &Strategy{
 		s: make(ffsm.Stack),
 	}
 	s.load()
-	store.Reg(InvRechargeStrategy, s)
+	strategies.RegInvoiceStrategy(s)
 }
 
 type Strategy struct {
@@ -27,12 +26,23 @@ type Strategy struct {
 	syncOnce sync.Once
 }
 
+func (s *Strategy) Name() strategies.InvStrategyName {
+	return nameStrategy
+}
+
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
 	invID, ok := payload.(int64)
 	if !ok {
 		return errors.New("bad_payload")
 	}
-	inv := for_testing.NoDbFromTest.GetInv(invID)
+	tx := strategies.GetTXContext(ctx)
+	if tx == nil {
+		return errors.New("Not reform tx.")
+	}
+	inv := engine.Invoice{InvoiceID: invID}
+	if err := tx.Reload(&inv); err != nil {
+		return errors.Wrap(err, "Failed reload invoice by ID.")
+	}
 	st := ffsm.State(inv.Status)
 	fsm := ffsm.MachineFrom(s.s, &st)
 	err := fsm.Dispatch(context.Background(), state, payload)
@@ -42,7 +52,7 @@ func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.
 	return nil
 }
 
-var _ store.Strategy = (*Strategy)(nil)
+var _ strategies.InvStrategy = (*Strategy)(nil)
 
 func (s *Strategy) load() {
 	s.syncOnce.Do(func() {
@@ -56,13 +66,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.DRAFT_I {
 					return ctx, errors.New("Invoice status not draft.")
@@ -70,11 +83,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.AUTH_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.AUTH_TX) {
 						next = false
 						break
 					}
@@ -83,10 +103,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.AUTH_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"draft>auth",
@@ -101,13 +122,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.DRAFT_I {
 					return ctx, errors.New("Invoice status not draft.")
@@ -115,11 +139,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.REJECTED_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.REJECTED_TX) {
 						next = false
 						break
 					}
@@ -128,10 +159,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.REJECTED_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"draft>rejected",
@@ -146,13 +178,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -160,11 +195,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.WAIT_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.HOLD_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.HOLD_TX) {
 						next = false
 						break
 					}
@@ -173,10 +215,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.WAIT_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>wait",
@@ -191,13 +234,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -205,11 +251,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.ACCEPTED_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.ACCEPTED_TX) {
 						next = false
 						break
 					}
@@ -218,10 +271,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.ACCEPTED_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>accepted",
@@ -236,13 +290,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -250,11 +307,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.REJECTED_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.REJECTED_TX) {
 						next = false
 						break
 					}
@@ -263,10 +327,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.REJECTED_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>rejected",
@@ -281,13 +346,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -295,11 +363,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.ACCEPTED_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.ACCEPTED_TX) {
 						next = false
 						break
 					}
@@ -308,10 +383,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.ACCEPTED_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"wait>accepted",
@@ -326,13 +402,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -340,11 +419,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.REJECTED_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.REJECTED_TX) {
 						next = false
 						break
 					}
@@ -353,10 +439,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.REJECTED_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"wait>rejected",
@@ -371,13 +458,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.WAIT_I {
 					return ctx, errors.New("Invoice status not wait.")
@@ -385,11 +475,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.DRAFT_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.DRAFT_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.DRAFT_TX) {
 						next = false
 						break
 					}
@@ -398,10 +495,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.DRAFT_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"wait>draft",
@@ -416,13 +514,16 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				inv := for_testing.NoDbFromTest.GetInv(invID)
-				if inv == nil {
-					log.Println("Invoice not found id: ", invID)
-					return
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
 				}
-				if inv.Strategy != InvRechargeStrategy.String() {
-					return ctx, errors.New("Invoice strategy not InvRechargeStrategy.")
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
 				}
 				if inv.Status != engine.AUTH_I {
 					return ctx, errors.New("Invoice status not auth.")
@@ -430,11 +531,18 @@ func (s *Strategy) load() {
 				// Установить статус куда происходит переход
 				ns := engine.DRAFT_I
 				inv.NextStatus = &ns
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				// TODO load transactions from DB
 				next := true
-				for _, v := range for_testing.NoDbFromTest.ListTr(invID) {
-					if !v.Status.Match(engine.DRAFT_TX) {
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.DRAFT_TX) {
 						next = false
 						break
 					}
@@ -443,10 +551,11 @@ func (s *Strategy) load() {
 					return ctx, nil
 				}
 				// Установить статус после проделанных операций
-				inv = for_testing.NoDbFromTest.GetInv(invID)
 				inv.Status = engine.DRAFT_I
 				inv.NextStatus = nil
-				for_testing.NoDbFromTest.SaveInv(inv)
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
 				return ctx, nil
 			},
 			"auth>draft",
