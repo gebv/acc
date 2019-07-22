@@ -29,8 +29,8 @@ const (
 )
 
 var mutex sync.RWMutex
-var storeTr map[TrStrategyName]TrStrategy
-var storeInv map[InvStrategyName]InvStrategy
+var storeTr = make(map[TrStrategyName]TrStrategy)
+var storeInv = make(map[InvStrategyName]InvStrategy)
 
 type TrStrategy interface {
 	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
@@ -98,12 +98,12 @@ func GetTXContext(ctx context.Context) *reform.TX {
 	return ctx.Value(contextReformKeyTX).(*reform.TX)
 }
 
-func SetNatsToContext(ctx context.Context, nc *nats.Conn) context.Context {
+func SetNatsToContext(ctx context.Context, nc *nats.EncodedConn) context.Context {
 	return context.WithValue(ctx, contextNatsKey, nc)
 }
 
-func GetNatsFromContext(ctx context.Context) *nats.Conn {
-	return ctx.Value(contextNatsKey).(*nats.Conn)
+func GetNatsFromContext(ctx context.Context) *nats.EncodedConn {
+	return ctx.Value(contextNatsKey).(*nats.EncodedConn)
 }
 
 type MessageUpdateTransaction struct {
