@@ -15,17 +15,21 @@ import (
 
 	"github.com/gebv/acca/api"
 	_ "github.com/gebv/acca/engine/strategies/isimple"
+	_ "github.com/gebv/acca/engine/strategies/tsberbank"
 	_ "github.com/gebv/acca/engine/strategies/tsimple"
 	"github.com/gebv/acca/engine/worker"
 	"github.com/gebv/acca/interceptors/auth"
 	"github.com/gebv/acca/interceptors/recover"
 	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
+	"github.com/gebv/acca/provider/sberbank"
 	"github.com/gebv/acca/services"
 	"github.com/gebv/acca/services/accounts"
 	"github.com/gebv/acca/services/auditor"
 	"github.com/gebv/acca/services/invoices"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/labstack/echo"
+	echo_middleware "github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
@@ -86,16 +90,25 @@ func main() {
 		panic("Unable to start NATS Server in Go Routine")
 	}
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	n, err := nats.Connect(nats.DefaultURL)
 	if err != nil {
 		log.Fatal(err)
 	}
-	c, err := nats.NewEncodedConn(nc, nats.JSON_ENCODER)
+	nc, err := nats.NewEncodedConn(n, nats.JSON_ENCODER)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	worker.SubToNATS(c, db)
+	sberProvider := sberbank.NewProvider(db, sberbank.Config{
+		EntrypointURL: "",
+		Token:         "",
+		Password:      "",
+		UserName:      "",
+	},
+		nc,
+	)
+
+	worker.SubToNATS(nc, db, sberProvider)
 
 	lis, err := net.Listen("tcp", *grpcAddrsF)
 	if err != nil {
@@ -125,7 +138,7 @@ func main() {
 	)
 
 	accServ := accounts.NewServer(db)
-	invServ := invoices.NewServer(db, c)
+	invServ := invoices.NewServer(db, nc)
 
 	api.RegisterAccountsServer(s, accServ)
 	api.RegisterInvoicesServer(s, invServ)
@@ -133,8 +146,8 @@ func main() {
 	// graceful stop
 	go func() {
 		<-ctx.Done()
-		c.Drain()
 		nc.Drain()
+		n.Drain()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
@@ -164,6 +177,13 @@ func main() {
 			zap.L().Panic("Failed to serve.", zap.Error(err))
 		}
 	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serverWebhookSberbank(ctx, db, nc)
+	}()
+
 	wg.Wait()
 
 	// - внутренний grpc АПИ
@@ -284,4 +304,67 @@ func setupPostgres(conn string, maxLifetime time.Duration, maxOpen, maxIdle int)
 	zap.L().Info("Postgres - Connected!")
 
 	return sqlDB
+}
+
+func serverWebhookSberbank(ctx context.Context, db *reform.DB, nc *nats.EncodedConn) {
+
+	e := echo.New()
+
+	e.Use(echo_middleware.CORSWithConfig(echo_middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{
+			echo.GET,
+			echo.PUT,
+			echo.POST,
+			echo.DELETE,
+			echo.OPTIONS,
+			echo.CONNECT,
+			echo.HEAD,
+			echo.TRACE,
+		},
+	}))
+
+	e.Use(echo_middleware.Recover())
+
+	e.Use(echo_middleware.Logger())
+
+	provider := sberbank.NewProvider(
+		db,
+		sberbank.Config{
+			EntrypointURL: "",
+			Token:         "",
+			Password:      "",
+			UserName:      "",
+		},
+		nc,
+	)
+
+	e.GET("/webhook/sberbank", provider.SberbankWebhookHandler())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		zap.L().Info("start server sberbank webhook ", zap.String("address", "/webhook/sberbank"))
+		if err := e.Start(":10003"); err != nil {
+			zap.L().Error("failed run server sberbank webhook", zap.Error(err))
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		Ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		err := e.Shutdown(Ctx)
+		if err != nil {
+			zap.L().Error("failed shutdown server sberbank webhook", zap.Error(err))
+		}
+		err = e.Close()
+		if err != nil {
+			zap.L().Error("failed close server sberbank webhook", zap.Error(err))
+		}
+		zap.L().Debug("success shutdown server sberbank webhook")
+	}()
+	wg.Wait()
 }
