@@ -15,7 +15,7 @@ type invoiceTransactionsExtOrdersTableType struct {
 	z []interface{}
 }
 
-// Schema returns a schema name in SQL database ("").
+// Schema returns a schema name in SQL database ("acca").
 func (v *invoiceTransactionsExtOrdersTableType) Schema() string {
 	return v.s.SQLSchema
 }
@@ -47,7 +47,7 @@ func (v *invoiceTransactionsExtOrdersTableType) PKColumnIndex() uint {
 
 // InvoiceTransactionsExtOrdersTable represents invoice_transactions_ext_orders view or table in SQL database.
 var InvoiceTransactionsExtOrdersTable = &invoiceTransactionsExtOrdersTableType{
-	s: parse.StructInfo{Type: "InvoiceTransactionsExtOrders", SQLSchema: "", SQLName: "invoice_transactions_ext_orders", Fields: []parse.FieldInfo{{Name: "OrderNumber", Type: "string", Column: "order_number"}, {Name: "PaymentSystemName", Type: "string", Column: "payment_system_name"}, {Name: "RawOrderStatus", Type: "string", Column: "raw_order_status"}, {Name: "OrderStatus", Type: "string", Column: "order_status"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "ExtUpdatedAt", Type: "time.Time", Column: "ext_updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "InvoiceTransactionsExtOrders", SQLSchema: "acca", SQLName: "invoice_transactions_ext_orders", Fields: []parse.FieldInfo{{Name: "OrderNumber", Type: "string", Column: "order_number"}, {Name: "PaymentSystemName", Type: "string", Column: "payment_system_name"}, {Name: "RawOrderStatus", Type: "string", Column: "raw_order_status"}, {Name: "OrderStatus", Type: "string", Column: "order_status"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "ExtUpdatedAt", Type: "time.Time", Column: "ext_updated_at"}}, PKFieldIndex: 0},
 	z: new(InvoiceTransactionsExtOrders).Values(),
 }
 
