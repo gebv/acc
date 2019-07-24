@@ -7,6 +7,7 @@ import (
 
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
+	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
 	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
@@ -16,6 +17,7 @@ func SubToNATS(
 	nc *nats.EncodedConn,
 	db *reform.DB,
 	providerSber *sberbank.Provider,
+	providerMoeDelo *moedelo.Provider,
 ) {
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		tx, err := db.Begin()
@@ -78,4 +80,5 @@ func SubToNATS(
 		}
 	})
 	nc.QueueSubscribe(sberbank.SUBJECT, "queue", providerSber.NatsHandler())
+	nc.QueueSubscribe(moedelo.SUBJECT, "queue", providerMoeDelo.NatsHandler())
 }

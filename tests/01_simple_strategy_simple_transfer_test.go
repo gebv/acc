@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/gebv/acca/api"
-	"github.com/gebv/acca/engine/strategies/isimple"
-	"github.com/gebv/acca/engine/strategies/tsimple"
+	isimple "github.com/gebv/acca/engine/strategies/invoices/simple"
+	tsimple "github.com/gebv/acca/engine/strategies/transactions/simple"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )

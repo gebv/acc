@@ -74,6 +74,7 @@ const (
 	UNKNOWN_PROVIDER Provider = ""
 	INTERNAL         Provider = "internal"
 	SBERBANK         Provider = "sberbank"
+	MOEDELO          Provider = "moedelo"
 )
 
 type TransactionStatus string

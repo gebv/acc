@@ -2,19 +2,20 @@ package tests
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"net/http"
+	"os"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine/strategies/invoices/simple"
-	"github.com/gebv/acca/engine/strategies/transactions/sberbank"
+	tmoedelo "github.com/gebv/acca/engine/strategies/transactions/moedelo"
+	"github.com/gebv/acca/provider/moedelo"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
 )
 
-func Test02_01SberbankStrategy(t *testing.T) {
+func Test03_01MoedeloStrategy(t *testing.T) {
 	accC := api.NewAccountsClient(Conn)
 	invC := api.NewInvoicesClient(Conn)
 	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
@@ -27,6 +28,18 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	var balanceAccepted2 int64
 	var invID int64
 	var trID int64
+
+	md := moedelo.NewProvider(
+		nil,
+		moedelo.Config{
+			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+			Token:         os.Getenv("MOEDELO_TOKEN"),
+		},
+		nil,
+	)
+	kontragentID, err := md.CreateKontragent("7720239606", "Иванов Иван Иванович")
+	require.NoError(t, err)
+	require.NotEmpty(t, kontragentID)
 
 	t.Run("CreateCurrency", func(t *testing.T) {
 		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
@@ -46,7 +59,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.1.1",
+			Key:        "acc3.1.1",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -56,7 +69,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.1.1",
+			Key:    "acc3.1.1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -67,7 +80,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.1.2",
+			Key:        "acc3.1.2",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -77,7 +90,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.1.2",
+			Key:    "acc3.1.2",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -110,9 +123,11 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		})
 
 		Meta := map[string]string{
-			"callback":    "https://ya.ru",
-			"description": "",
-			"email":       "test@mail.ru",
+			"title":         "Сервис в тесте.",
+			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
+			"count":         "1",
+			"price":         "1200",
+			"unit":          "шт",
 		}
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
@@ -120,7 +135,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		t.Run("AddTransactionToInvoice", func(t *testing.T) {
 			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
 				InvoiceId: invID,
-				Strategy:  (&sberbank.Strategy{}).Name().String(),
+				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
 				Amount:    1000,
 				Meta:      &meta,
 				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
@@ -161,7 +176,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.1.1",
+				Key:    "acc3.1.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -174,7 +189,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.1.2",
+				Key:    "acc3.1.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -185,6 +200,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		})
 
 		var URL string
+		var billID int64
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -193,11 +209,19 @@ func Test02_01SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "CREATED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperUrl())
 			URL = *res.GetTx().GetProviderOperUrl()
+			require.NotNil(t, res.GetTx().GetProviderOperId())
+			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
+			require.NoError(t, err)
 		})
-		sendCardDataInSberbank(t, URL)
+
+		// TODO добавить подтверждение перевода
+		t.Log("MOE DELO URL: ", URL)
+
+		t.Skip("WIP")
+
 		time.Sleep(5 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
@@ -207,7 +231,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_HOLD_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "APPROVED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.PartiallyPaid.String(), *res.GetTx().GetProviderOperStatus())
 		})
 		t.Run("AcceptInvoice", func(t *testing.T) {
 			balance1 += 1000
@@ -231,7 +255,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.1.1",
+				Key:    "acc3.1.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -244,7 +268,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.1.2",
+				Key:    "acc3.1.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -256,7 +280,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 	})
 }
 
-func Test02_02SberbankStrategy(t *testing.T) {
+func Test03_02MoedeloStrategy(t *testing.T) {
 	accC := api.NewAccountsClient(Conn)
 	invC := api.NewInvoicesClient(Conn)
 	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
@@ -269,6 +293,18 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	var balanceAccepted2 int64
 	var invID int64
 	var trID int64
+
+	md := moedelo.NewProvider(
+		nil,
+		moedelo.Config{
+			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+			Token:         os.Getenv("MOEDELO_TOKEN"),
+		},
+		nil,
+	)
+	kontragentID, err := md.CreateKontragent("7720239606", "Иванов Иван Иванович")
+	require.NoError(t, err)
+	require.NotEmpty(t, kontragentID)
 
 	t.Run("CreateCurrency", func(t *testing.T) {
 		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
@@ -288,7 +324,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.2.1",
+			Key:        "acc3.2.1",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -298,7 +334,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.2.1",
+			Key:    "acc3.2.1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -309,7 +345,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.2.2",
+			Key:        "acc3.2.2",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -319,7 +355,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.2.2",
+			Key:    "acc3.2.2",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -351,9 +387,11 @@ func Test02_02SberbankStrategy(t *testing.T) {
 			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoice().GetStatus())
 		})
 		Meta := map[string]string{
-			"callback":    "https://ya.ru",
-			"description": "",
-			"email":       "test@mail.ru",
+			"title":         "Сервис в тесте.",
+			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
+			"count":         "1",
+			"price":         "1200",
+			"unit":          "шт",
 		}
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
@@ -361,7 +399,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 		t.Run("AddTransactionToInvoice", func(t *testing.T) {
 			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
 				InvoiceId: invID,
-				Strategy:  (&sberbank.Strategy{}).Name().String(),
+				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
 				Amount:    1000,
 				Meta:      &meta,
 				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
@@ -402,7 +440,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.2.1",
+				Key:    "acc3.2.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -415,7 +453,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.2.2",
+				Key:    "acc3.2.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -434,11 +472,16 @@ func Test02_02SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "CREATED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperUrl())
 			URL = *res.GetTx().GetProviderOperUrl()
 		})
-		sendCardDataInSberbank(t, URL)
+
+		// TODO добавить подтверждение перевода
+		t.Log("MOE DELO URL: ", URL)
+
+		t.Skip("WIP")
+
 		time.Sleep(5 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
@@ -448,7 +491,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_HOLD_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "APPROVED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.PartiallyPaid.String(), *res.GetTx().GetProviderOperStatus())
 		})
 		t.Run("RejectInvoice", func(t *testing.T) {
 			_, err := invC.RejectInvoice(authCtx, &api.RejectInvoiceRequest{
@@ -468,7 +511,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.2.1",
+				Key:    "acc3.2.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -481,7 +524,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.2.2",
+				Key:    "acc3.2.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -494,7 +537,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 	})
 }
 
-func Test02_03SberbankStrategy(t *testing.T) {
+func Test03_03MoedeloStrategy(t *testing.T) {
 	accC := api.NewAccountsClient(Conn)
 	invC := api.NewInvoicesClient(Conn)
 	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
@@ -507,6 +550,18 @@ func Test02_03SberbankStrategy(t *testing.T) {
 	var balanceAccepted2 int64
 	var invID int64
 	var trID int64
+
+	md := moedelo.NewProvider(
+		nil,
+		moedelo.Config{
+			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+			Token:         os.Getenv("MOEDELO_TOKEN"),
+		},
+		nil,
+	)
+	kontragentID, err := md.CreateKontragent("7720239606", "Иванов Иван Иванович")
+	require.NoError(t, err)
+	require.NotEmpty(t, kontragentID)
 
 	t.Run("CreateCurrency", func(t *testing.T) {
 		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
@@ -526,7 +581,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.3.1",
+			Key:        "acc3.3.1",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -536,7 +591,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.3.1",
+			Key:    "acc3.3.1",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -547,7 +602,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 	})
 	t.Run("CreateAccount", func(t *testing.T) {
 		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc2.3.2",
+			Key:        "acc3.3.2",
 			CurrencyId: currID,
 		})
 		require.NoError(t, err)
@@ -557,7 +612,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 	t.Run("GetAccountByKey", func(t *testing.T) {
 		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 			CurrId: currID,
-			Key:    "acc2.3.2",
+			Key:    "acc3.3.2",
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())
@@ -590,9 +645,11 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		})
 
 		Meta := map[string]string{
-			"callback":    "https://ya.ru",
-			"description": "",
-			"email":       "test@mail.ru",
+			"title":         "Сервис в тесте.",
+			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
+			"count":         "1",
+			"price":         "1200",
+			"unit":          "шт",
 		}
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
@@ -600,7 +657,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		t.Run("AddTransactionToInvoice", func(t *testing.T) {
 			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
 				InvoiceId: invID,
-				Strategy:  (&sberbank.Strategy{}).Name().String(),
+				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
 				Amount:    1000,
 				Meta:      &meta,
 				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
@@ -650,7 +707,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.3.1",
+				Key:    "acc3.3.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -663,7 +720,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.3.2",
+				Key:    "acc3.3.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -682,7 +739,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "CREATED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperUrl())
 			URL = *res.GetTx().GetProviderOperUrl()
 		})
@@ -694,7 +751,12 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		balanceAccepted1 -= 100
 		balanceAccepted2 += 1000
 		balanceAccepted2 -= 100
-		sendCardDataInSberbank(t, URL)
+
+		// TODO добавить подтверждение перевода
+		t.Log("MOE DELO URL: ", URL)
+
+		t.Skip("WIP")
+
 		time.Sleep(10 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
@@ -704,12 +766,12 @@ func Test02_03SberbankStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_ACCEPTED_TX, res.GetTx().GetStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, "DEPOSITED", *res.GetTx().GetProviderOperStatus())
+			require.EqualValues(t, moedelo.Paid.String(), *res.GetTx().GetProviderOperStatus())
 		})
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.3.1",
+				Key:    "acc3.3.1",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -722,7 +784,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
-				Key:    "acc2.3.2",
+				Key:    "acc3.3.2",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -731,50 +793,5 @@ func Test02_03SberbankStrategy(t *testing.T) {
 			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
 
 		})
-	})
-}
-
-func sendCardDataInSberbank(t *testing.T, URL string) {
-	// https://3dsec.sberbank.ru/payment/merchants/sbersafe/payment_ru.html?mdOrder=ebc0d85c-42e9-7593-96af-650104b2e43b
-	t.Run("SendCardDataInSberbank", func(t *testing.T) {
-		if len(URL) < 37 {
-			t.Fatal("URL: ", URL)
-		}
-		c := http.Client{
-			Transport: http.DefaultTransport,
-			Timeout:   10 * time.Second,
-		}
-		resp, err := c.Post(
-			"https://3dsec.sberbank.ru/payment/rest/processform.do?MDORDER="+
-				URL[len(URL)-36:]+
-				"&$PAN=5555555555555599&$CVC=123&MM=12&YYYY=2019&language=ru&TEXT=CARDHOLDER+NAME",
-			"",
-			nil,
-		)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		require.NoError(t, err)
-		errCode := &struct {
-			ErrorCode int64  `json:"errorCode"`
-			Redirect  string `json:"redirect"`
-		}{}
-		err = json.Unmarshal(body, errCode)
-		require.NoError(t, err)
-		require.EqualValues(t, 0, errCode.ErrorCode)
-		getSberbankWebhook(t, errCode.Redirect)
-	})
-}
-
-func getSberbankWebhook(t *testing.T, URL string) {
-	t.Run("GetSberbankWebhook", func(t *testing.T) {
-		c := http.Client{
-			Transport: http.DefaultTransport,
-			Timeout:   10 * time.Second,
-		}
-		t.Log("URL: ", URL)
-		resp, err := c.Get("http://localhost:10003/webhook/sberbank" + URL[len("localhost"):])
-		require.NoError(t, err)
-		defer resp.Body.Close()
 	})
 }
