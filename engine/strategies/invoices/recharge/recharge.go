@@ -1,4 +1,4 @@
-package irecharge
+package recharge
 
 import (
 	"context"

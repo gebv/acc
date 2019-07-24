@@ -1,4 +1,4 @@
-package isimple
+package simple
 
 import (
 	"context"

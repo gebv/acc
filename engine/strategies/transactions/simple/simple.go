@@ -1,4 +1,4 @@
-package tsimple
+package simple
 
 import (
 	"context"

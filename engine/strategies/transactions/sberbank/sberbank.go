@@ -1,4 +1,4 @@
-package tsberbank
+package sberbank
 
 import (
 	"context"
