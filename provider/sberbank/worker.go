@@ -2,7 +2,7 @@ package sberbank
 
 import (
 	"context"
-	"log"
+	"encoding/json"
 	"time"
 
 	"github.com/gebv/acca/engine"
@@ -43,24 +43,47 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				}
 				return
 			}
-			if tr.Status != engine.DRAFT_TX {
+			if tr.Status != engine.WAUTH_TX {
 				p.l.Warn(
-					"Transaction status not draft.",
+					"Transaction status not auth_wait.",
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
 				return
 			}
-			var amount int64 // TODO amount из транзакции после добавления
+			if tr.Meta == nil {
+				p.l.Warn(
+					"Transaction not set meta.",
+					zap.Int64("tr_id", tr.TransactionID),
+				)
+				return
+			}
+			meta := make(map[string]string)
+			if err := json.Unmarshal(*tr.Meta, &meta); err != nil {
+				p.l.Error("Failed unmarshal meta in transaction. ", zap.Error(err))
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				return
+			}
+			var hold bool
+			if err, hold = engine.IsHoldOperations(tx, tr.TransactionID); err != nil {
+				p.l.Error("Failed select operation in transaction. ", zap.Error(err))
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				return
+			}
+
 			extOrderID, urlForm, err := p.AuthTransfer(
-				amount,
+				tr.Amount,
 				TransferInformation{
-					ReturnURL:   "",
-					FailURL:     "",
-					Description: "",
-					Email:       "",
+					ReturnURL:   "localhost?result=success" + "&callback=" + meta["callback"],
+					FailURL:     "localhost?result=false" + "&callback=" + meta["callback"],
+					Description: meta["description"],
+					Email:       meta["email"],
 				},
-				true,
+				hold,
 			)
 			if err != nil {
 				p.l.Error("Failed auth transfer in sberbank.", zap.Error(err))
@@ -69,11 +92,10 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				}
 				return
 			}
-			// TODO в транзакцию добавить значения ссылки так как по ней требуется оплата.
-			log.Println("URL FROM PAY IN SBERANK: ", urlForm)
 			tr.ProviderOperID = &extOrderID
 			status := CREATED
 			tr.ProviderOperStatus = &status
+			tr.ProviderOperUrl = &urlForm
 			if err := tx.Save(&tr); err != nil {
 				p.l.Error("Failed reload transaction. ", zap.Error(err))
 				if err := tx.Rollback(); err != nil {
@@ -106,6 +128,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 					if err := tx.Commit(); err != nil {
 						p.l.Error("Failed tx commit. ", zap.Error(err))
 					}
+					return
 				}
 			}
 			if err := tx.Rollback(); err != nil {
@@ -120,9 +143,9 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				}
 				return
 			}
-			if tr.Status != engine.HOLD_TX {
+			if tr.Status != engine.WREJECTED_TX {
 				p.l.Warn(
-					"Transaction status not hold.",
+					"Transaction status not rejected_wait.",
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
@@ -152,10 +175,9 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				}
 				return
 			}
-			var amount int64 // TODO amount из транзакции после добавления
 			err := p.ReverseForHold(
 				*tr.ProviderOperID,
-				amount,
+				tr.Amount,
 			)
 			if err != nil {
 				p.l.Error("Failed reverse for hold in sberbank.", zap.Error(err))
@@ -189,6 +211,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 					if err := tx.Commit(); err != nil {
 						p.l.Error("Failed tx commit. ", zap.Error(err))
 					}
+					return
 				}
 			}
 			if err := tx.Rollback(); err != nil {

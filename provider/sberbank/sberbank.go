@@ -40,7 +40,7 @@ type Provider struct {
 }
 
 const (
-	CARD_SBERBANK = "card_sberbank"
+	SBERBANK = "sberbank"
 
 	CREATED   = "CREATED"
 	APPROVED  = "APPROVED"
@@ -132,7 +132,7 @@ func (p *Provider) AuthTransfer(
 	default:
 		return "", "", errors.New(rco.ErrorMessage)
 	}
-	err = p.s.NewOrder(rco.OrderID, CARD_SBERBANK, CREATED)
+	err = p.s.NewOrder(rco.OrderID, SBERBANK, CREATED)
 	if err != nil {
 		return "", "", errors.Wrap(err, "Failed insert sberbank order")
 	}
@@ -358,7 +358,7 @@ func newPaymentOrderID() string {
 	}
 	tm := time.Now()
 	return fmt.Sprintf(
-		"zps-%d-%d-%d-%d-%d-%d-%s",
+		"app-%d-%d-%d-%d-%d-%d-%s",
 		tm.Year(),
 		tm.Month(),
 		tm.Day(),

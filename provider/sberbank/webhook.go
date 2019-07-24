@@ -12,9 +12,8 @@ import (
 
 // SberbankWebhookHandler обработчик вебхука от сбербанк.
 func (p *Provider) SberbankWebhookHandler() echo.HandlerFunc {
-	// TODO добавить ссылку редиректа
-	callback := ""
 	return func(c echo.Context) error {
+		callback := c.QueryParam("callback")
 		if p == nil {
 			c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 			c.Response().WriteHeader(http.StatusTemporaryRedirect)
@@ -37,9 +36,7 @@ func (p *Provider) SberbankWebhookHandler() echo.HandlerFunc {
 func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 	//securityCode := c.QueryParam("security_code")
 	extOrderID := c.QueryParam("orderId")
-
-	// TODO добавить ссылку редиректа
-	callback := ""
+	callback := c.QueryParam("callback")
 
 	var tr engine.Transaction
 	err := p.db.SelectOneTo(&tr, "WHERE provider_oper_id = $1", extOrderID)
@@ -85,7 +82,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 	if paymentInfo.UpdateStatus {
 		switch paymentInfo.PaymentAmountInfo.PaymentState {
 		case DEPOSITED: // Статус подтверждает списание средств
-			if tr.Status != engine.HOLD_TX {
+			if tr.Status != engine.AUTH_TX {
 				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
 				return errors.New("invoice is not ready for pay")
@@ -114,6 +111,11 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 				return errors.Wrap(err, "failed send accept transaction")
 			}
 		case APPROVED: // Статус подтверждает холдирования средств
+			if tr.Status != engine.AUTH_TX {
+				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
+				c.Response().WriteHeader(http.StatusTemporaryRedirect)
+				return errors.New("invoice is not ready for pay")
+			}
 			status := APPROVED
 			tr.ProviderOperStatus = &status
 			if err := p.db.Save(&tr); err != nil {
@@ -130,7 +132,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
-				Status:        engine.AUTH_TX,
+				Status:        engine.HOLD_TX,
 			}); err != nil {
 				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
@@ -156,9 +158,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 func (p *Provider) failSberbankWebhookHandler(c echo.Context) error {
 	//securityCode := c.QueryParam("security_code")
 	extOrderID := c.QueryParam("orderId")
-
-	// TODO добавить ссылку редиректа
-	callback := ""
+	callback := c.QueryParam("callback")
 
 	var tr engine.Transaction
 	err := p.db.SelectOneTo(&tr, "WHERE provider_oper_id = $1", extOrderID)
