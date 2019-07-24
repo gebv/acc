@@ -100,10 +100,10 @@ func main() {
 	}
 
 	sberProvider := sberbank.NewProvider(db, sberbank.Config{
-		EntrypointURL: "",
-		Token:         "",
-		Password:      "",
-		UserName:      "",
+		EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
+		Token:         os.Getenv("SBERBANK_TOKEN"),
+		Password:      os.Getenv("SBERBANK_PASSWORD"),
+		UserName:      os.Getenv("SBERBANK_USER_NAME"),
 	},
 		nc,
 	)
@@ -181,7 +181,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		serverWebhookSberbank(ctx, db, nc)
+		serverWebhookSberbank(ctx, sberProvider)
 	}()
 
 	wg.Wait()
@@ -306,7 +306,7 @@ func setupPostgres(conn string, maxLifetime time.Duration, maxOpen, maxIdle int)
 	return sqlDB
 }
 
-func serverWebhookSberbank(ctx context.Context, db *reform.DB, nc *nats.EncodedConn) {
+func serverWebhookSberbank(ctx context.Context, provider *sberbank.Provider) {
 
 	e := echo.New()
 
@@ -327,17 +327,6 @@ func serverWebhookSberbank(ctx context.Context, db *reform.DB, nc *nats.EncodedC
 	e.Use(echo_middleware.Recover())
 
 	e.Use(echo_middleware.Logger())
-
-	provider := sberbank.NewProvider(
-		db,
-		sberbank.Config{
-			EntrypointURL: "",
-			Token:         "",
-			Password:      "",
-			UserName:      "",
-		},
-		nc,
-	)
 
 	e.GET("/webhook/sberbank", provider.SberbankWebhookHandler())
 
