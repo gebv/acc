@@ -19,6 +19,8 @@ type Transaction struct {
 	// Key Уникальный внешний идентификатор транзакции (опционально).
 	Key *string `reform:"key"`
 
+	Amount int64 `reform:"amount"`
+
 	// Strategy стратегия работы с инвойсом.
 	Strategy string `reform:"strategy"`
 
@@ -30,6 +32,9 @@ type Transaction struct {
 
 	// ProviderOperStatus Статус связанной с транзакцией операции во внешней системе.
 	ProviderOperStatus *string `reform:"provider_oper_status"`
+
+	// ProviderOperStatus Статус связанной с транзакцией операции во внешней системе.
+	ProviderOperUrl *string `reform:"provider_oper_url"`
 
 	// Meta мета информация связанная с транзакцией (учавствующая в логике).
 	Meta *[]byte `reform:"meta"`

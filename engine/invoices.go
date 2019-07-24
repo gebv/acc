@@ -44,6 +44,8 @@ type Invoice struct {
 	// Key внешний уникальный идентицитора инвойса.
 	Key string `reform:"key"`
 
+	Amount int64 `reform:"amount"`
+
 	// Status состояние инвойса.
 	Status InvoiceStatus `reform:"status"`
 
