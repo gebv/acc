@@ -16,7 +16,7 @@ func newLowLevelMoneyTransferStrategy() *lowLevelMoneyTransferStrategy {
 
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{RECHARGE_OPS, AUTH_TX}] = m.recharge_auth
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{RECHARGE_OPS, ACCEPTED_TX}] = m.recharge_accepted
-	m.execMap[lowLevelMoneyTransferStrategy__execKey{RECHARGE_OPS, REJECTED_TX}] = m.simpleTransfer_rejected
+	m.execMap[lowLevelMoneyTransferStrategy__execKey{RECHARGE_OPS, REJECTED_TX}] = m.recharge_rejected
 
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{WITHDRAW_OPS, AUTH_TX}] = m.withdraw_auth
 	m.execMap[lowLevelMoneyTransferStrategy__execKey{WITHDRAW_OPS, ACCEPTED_TX}] = m.withdraw_accepted
@@ -112,6 +112,7 @@ func (t *lowLevelMoneyTransferStrategy) recharge_auth(nextTxStatus TransactionSt
 func (t *lowLevelMoneyTransferStrategy) withdraw_auth(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		t.accountBalances.dec(oper.SrcAccID, oper.Amount)
+		t.accountBalances.dec(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
 			t.accountBalances.inc(*oper.HoldAccID, oper.Amount)
 		}
@@ -157,8 +158,6 @@ func (t *lowLevelMoneyTransferStrategy) recharge_accepted(nextTxStatus Transacti
 func (t *lowLevelMoneyTransferStrategy) withdraw_accepted(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		t.accountAcceptedBalances.dec(oper.SrcAccID, oper.Amount)
-
-		t.accountBalances.dec(oper.DstAccID, oper.Amount)
 		t.accountAcceptedBalances.dec(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
 			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
@@ -202,6 +201,7 @@ func (t *lowLevelMoneyTransferStrategy) recharge_rejected(nextTxStatus Transacti
 func (t *lowLevelMoneyTransferStrategy) withdraw_rejected(nextTxStatus TransactionStatus, oper *Operation) {
 	if oper.Hold {
 		t.accountBalances.inc(oper.SrcAccID, oper.Amount)
+		t.accountBalances.inc(oper.DstAccID, oper.Amount)
 		if oper.HoldAccID != nil {
 			t.accountBalances.dec(*oper.HoldAccID, oper.Amount)
 		}
