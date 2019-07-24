@@ -14,13 +14,15 @@ import (
 	"time"
 
 	"github.com/gebv/acca/api"
-	_ "github.com/gebv/acca/engine/strategies/isimple"
-	_ "github.com/gebv/acca/engine/strategies/tsberbank"
-	_ "github.com/gebv/acca/engine/strategies/tsimple"
+	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
+	_ "github.com/gebv/acca/engine/strategies/transactions/moedelo"
+	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank"
+	_ "github.com/gebv/acca/engine/strategies/transactions/simple"
 	"github.com/gebv/acca/engine/worker"
 	"github.com/gebv/acca/interceptors/auth"
 	"github.com/gebv/acca/interceptors/recover"
 	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
+	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
 	"github.com/gebv/acca/services"
 	"github.com/gebv/acca/services/accounts"
@@ -99,16 +101,27 @@ func main() {
 		log.Fatal(err)
 	}
 
-	sberProvider := sberbank.NewProvider(db, sberbank.Config{
-		EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
-		Token:         os.Getenv("SBERBANK_TOKEN"),
-		Password:      os.Getenv("SBERBANK_PASSWORD"),
-		UserName:      os.Getenv("SBERBANK_USER_NAME"),
-	},
+	sberProvider := sberbank.NewProvider(
+		db,
+		sberbank.Config{
+			EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
+			Token:         os.Getenv("SBERBANK_TOKEN"),
+			Password:      os.Getenv("SBERBANK_PASSWORD"),
+			UserName:      os.Getenv("SBERBANK_USER_NAME"),
+		},
 		nc,
 	)
 
-	worker.SubToNATS(nc, db, sberProvider)
+	moeDeloProvider := moedelo.NewProvider(
+		db,
+		moedelo.Config{
+			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+			Token:         os.Getenv("MOEDELO_TOKEN"),
+		},
+		nc,
+	)
+
+	worker.SubToNATS(nc, db, sberProvider, moeDeloProvider)
 
 	lis, err := net.Listen("tcp", *grpcAddrsF)
 	if err != nil {
