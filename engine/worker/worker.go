@@ -40,6 +40,7 @@ func SubToNATS(
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
 				}
+				return
 			}
 		}
 		if err := tx.Rollback(); err != nil {
@@ -69,6 +70,7 @@ func SubToNATS(
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
 				}
+				return
 			}
 		}
 		if err := tx.Rollback(); err != nil {
