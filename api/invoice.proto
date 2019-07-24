@@ -50,6 +50,7 @@ message NewInvoiceRequest {
     // strategy стратегия работы с инвойсом.
     string strategy = 2;
     google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
+    int64 amount = 4;
 }
 message NewInvoiceResponse {
     int64 invoice_id = 1;
@@ -81,6 +82,7 @@ message AddTransactionToInvoiceRequest {
     string strategy = 3;
     google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
     repeated Oper operations = 5;
+    int64 amount = 6;
 }
 message AddTransactionToInvoiceResponse {
     int64 tx_id = 1;
