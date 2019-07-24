@@ -102,6 +102,11 @@ func (this *Tx) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("UpdatedAt", err)
 		}
 	}
+	if this.ProviderOperUrl != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ProviderOperUrl); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ProviderOperUrl", err)
+		}
+	}
 	return nil
 }
 func (this *Oper) Validate() error {
