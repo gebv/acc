@@ -219,6 +219,22 @@ func (t *transactionProcessor) Process(txID int64, updatedAt time.Time, currentS
 	return nil
 }
 
+// холд операци в транзакции
+func IsHoldOperations(tx *reform.TX, trID int64) (error, bool) {
+	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", trID)
+	if err != nil {
+		return errors.Wrap(err, "failed find operations"), false
+	}
+	var isHold bool
+	for _, ioper := range opers {
+		oper := ioper.(*Operation)
+		if oper.Hold {
+			isHold = true
+		}
+	}
+	return nil, isHold
+}
+
 // обработка операций в транзакции
 func ProcessingOperations(tx *reform.TX, cmd *ProcessorCommand) (error, bool) {
 	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", cmd.TrID)
