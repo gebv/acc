@@ -41,6 +41,7 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 	inv := &engine.Invoice{
 		Key:      key,
 		Strategy: strategy,
+		Amount:   req.GetAmount(),
 		Status:   engine.DRAFT_I,
 		Meta:     req.GetMeta(),
 		Payload:  nil,
@@ -64,6 +65,7 @@ func (s Server) GetInvoiceByID(ctx context.Context, req *api.GetInvoiceByIDReque
 		Invoice: &api.Invoice{
 			InvoiceId:  inv.InvoiceID,
 			Key:        inv.Key,
+			Amount:     inv.Amount,
 			Status:     mapInvStatusToApiInvStatus[inv.Status],
 			NextStatus: nextStatus,
 			Strategy:   inv.Strategy,
@@ -99,6 +101,7 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 		tr := &engine.Transaction{
 			InvoiceID: req.GetInvoiceId(),
 			Strategy:  strategy,
+			Amount:    req.GetAmount(),
 			Key:       req.GetKey(),
 			Meta:      req.GetMeta(),
 			Status:    engine.DRAFT_TX,
@@ -179,9 +182,11 @@ func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionB
 			InvoiceId:          tr.InvoiceID,
 			Key:                tr.Key,
 			Strategy:           tr.Strategy,
+			Amount:             tr.Amount,
 			Provider:           mapTrProviderToApiTrProvider[tr.Provider],
 			ProviderOperId:     tr.ProviderOperID,
 			ProviderOperStatus: tr.ProviderOperStatus,
+			ProviderOperUrl:    tr.ProviderOperUrl,
 			Meta:               tr.Meta,
 			Status:             mapTrStatusToApiTrStatus[tr.Status],
 			NextStatus:         nextStatus,
