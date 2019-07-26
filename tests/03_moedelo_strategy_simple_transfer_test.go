@@ -126,7 +126,7 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			"title":         "Сервис в тесте.",
 			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
 			"count":         "1",
-			"price":         "1200",
+			"price":         "10.00",
 			"unit":          "шт",
 		}
 		meta, err := json.Marshal(&Meta)
@@ -171,7 +171,7 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
@@ -217,12 +217,24 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		// TODO добавить подтверждение перевода
-		t.Log("MOE DELO URL: ", URL)
+		t.Run("UpdateBill", func(t *testing.T) {
+			t.Log("MOE DELO URL: ", URL)
+			status := moedelo.PartiallyPaid
+			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
+				{
+					Name:    Meta["title"],
+					Count:   1,
+					Unit:    Meta["unit"],
+					Type:    moedelo.Service,
+					Price:   10.00,
+					NdsType: moedelo.Nds0,
+				},
+			},
+				&status,
+			)
+		})
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Skip("WIP")
-
-		time.Sleep(5 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -233,17 +245,35 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.NotNil(t, res.GetTx().GetProviderOperStatus())
 			require.EqualValues(t, moedelo.PartiallyPaid.String(), *res.GetTx().GetProviderOperStatus())
 		})
-		t.Run("AcceptInvoice", func(t *testing.T) {
+
+		t.Run("GetAccountByKey", func(t *testing.T) {
+			bill, err := md.GetBill(billID)
+			require.NoError(t, err)
+			require.NotNil(t, bill)
+			require.EqualValues(t, moedelo.PartiallyPaid, bill.Status)
+		})
+
+		t.Run("UpdateBill", func(t *testing.T) {
 			balance1 += 1000
 			balance2 += 1000
 			balanceAccepted1 += 1000
 			balanceAccepted2 += 1000
-			_, err := invC.AcceptInvoice(authCtx, &api.AcceptInvoiceRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
+			status := moedelo.Paid
+			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
+				{
+					Name:    Meta["title"],
+					Count:   1,
+					Unit:    Meta["unit"],
+					Type:    moedelo.Service,
+					Price:   10.00,
+					NdsType: moedelo.Nds0,
+				},
+			},
+				&status,
+			)
 		})
-		time.Sleep(5 * time.Second)
+		time.Sleep(45 * time.Second) // listener updated every 30 second
+
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -252,6 +282,7 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.NotEmpty(t, res.GetTx())
 			require.EqualValues(t, api.TxStatus_ACCEPTED_TX, res.GetTx().GetStatus())
 		})
+
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
 				CurrId: currID,
@@ -277,6 +308,14 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
 
 		})
+
+		t.Run("GetAccountByKey", func(t *testing.T) {
+			bill, err := md.GetBill(billID)
+			require.NoError(t, err)
+			require.NotNil(t, bill)
+			require.EqualValues(t, moedelo.Paid, bill.Status)
+		})
+
 	})
 }
 
@@ -435,7 +474,7 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
@@ -464,6 +503,7 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 		})
 
 		var URL string
+		var billID int64
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -475,14 +515,29 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperUrl())
 			URL = *res.GetTx().GetProviderOperUrl()
+			require.NotNil(t, res.GetTx().GetProviderOperId())
+			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
+			require.NoError(t, err)
 		})
 
-		// TODO добавить подтверждение перевода
-		t.Log("MOE DELO URL: ", URL)
+		t.Run("UpdateBill", func(t *testing.T) {
+			t.Log("MOE DELO URL: ", URL)
+			status := moedelo.PartiallyPaid
+			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
+				{
+					Name:    Meta["title"],
+					Count:   1,
+					Unit:    Meta["unit"],
+					Type:    moedelo.Service,
+					Price:   10.00,
+					NdsType: moedelo.Nds0,
+				},
+			},
+				&status,
+			)
+		})
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Skip("WIP")
-
-		time.Sleep(5 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -533,7 +588,6 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
 
 		})
-
 	})
 }
 
@@ -648,7 +702,7 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 			"title":         "Сервис в тесте.",
 			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
 			"count":         "1",
-			"price":         "1200",
+			"price":         "10.00",
 			"unit":          "шт",
 		}
 		meta, err := json.Marshal(&Meta)
@@ -702,7 +756,7 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
@@ -731,6 +785,7 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 		})
 
 		var URL string
+		var billID int64
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -742,7 +797,11 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
 			require.NotNil(t, res.GetTx().GetProviderOperUrl())
 			URL = *res.GetTx().GetProviderOperUrl()
+			require.NotNil(t, res.GetTx().GetProviderOperId())
+			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
+			require.NoError(t, err)
 		})
+
 		balance1 += 1000
 		balance1 -= 100
 		balance2 += 1000
@@ -752,12 +811,25 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 		balanceAccepted2 += 1000
 		balanceAccepted2 -= 100
 
-		// TODO добавить подтверждение перевода
 		t.Log("MOE DELO URL: ", URL)
 
-		t.Skip("WIP")
+		t.Run("UpdateBill", func(t *testing.T) {
+			status := moedelo.Paid
+			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
+				{
+					Name:    Meta["title"],
+					Count:   1,
+					Unit:    Meta["unit"],
+					Type:    moedelo.Service,
+					Price:   10.00,
+					NdsType: moedelo.Nds0,
+				},
+			},
+				&status,
+			)
+		})
+		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		time.Sleep(10 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,

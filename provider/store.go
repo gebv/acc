@@ -61,10 +61,10 @@ func (s *Store) SetStatusWithExtUpdate(sOrdID string, newStatus string, tm time.
 	return s.DB.Save(o)
 }
 
-func (s *Store) GetLastTimeFromNoncash() (*time.Time, error) {
+func (s *Store) GetLastTimeFromPaymentSystemName(name string) (*time.Time, error) {
 	tm := time.Date(2019, 01, 01, 00, 00, 00, 00, time.UTC)
 	var so InvoiceTransactionsExtOrders
-	err := s.DB.SelectOneTo(&so, "WHERE payment_system_name = 'noncash' ORDER BY ext_updated_at DESC LIMIT 1")
+	err := s.DB.SelectOneTo(&so, "WHERE payment_system_name = $1 ORDER BY ext_updated_at DESC LIMIT 1", name)
 	if err != nil {
 		if err == reform.ErrNoRows {
 			return &tm, nil

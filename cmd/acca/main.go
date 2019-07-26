@@ -182,6 +182,12 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		moeDeloProvider.RunCheckStatusListener(ctx)
+	}()
+
 	zap.L().Info("gRPC server listen address.", zap.String("address", lis.Addr().String()))
 	wg.Add(1)
 	go func() {
