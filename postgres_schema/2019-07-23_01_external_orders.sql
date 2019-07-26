@@ -1,6 +1,7 @@
 CREATE TYPE payment_system_name AS enum (
     'internal',
-    'sberbank'
+    'sberbank',
+    'moe_delo'
     );
 
 CREATE TABLE invoice_transactions_ext_orders
