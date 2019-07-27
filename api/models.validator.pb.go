@@ -138,11 +138,6 @@ func (this *Oper) Validate() error {
 	return nil
 }
 func (this *BalanceChanges) Validate() error {
-	if this.Account != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Account); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Account", err)
-		}
-	}
 	if this.Currency != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Currency); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("Currency", err)
@@ -165,15 +160,27 @@ func (this *BalanceChanges) Validate() error {
 			}
 		}
 	}
+	if this.ActualAccount != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ActualAccount); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ActualAccount", err)
+		}
+	}
+	if this.ActualTransaction != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ActualTransaction); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ActualTransaction", err)
+		}
+	}
 	return nil
 }
 func (this *BalanceChanges_Account) Validate() error {
 	return nil
 }
-func (this *BalanceChanges_Currency) Validate() error {
-	return nil
-}
 func (this *BalanceChanges_Invoice) Validate() error {
+	if this.Meta != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
+		}
+	}
 	return nil
 }
 func (this *BalanceChanges_Transaction) Validate() error {
@@ -197,6 +204,11 @@ func (this *BalanceChanges_Transaction) Validate() error {
 			return github_com_mwitkow_go_proto_validators.FieldError("ProviderOperUrl", err)
 		}
 	}
+	if this.Meta != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
+		}
+	}
 	return nil
 }
 func (this *BalanceChanges_Operation) Validate() error {
@@ -208,6 +220,11 @@ func (this *BalanceChanges_Operation) Validate() error {
 	if this.HoldAccId != nil {
 		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HoldAccId); err != nil {
 			return github_com_mwitkow_go_proto_validators.FieldError("HoldAccId", err)
+		}
+	}
+	if this.Meta != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
 		}
 	}
 	return nil

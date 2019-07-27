@@ -64,6 +64,11 @@ func (this *GetAccountByKeyResponse) Validate() error {
 	return nil
 }
 func (this *BalanceChangesRequest) Validate() error {
+	if this.AccId != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.AccId); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("AccId", err)
+		}
+	}
 	return nil
 }
 func (this *BalanceChangesResponse) Validate() error {
