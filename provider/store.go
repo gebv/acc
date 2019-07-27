@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -11,16 +12,20 @@ type Store struct {
 	DB *reform.DB
 }
 
-func (s *Store) NewOrder(ordID string, paymentSystemName string, rawOrderStatus string) error {
+const (
+	prefixOrderId = "acca"
+)
+
+func (s *Store) NewOrder(ordID string, providerName Provider, rawOrderStatus string) error {
 	return s.DB.Insert(&InvoiceTransactionsExtOrders{
-		OrderNumber:       ordID,
-		PaymentSystemName: paymentSystemName, // CARD_SBERBANK,
-		RawOrderStatus:    rawOrderStatus,    // CREATED,
+		OrderNumber:       formatOrderID(providerName, ordID),
+		PaymentSystemName: providerName,
+		RawOrderStatus:    rawOrderStatus,
 	})
 }
 
-func (s *Store) GetByOrderID(ordID string) (*InvoiceTransactionsExtOrders, error) {
-	so := &InvoiceTransactionsExtOrders{OrderNumber: ordID}
+func (s *Store) GetByOrderID(ordID string, providerName Provider) (*InvoiceTransactionsExtOrders, error) {
+	so := &InvoiceTransactionsExtOrders{OrderNumber: formatOrderID(providerName, ordID)}
 	err := s.DB.Reload(so)
 	if err != nil {
 		if err == reform.ErrNoRows {
@@ -31,8 +36,8 @@ func (s *Store) GetByOrderID(ordID string) (*InvoiceTransactionsExtOrders, error
 	return so, nil
 }
 
-func (s *Store) SetStatus(sOrdID string, newStatus string) error {
-	o := &InvoiceTransactionsExtOrders{OrderNumber: sOrdID}
+func (s *Store) SetStatus(ordID string, providerName Provider, newStatus string) error {
+	o := &InvoiceTransactionsExtOrders{OrderNumber: formatOrderID(providerName, ordID)}
 	err := s.DB.Reload(o)
 	if err != nil {
 		return err
@@ -41,17 +46,17 @@ func (s *Store) SetStatus(sOrdID string, newStatus string) error {
 	return s.DB.Save(o)
 }
 
-func (s *Store) NewOrderWithExtUpdate(ordID string, paymentSystemName string, rawOrderStatus string, extUpdatedAt time.Time) error {
+func (s *Store) NewOrderWithExtUpdate(ordID string, providerName Provider, rawOrderStatus string, extUpdatedAt time.Time) error {
 	return s.DB.Insert(&InvoiceTransactionsExtOrders{
-		OrderNumber:       ordID,
-		PaymentSystemName: paymentSystemName, // CARD_SBERBANK,
-		RawOrderStatus:    rawOrderStatus,    // CREATED,
+		OrderNumber:       formatOrderID(providerName, ordID),
+		PaymentSystemName: providerName,
+		RawOrderStatus:    rawOrderStatus,
 		ExtUpdatedAt:      extUpdatedAt,
 	})
 }
 
-func (s *Store) SetStatusWithExtUpdate(sOrdID string, newStatus string, tm time.Time) error {
-	o := &InvoiceTransactionsExtOrders{OrderNumber: sOrdID}
+func (s *Store) SetStatusWithExtUpdate(ordID string, providerName Provider, newStatus string, tm time.Time) error {
+	o := &InvoiceTransactionsExtOrders{OrderNumber: formatOrderID(providerName, ordID)}
 	err := s.DB.Reload(o)
 	if err != nil {
 		return err
@@ -61,7 +66,7 @@ func (s *Store) SetStatusWithExtUpdate(sOrdID string, newStatus string, tm time.
 	return s.DB.Save(o)
 }
 
-func (s *Store) GetLastTimeFromPaymentSystemName(name string) (*time.Time, error) {
+func (s *Store) GetLastTimeFromPaymentSystemName(name Provider) (*time.Time, error) {
 	tm := time.Date(2019, 01, 01, 00, 00, 00, 00, time.UTC)
 	var so InvoiceTransactionsExtOrders
 	err := s.DB.SelectOneTo(&so, "WHERE payment_system_name = $1 ORDER BY ext_updated_at DESC LIMIT 1", name)
@@ -79,9 +84,8 @@ func (s *Store) GetLastTimeFromPaymentSystemName(name string) (*time.Time, error
 //reform:acca.invoice_transactions_ext_orders
 type InvoiceTransactionsExtOrders struct {
 	OrderNumber       string    `reform:"order_number,pk"`
-	PaymentSystemName string    `reform:"payment_system_name"`
+	PaymentSystemName Provider  `reform:"payment_system_name"`
 	RawOrderStatus    string    `reform:"raw_order_status"`
-	OrderStatus       string    `reform:"order_status"`
 	CreatedAt         time.Time `reform:"created_at"`
 	UpdatedAt         time.Time `reform:"updated_at"`
 	ExtUpdatedAt      time.Time `reform:"ext_updated_at"`
@@ -96,4 +100,8 @@ func (o *InvoiceTransactionsExtOrders) BeforeInsert() error {
 func (o *InvoiceTransactionsExtOrders) BeforeUpdate() error {
 	o.UpdatedAt = time.Now()
 	return nil
+}
+
+func formatOrderID(p Provider, extOrderID string) string {
+	return prefixOrderId + fmt.Sprintf("-%s-%s", p, extOrderID)
 }

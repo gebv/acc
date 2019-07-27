@@ -8,6 +8,8 @@ import (
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
+	"github.com/gebv/acca/provider"
+	"github.com/gebv/acca/provider/sberbank"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -321,9 +323,9 @@ var MapOperStrategyToApiTrStrategy = map[engine.OperationStrategy]api.OperStrate
 	engine.WITHDRAW_OPS: api.OperStrategy_WITHDRAW_OPS,
 }
 
-var MapTrProviderToApiTrProvider = map[engine.Provider]api.Provider{
-	engine.INTERNAL: api.Provider_INTERNAL_PROVIDER,
-	engine.SBERBANK: api.Provider_SBERBANK_PROVIDER,
+var MapTrProviderToApiTrProvider = map[provider.Provider]api.Provider{
+	provider.INTERNAL: api.Provider_INTERNAL_PROVIDER,
+	sberbank.SBERBANK: api.Provider_SBERBANK_PROVIDER,
 }
 
 var MapTrStatusToApiTrStatus = map[engine.TransactionStatus]api.TxStatus{

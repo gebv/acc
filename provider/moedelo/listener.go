@@ -20,7 +20,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 	_l := p.l.Named("moe_delo_check_status_listener")
 	_l.Info("Started")
 	store := &provider.Store{DB: p.db}
-	tm, err := store.GetLastTimeFromPaymentSystemName(MD)
+	tm, err := store.GetLastTimeFromPaymentSystemName(MOEDELO)
 	if err != nil {
 		_l.Panic("Failed get last time from noncash", zap.Error(err))
 	}
@@ -36,7 +36,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 		nextDate = time.Now()
 		listBill, err := p.GetListBills(&afterDate, &nextDate)
 		if err != nil {
-			if err == PROVIDER_NOT_SET {
+			if err == ErrProviderNotSet {
 				_l.Warn("Failed get list bills from moe delo", zap.Error(err))
 				return
 			}
@@ -50,12 +50,12 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 				break
 			}
 			_l.Debug("Check Bill", zap.Int64("bill_id", bill.ID), zap.Int("bill_status", int(bill.Status)))
-			orderID := newPaymentOrderID(bill.KontragentID, bill.ID)
+			orderID := strconv.FormatInt(bill.ID, 10)
 			var oldStatus BillStatus
-			billData, err := store.GetByOrderID(orderID)
+			billData, err := store.GetByOrderID(orderID, MOEDELO)
 			switch err {
 			case reform.ErrNoRows:
-				err = store.NewOrderWithExtUpdate(orderID, MD, strconv.Itoa(int(bill.Status)), nextDate)
+				err = store.NewOrderWithExtUpdate(orderID, MOEDELO, strconv.Itoa(int(bill.Status)), nextDate)
 				if err != nil {
 					_l.Warn("Failed set status in bill from moe delo", zap.Error(err))
 					skip = true
@@ -91,7 +91,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 
 			if !skip && push {
 				var tr engine.Transaction
-				err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", engine.MOEDELO, strconv.FormatInt(bill.ID, 10))
+				err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", MOEDELO, strconv.FormatInt(bill.ID, 10))
 				if err != nil {
 					if err == reform.ErrNoRows {
 						_l.Warn("Not found related transactions by bill ID", zap.Int64("bill_id", bill.ID))
@@ -134,7 +134,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 							skip = true
 							continue
 						}
-						if err := store.SetStatus(orderID, strconv.Itoa(int(bill.Status))); err != nil {
+						if err := store.SetStatus(orderID, MOEDELO, strconv.Itoa(int(bill.Status))); err != nil {
 							_l.Error("Failed set status to external transaction. ", zap.Error(err))
 						}
 						continue

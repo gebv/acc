@@ -40,7 +40,7 @@ type Provider struct {
 }
 
 const (
-	SBERBANK = "sberbank"
+	SBERBANK provider.Provider = "sberbank"
 
 	CREATED   = "CREATED"
 	APPROVED  = "APPROVED"
@@ -173,7 +173,7 @@ func (p *Provider) GetOrderStatus(orderID string) (*SberbankOrderStatus, error) 
 		)
 		return nil, errors.Wrap(err, "Failed unmarshal response from sberbank")
 	}
-	so, err := p.s.GetByOrderID(orderID)
+	so, err := p.s.GetByOrderID(orderID, SBERBANK)
 	if err != nil {
 		p.l.Warn(
 			"requestForOrderStatus: reload extOrder status",
@@ -184,7 +184,7 @@ func (p *Provider) GetOrderStatus(orderID string) (*SberbankOrderStatus, error) 
 	}
 	if so.RawOrderStatus != os.PaymentAmountInfo.PaymentState {
 		os.UpdateStatus = true
-		err = p.s.SetStatus(orderID, os.PaymentAmountInfo.PaymentState)
+		err = p.s.SetStatus(orderID, SBERBANK, os.PaymentAmountInfo.PaymentState)
 		if err != nil {
 			p.l.Warn(
 				"requestForOrderStatus: save extOrder status",
@@ -330,10 +330,6 @@ func (p *Provider) Refund(orderID string, amount int64) error {
 		return errors.New(sr.ErrorMessage)
 	}
 	return nil
-}
-
-func (p *Provider) GetBySberbankID(sOrdID string) (*provider.InvoiceTransactionsExtOrders, error) {
-	return p.s.GetByOrderID(sOrdID)
 }
 
 type Config struct {

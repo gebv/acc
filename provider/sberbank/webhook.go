@@ -39,7 +39,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 	callback := c.QueryParam("callback")
 
 	var tr engine.Transaction
-	err := p.db.SelectOneTo(&tr, "WHERE provider_oper_id = $1", extOrderID)
+	err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", SBERBANK, extOrderID)
 	if err != nil {
 		p.l.Warn(
 			"Failed get transaction by external order from sberbank payment",
@@ -161,7 +161,7 @@ func (p *Provider) failSberbankWebhookHandler(c echo.Context) error {
 	callback := c.QueryParam("callback")
 
 	var tr engine.Transaction
-	err := p.db.SelectOneTo(&tr, "WHERE provider_oper_id = $1", extOrderID)
+	err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", SBERBANK, extOrderID)
 	if err != nil {
 		p.l.Warn(
 			"Failed get invoice transaction by external code from sberbank payment",

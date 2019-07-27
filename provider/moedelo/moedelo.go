@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/gebv/acca/provider"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -12,11 +13,11 @@ import (
 )
 
 const (
-	MD = "moe_delo"
+	MOEDELO provider.Provider = "moedelo"
 )
 
 var (
-	PROVIDER_NOT_SET = errors.New("Provider not set")
+	ErrProviderNotSet = errors.New("Provider not set")
 )
 
 const TimeFormat = "2006-01-02T15:04:05-07:00"
@@ -55,7 +56,7 @@ func (p *Provider) CreateKontragent(
 	name string,
 ) (*int64, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(p.cfg.EntrypointURL + "/kontragents/api/v1/kontragent")
 	if err != nil {
@@ -92,7 +93,7 @@ func (p *Provider) CreateAccount(
 	comment string,
 ) (*int64, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -131,7 +132,7 @@ func (p *Provider) UpdateAccount(
 	comment string,
 ) error {
 	if p.c == nil {
-		return PROVIDER_NOT_SET
+		return ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -170,7 +171,7 @@ func (p *Provider) UpdateKontragent(
 	name string,
 ) error {
 	if p.c == nil {
-		return PROVIDER_NOT_SET
+		return ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -207,7 +208,7 @@ func (p *Provider) GetAccount(
 	accountID int64,
 ) (*KontragentSettlementAccountRepresentation, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -236,7 +237,7 @@ func (p *Provider) GetKontragent(
 	kontragentID int64,
 ) (*KontragentRepresentation, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -267,7 +268,7 @@ func (p *Provider) CreateBill(
 	items []SalesDocumentItemModel,
 ) (*int64, *string, error) {
 	if p.c == nil {
-		return nil, nil, PROVIDER_NOT_SET
+		return nil, nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(p.cfg.EntrypointURL + "/accounting/api/v1/sales/bill")
 	if err != nil {
@@ -304,7 +305,7 @@ func (p *Provider) UpdateBill(
 	status *BillStatus,
 ) error {
 	if p.c == nil {
-		return PROVIDER_NOT_SET
+		return ErrProviderNotSet
 	}
 	_url, err := url.Parse(p.cfg.EntrypointURL + "/accounting/api/v1/sales/bill/" + strconv.FormatInt(billID, 10))
 	if err != nil {
@@ -339,7 +340,7 @@ func (p *Provider) GetBill(
 	billID int64,
 ) (*BillRepresentation, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
@@ -367,7 +368,7 @@ func (p *Provider) GetListBills(
 	beforeDate *time.Time,
 ) (*BillRepresentationCollection, error) {
 	if p.c == nil {
-		return nil, PROVIDER_NOT_SET
+		return nil, ErrProviderNotSet
 	}
 	_url, err := url.Parse(p.cfg.EntrypointURL + "/accounting/api/v1/sales/bill")
 	if err != nil {
@@ -400,7 +401,7 @@ func (p *Provider) DeleteBill(
 	billID int64,
 ) error {
 	if p.c == nil {
-		return PROVIDER_NOT_SET
+		return ErrProviderNotSet
 	}
 	_url, err := url.Parse(
 		p.cfg.EntrypointURL +
