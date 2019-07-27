@@ -59,14 +59,14 @@ func (s Server) GetInvoiceByID(ctx context.Context, req *api.GetInvoiceByIDReque
 	}
 	var nextStatus api.InvoiceStatus
 	if inv.NextStatus != nil {
-		nextStatus = mapInvStatusToApiInvStatus[*inv.NextStatus]
+		nextStatus = MapInvStatusToApiInvStatus[*inv.NextStatus]
 	}
 	return &api.GetInvoiceByIDResponse{
 		Invoice: &api.Invoice{
 			InvoiceId:  inv.InvoiceID,
 			Key:        inv.Key,
 			Amount:     inv.Amount,
-			Status:     mapInvStatusToApiInvStatus[inv.Status],
+			Status:     MapInvStatusToApiInvStatus[inv.Status],
 			NextStatus: nextStatus,
 			Strategy:   inv.Strategy,
 			Meta:       inv.Meta,
@@ -150,7 +150,7 @@ func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionB
 	}
 	var nextStatus api.TxStatus
 	if tr.NextStatus != nil {
-		nextStatus = mapTrStatusToApiTrStatus[*tr.NextStatus]
+		nextStatus = MapTrStatusToApiTrStatus[*tr.NextStatus]
 	}
 	list, err := s.db.SelectAllFrom(engine.OperationTable, "WHERE tx_id = $1", tr.TransactionID)
 	if err != nil {
@@ -167,11 +167,11 @@ func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionB
 			Hold:      op.Hold,
 			HoldAccId: op.HoldAccID,
 			DstAccId:  op.DstAccID,
-			Strategy:  mapOperStrategyToApiTrStrategy[op.Strategy],
+			Strategy:  MapOperStrategyToApiTrStrategy[op.Strategy],
 			Amount:    op.Amount,
 			Key:       op.Key,
 			Meta:      op.Meta,
-			Status:    mapOperStatusToApiTrStatus[op.Status],
+			Status:    MapOperStatusToApiTrStatus[op.Status],
 			CreatedAt: &op.CreatedAt,
 			UpdatedAt: &op.UpdatedAt,
 		})
@@ -183,12 +183,12 @@ func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionB
 			Key:                tr.Key,
 			Strategy:           tr.Strategy,
 			Amount:             tr.Amount,
-			Provider:           mapTrProviderToApiTrProvider[tr.Provider],
+			Provider:           MapTrProviderToApiTrProvider[tr.Provider],
 			ProviderOperId:     tr.ProviderOperID,
 			ProviderOperStatus: tr.ProviderOperStatus,
 			ProviderOperUrl:    tr.ProviderOperUrl,
 			Meta:               tr.Meta,
-			Status:             mapTrStatusToApiTrStatus[tr.Status],
+			Status:             MapTrStatusToApiTrStatus[tr.Status],
 			NextStatus:         nextStatus,
 			CreatedAt:          &tr.CreatedAt,
 			UpdatedAt:          &tr.UpdatedAt,
@@ -299,7 +299,7 @@ func (s Server) RejectTx(ctx context.Context, req *api.RejectTxRequest) (*api.Re
 	return &api.RejectTxResponse{}, nil
 }
 
-var mapInvStatusToApiInvStatus = map[engine.InvoiceStatus]api.InvoiceStatus{
+var MapInvStatusToApiInvStatus = map[engine.InvoiceStatus]api.InvoiceStatus{
 	engine.DRAFT_I:     api.InvoiceStatus_DRAFT_I,
 	engine.AUTH_I:      api.InvoiceStatus_AUTH_I,
 	engine.WAIT_I:      api.InvoiceStatus_WAIT_I,
@@ -315,18 +315,18 @@ var mapStrategyOperFromApiStrategyOper = map[api.OperStrategy]engine.OperationSt
 	api.OperStrategy_WITHDRAW_OPS: engine.WITHDRAW_OPS,
 }
 
-var mapOperStrategyToApiTrStrategy = map[engine.OperationStrategy]api.OperStrategy{
+var MapOperStrategyToApiTrStrategy = map[engine.OperationStrategy]api.OperStrategy{
 	engine.SIMPLE_OPS:   api.OperStrategy_SIMPLE_OPS,
 	engine.RECHARGE_OPS: api.OperStrategy_RECHARGE_OPS,
 	engine.WITHDRAW_OPS: api.OperStrategy_WITHDRAW_OPS,
 }
 
-var mapTrProviderToApiTrProvider = map[engine.Provider]api.Provider{
+var MapTrProviderToApiTrProvider = map[engine.Provider]api.Provider{
 	engine.INTERNAL: api.Provider_INTERNAL_PROVIDER,
 	engine.SBERBANK: api.Provider_SBERBANK_PROVIDER,
 }
 
-var mapTrStatusToApiTrStatus = map[engine.TransactionStatus]api.TxStatus{
+var MapTrStatusToApiTrStatus = map[engine.TransactionStatus]api.TxStatus{
 	engine.DRAFT_TX:     api.TxStatus_DRAFT_TX,
 	engine.AUTH_TX:      api.TxStatus_AUTH_TX,
 	engine.WAUTH_TX:     api.TxStatus_AUTH_TX,
@@ -339,7 +339,7 @@ var mapTrStatusToApiTrStatus = map[engine.TransactionStatus]api.TxStatus{
 	engine.FAILED_TX:    api.TxStatus_FAILED_TX,
 }
 
-var mapOperStatusToApiTrStatus = map[engine.OperationStatus]api.OperStatus{
+var MapOperStatusToApiTrStatus = map[engine.OperationStatus]api.OperStatus{
 	engine.DRAFT_OP:    api.OperStatus_DRAFT_OP,
 	engine.HOLD_OP:     api.OperStatus_HOLD_OP,
 	engine.ACCEPTED_OP: api.OperStatus_ACCEPTED_OP,
