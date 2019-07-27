@@ -27,7 +27,7 @@ func (v *invoiceTransactionsExtOrdersTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *invoiceTransactionsExtOrdersTableType) Columns() []string {
-	return []string{"order_number", "payment_system_name", "raw_order_status", "order_status", "created_at", "updated_at", "ext_updated_at"}
+	return []string{"order_number", "payment_system_name", "raw_order_status", "created_at", "updated_at", "ext_updated_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,20 +47,19 @@ func (v *invoiceTransactionsExtOrdersTableType) PKColumnIndex() uint {
 
 // InvoiceTransactionsExtOrdersTable represents invoice_transactions_ext_orders view or table in SQL database.
 var InvoiceTransactionsExtOrdersTable = &invoiceTransactionsExtOrdersTableType{
-	s: parse.StructInfo{Type: "InvoiceTransactionsExtOrders", SQLSchema: "acca", SQLName: "invoice_transactions_ext_orders", Fields: []parse.FieldInfo{{Name: "OrderNumber", Type: "string", Column: "order_number"}, {Name: "PaymentSystemName", Type: "string", Column: "payment_system_name"}, {Name: "RawOrderStatus", Type: "string", Column: "raw_order_status"}, {Name: "OrderStatus", Type: "string", Column: "order_status"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "ExtUpdatedAt", Type: "time.Time", Column: "ext_updated_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "InvoiceTransactionsExtOrders", SQLSchema: "acca", SQLName: "invoice_transactions_ext_orders", Fields: []parse.FieldInfo{{Name: "OrderNumber", Type: "string", Column: "order_number"}, {Name: "PaymentSystemName", Type: "Provider", Column: "payment_system_name"}, {Name: "RawOrderStatus", Type: "string", Column: "raw_order_status"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "ExtUpdatedAt", Type: "time.Time", Column: "ext_updated_at"}}, PKFieldIndex: 0},
 	z: new(InvoiceTransactionsExtOrders).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s InvoiceTransactionsExtOrders) String() string {
-	res := make([]string, 7)
+	res := make([]string, 6)
 	res[0] = "OrderNumber: " + reform.Inspect(s.OrderNumber, true)
 	res[1] = "PaymentSystemName: " + reform.Inspect(s.PaymentSystemName, true)
 	res[2] = "RawOrderStatus: " + reform.Inspect(s.RawOrderStatus, true)
-	res[3] = "OrderStatus: " + reform.Inspect(s.OrderStatus, true)
-	res[4] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[5] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
-	res[6] = "ExtUpdatedAt: " + reform.Inspect(s.ExtUpdatedAt, true)
+	res[3] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[4] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[5] = "ExtUpdatedAt: " + reform.Inspect(s.ExtUpdatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -71,7 +70,6 @@ func (s *InvoiceTransactionsExtOrders) Values() []interface{} {
 		s.OrderNumber,
 		s.PaymentSystemName,
 		s.RawOrderStatus,
-		s.OrderStatus,
 		s.CreatedAt,
 		s.UpdatedAt,
 		s.ExtUpdatedAt,
@@ -85,7 +83,6 @@ func (s *InvoiceTransactionsExtOrders) Pointers() []interface{} {
 		&s.OrderNumber,
 		&s.PaymentSystemName,
 		&s.RawOrderStatus,
-		&s.OrderStatus,
 		&s.CreatedAt,
 		&s.UpdatedAt,
 		&s.ExtUpdatedAt,
