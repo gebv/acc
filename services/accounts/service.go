@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine"
@@ -84,7 +85,16 @@ func (s *Server) GetAccountByKey(ctx context.Context, req *api.GetAccountByKeyRe
 
 func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequest) (*api.BalanceChangesResponse, error) {
 
-	list, err := s.db.SelectAllFrom(engine.ViewBalanceChangesView, "OFFSET $1 LIMIT $2", req.GetOffset(), req.GetLimit())
+	var tail string
+	args := make([]interface{}, 0, 3)
+	if req.GetAccId() != nil {
+		tail += "WHERE acc_id = $1"
+		args = append(args, req.GetAccId())
+	}
+	tail += fmt.Sprintf(" OFFSET $%d LIMIT $%d", len(args)+1, len(args)+2)
+	args = append(args, req.GetOffset(), req.GetLimit())
+
+	list, err := s.db.SelectAllFrom(engine.ViewBalanceChangesView, tail, args...)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed get balance_changes.")
 	}
@@ -111,28 +121,21 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 			ChId:            vbc.ChID,
 			TxId:            vbc.TxID,
 			AccId:           vbc.AccID,
+			CurrId:          vbc.CurrID,
 			Amount:          vbc.Amount,
 			Balance:         vbc.Balance,
 			BalanceAccepted: vbc.BalanceAccepted,
-			Account: &api.BalanceChanges_Account{
-				AccId:           vbc.Account.AccID,
-				Key:             vbc.Account.Key,
-				Balance:         vbc.Account.Balance,
-				BalanceAccepted: vbc.Account.BalanceAccepted,
-			},
-			Currency: &api.BalanceChanges_Currency{
-				CurrId: vbc.Currency.CurrID,
-				Key:    vbc.Currency.Key,
-			},
 			Invoice: &api.BalanceChanges_Invoice{
 				InvoiceId: vbc.Invoice.InvoiceID,
 				Key:       vbc.Invoice.Key,
+				Meta:      vbc.Invoice.Meta,
 				Strategy:  vbc.Invoice.Strategy,
 				Status:    invoices.MapInvStatusToApiInvStatus[vbc.Invoice.Status],
 			},
 			Transaction: &api.BalanceChanges_Transaction{
 				TxId:               vbc.Transaction.TxID,
 				Key:                vbc.Transaction.Key,
+				Meta:               vbc.Transaction.Meta,
 				Strategy:           vbc.Transaction.Strategy,
 				Status:             invoices.MapTrStatusToApiTrStatus[vbc.Transaction.Status],
 				Provider:           invoices.MapTrProviderToApiTrProvider[vbc.Transaction.Provider],
@@ -141,6 +144,23 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 				ProviderOperUrl:    vbc.Transaction.ProviderOperUrl,
 			},
 			Operations: operations,
+			ActualAccount: &api.BalanceChanges_Account{
+				AccId:           vbc.Account.AccID,
+				Key:             vbc.Account.Key,
+				Balance:         vbc.Account.Balance,
+				BalanceAccepted: vbc.Account.BalanceAccepted,
+			},
+			ActualTransaction: &api.BalanceChanges_Transaction{
+				TxId:               vbc.ActualTransaction.TxID,
+				Key:                vbc.ActualTransaction.Key,
+				Meta:               vbc.ActualTransaction.Meta,
+				Strategy:           vbc.ActualTransaction.Strategy,
+				Status:             invoices.MapTrStatusToApiTrStatus[vbc.Transaction.Status],
+				Provider:           invoices.MapTrProviderToApiTrProvider[vbc.Transaction.Provider],
+				ProviderOperId:     vbc.ActualTransaction.ProviderOperID,
+				ProviderOperStatus: vbc.ActualTransaction.ProviderOperStatus,
+				ProviderOperUrl:    vbc.ActualTransaction.ProviderOperUrl,
+			},
 		})
 	}
 	return &api.BalanceChangesResponse{
