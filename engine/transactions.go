@@ -3,6 +3,7 @@ package engine
 import (
 	"time"
 
+	"github.com/gebv/acca/provider"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +26,7 @@ type Transaction struct {
 	Strategy string `reform:"strategy"`
 
 	// Provider Тип провайдера обслуживающий транзакцию.
-	Provider Provider `reform:"provider"`
+	Provider provider.Provider `reform:"provider"`
 
 	// ProviderOperID Идентификатор связанной с транзакцией операции во внешней системе.
 	ProviderOperID *string `reform:"provider_oper_id"`
@@ -53,7 +54,7 @@ func (t *Transaction) BeforeInsert() error {
 	t.UpdatedAt = time.Now()
 	t.CreatedAt = time.Now()
 	t.Status = DRAFT_TX
-	if t.Provider == UNKNOWN_PROVIDER {
+	if t.Provider == provider.UNKNOWN_PROVIDER {
 		return errors.New("unknown provider")
 	}
 	return nil
@@ -63,19 +64,6 @@ func (t *Transaction) BeforeUpdate() error {
 	t.UpdatedAt = time.Now()
 	return nil
 }
-
-type Provider string
-
-func (p Provider) Match(in Provider) bool {
-	return p == in
-}
-
-const (
-	UNKNOWN_PROVIDER Provider = ""
-	INTERNAL         Provider = "internal"
-	SBERBANK         Provider = "sberbank"
-	MOEDELO          Provider = "moedelo"
-)
 
 type TransactionStatus string
 

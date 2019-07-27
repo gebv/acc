@@ -6,6 +6,7 @@ import (
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/ffsm"
+	"github.com/gebv/acca/provider"
 	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 )
@@ -35,7 +36,7 @@ var storeInv = make(map[InvStrategyName]InvStrategy)
 type TrStrategy interface {
 	Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error
 	Name() TrStrategyName
-	Provider() engine.Provider
+	Provider() provider.Provider
 	MetaValidation(meta *[]byte) error
 }
 

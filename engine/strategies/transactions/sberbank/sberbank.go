@@ -9,6 +9,7 @@ import (
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
+	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/sberbank"
 	"github.com/pkg/errors"
 )
@@ -33,8 +34,8 @@ func (s *Strategy) Name() strategies.TrStrategyName {
 	return nameStrategy
 }
 
-func (s *Strategy) Provider() engine.Provider {
-	return engine.SBERBANK
+func (s *Strategy) Provider() provider.Provider {
+	return sberbank.SBERBANK
 }
 
 func (s *Strategy) MetaValidation(meta *[]byte) error {

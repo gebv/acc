@@ -9,6 +9,7 @@ import (
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
+	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/pkg/errors"
 )
@@ -33,8 +34,8 @@ func (s *Strategy) Name() strategies.TrStrategyName {
 	return nameStrategy
 }
 
-func (s *Strategy) Provider() engine.Provider {
-	return engine.MOEDELO
+func (s *Strategy) Provider() provider.Provider {
+	return moedelo.MOEDELO
 }
 
 func (s *Strategy) MetaValidation(meta *[]byte) error {
@@ -142,15 +143,6 @@ func (s *Strategy) load() {
 				if tr.Status != engine.WAUTH_TX {
 					return ctx, errors.New("Transaction status not auth_wait.")
 				}
-				inv := engine.Invoice{InvoiceID: tr.InvoiceID}
-				if err := tx.Reload(&inv); err != nil {
-					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
-				}
-				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
 				tr.NextStatus = nil
 				if err := tx.Save(&tr); err != nil {
@@ -182,6 +174,9 @@ func (s *Strategy) load() {
 				}
 				if tr.Status != engine.AUTH_TX {
 					return ctx, errors.New("Transaction status not auth_wait.")
+				}
+				if tr.ProviderOperStatus == nil || *tr.ProviderOperStatus != moedelo.PartiallyPaid.String() {
+					return ctx, errors.New("Failed provider status, is not partially paid.")
 				}
 				inv := engine.Invoice{InvoiceID: tr.InvoiceID}
 				if err := tx.Reload(&inv); err != nil {
@@ -415,6 +410,9 @@ func (s *Strategy) load() {
 				if tr.Status != engine.AUTH_TX {
 					return ctx, errors.New("Transaction status not auth.")
 				}
+				if tr.ProviderOperStatus == nil || *tr.ProviderOperStatus != moedelo.Paid.String() {
+					return ctx, errors.New("Failed provider status, is not paid.")
+				}
 				inv := engine.Invoice{InvoiceID: tr.InvoiceID}
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
@@ -438,6 +436,9 @@ func (s *Strategy) load() {
 				})
 				if err != nil {
 					return ctx, errors.Wrap(err, "failed operation process")
+				}
+				if isHold {
+					return ctx, errors.Wrap(err, "Support only non hold operation.")
 				}
 				invStatus := engine.ACCEPTED_I
 				tr.Status = engine.ACCEPTED_TX
@@ -483,6 +484,9 @@ func (s *Strategy) load() {
 				}
 				if tr.Status != engine.HOLD_TX {
 					return ctx, errors.New("Transaction status not hold.")
+				}
+				if tr.ProviderOperStatus == nil || *tr.ProviderOperStatus != moedelo.Paid.String() {
+					return ctx, errors.New("Failed provider status, is not paid.")
 				}
 				inv := engine.Invoice{InvoiceID: tr.InvoiceID}
 				if err := tx.Reload(&inv); err != nil {
