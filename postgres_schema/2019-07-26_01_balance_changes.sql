@@ -10,9 +10,13 @@ CREATE TABLE acca.balance_changes
     ch_id            bigserial PRIMARY KEY,
     tx_id            bigint          NOT NULL REFERENCES acca.transactions (tx_id),
     acc_id           bigint          NOT NULL REFERENCES acca.accounts (acc_id),
+    curr_id          bigint          NOT NULL REFERENCES acca.currencies (curr_id),
     amount           numeric(69, 00) NOT NULL,
     balance          numeric(69, 00) NOT NULL,
-    balance_accepted numeric(69, 00) NOT NULL
+    balance_accepted numeric(69, 00) NOT NULL,
+    invoice          jsonb,
+    transaction      jsonb,
+    operations       jsonb
 );
 
 COMMENT ON COLUMN acca.balance_changes.ch_id IS 'Change ID.';
@@ -27,7 +31,10 @@ COMMENT ON COLUMN acca.balance_changes.balance_accepted IS 'Accepted balance.';
 CREATE FUNCTION add_balance_changes() RETURNS trigger AS
 $add_balance_changes$
 DECLARE
-    _amount numeric(69, 00);
+    _amount      numeric(69, 00);
+    _invoice     jsonb;
+    _transaction jsonb;
+    _opers       jsonb;
 BEGIN
     IF NEW.balance = OLD.balance THEN
         RETURN NEW;
@@ -39,8 +46,43 @@ BEGIN
 
     _amount := NEW.balance - OLD.balance;
 
-    INSERT INTO acca.balance_changes(tx_id, acc_id, amount, balance, balance_accepted)
-    VALUES (NEW.last_tx_id, NEW.acc_id, _amount, NEW.balance, NEW.balance_accepted);
+    SELECT json_build_object(
+                   'invoice_id', i.invoice_id,
+                   'key', i.key,
+                   'meta', i.meta,
+                   'strategy', i.strategy,
+                   'status', i.status)::jsonb,
+           json_build_object(
+                   'tx_id', t.tx_id,
+                   'key', t.key,
+                   'meta', t.meta,
+                   'strategy', t.strategy,
+                   'status', t.status,
+                   'provider', t.provider,
+                   'provider_oper_id', t.provider_oper_id,
+                   'provider_oper_status', t.provider_oper_status,
+                   'provider_oper_url', t.provider_oper_url)::jsonb,
+           array_to_json(array_agg(json_build_object(
+                   'oper_id', o.oper_id,
+                   'src_acc_id', o.src_acc_id,
+                   'dst_acc_id', o.dst_acc_id,
+                   'strategy', o.strategy,
+                   'key', o.key,
+                   'meta', o.meta,
+                   'hold', o.hold,
+                   'hold_acc_id', o.hold_acc_id,
+                   'status', o.status)))::jsonb
+    INTO _invoice, _transaction,_opers
+    FROM acca.transactions t
+             INNER JOIN acca.invoices i USING (invoice_id)
+             INNER JOIN acca.operations o USING (tx_id)
+    WHERE t.tx_id = NEW.last_tx_id
+    GROUP BY 1, 2;
+
+    INSERT INTO acca.balance_changes(tx_id, acc_id, curr_id, amount, balance, balance_accepted, invoice, transaction,
+                                     operations)
+    VALUES (NEW.last_tx_id, NEW.acc_id, NEW.curr_id, _amount, NEW.balance, NEW.balance_accepted, _invoice, _transaction,
+            _opers);
 
     RETURN NEW;
 END;
@@ -53,64 +95,26 @@ CREATE TRIGGER b_add_balance_changes_trigger
 EXECUTE PROCEDURE add_balance_changes();
 
 CREATE OR REPLACE VIEW acca.view_balance_changes AS
-SELECT bc.ch_id                                                 AS ch_id,
-       bc.tx_id                                                 AS tx_id,
-       bc.acc_id                                                as acc_id,
-       bc.amount                                                AS amount,
-       bc.balance                                               AS balance,
-       bc.balance_accepted                                      AS balance_accepted,
-
-       -- accounts
+SELECT bc.*,
        json_build_object(
                'acc_id', bc.acc_id,
                'key', a.key,
-               'meta', a.meta,
                'balance', a.balance,
-               'balance_accepted', a.balance_accepted)::jsonb   AS account,
-
-       -- currency
-       json_build_object(
-               'curr_id', c.curr_id,
-               'key', c.key)::jsonb                             AS currency,
-
-       -- invoices
-       json_build_object(
-               'invoice_id', i.invoice_id,
-               'key', i.key,
-               'strategy', i.strategy,
-               'status', i.status)::jsonb                       AS invoice,
-
-       -- transactions
+               'balance_accepted', a.balance_accepted)::jsonb   AS actual_account,
        json_build_object(
                'tx_id', t.tx_id,
                'key', t.key,
+               'meta', t.meta,
                'strategy', t.strategy,
                'status', t.status,
                'provider', t.provider,
                'provider_oper_id', t.provider_oper_id,
                'provider_oper_status', t.provider_oper_status,
-               'provider_oper_url', t.provider_oper_url)::jsonb AS transaction,
-
-       -- operations
-       array_to_json(array_agg(json_build_object(
-               'oper_id', o.oper_id,
-               'src_acc_id', o.src_acc_id,
-               'dst_acc_id', o.dst_acc_id,
-               'strategy', o.strategy,
-               'key', o.key,
-               'meta', o.meta,
-               'hold', o.hold,
-               'hold_acc_id', o.hold_acc_id,
-               'status', o.status)))::jsonb                     AS operations
-
-FROM acca.balance_changes bc
-         LEFT JOIN acca.accounts a USING (acc_id)
-         LEFT JOIN acca.currencies c USING (curr_id)
-         LEFT JOIN acca.transactions t USING (tx_id)
-         LEFT JOIN acca.invoices i USING (invoice_id)
-         LEFT JOIN acca.operations o USING (tx_id)
-GROUP BY ch_id, account, currency, invoice, transaction
-ORDER BY ch_id DESC;
+               'provider_oper_url', t.provider_oper_url)::jsonb AS actual_transaction
+FROM acca.balance_changes AS bc
+         INNER JOIN acca.accounts a USING (acc_id)
+         INNER JOIN acca.transactions t USING (tx_id)
+ORDER BY tx_id DESC, ch_id DESC;
 
 
 COMMIT;
