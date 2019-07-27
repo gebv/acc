@@ -264,7 +264,7 @@ func ProcessingOperations(tx *reform.TX, cmd *ProcessorCommand) (error, bool) {
 			// to skip if the balance didn't change
 			continue
 		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = balance + $1 WHERE acc_id = $2`, balance, accID); err != nil {
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = balance + $1, last_tx_id = $2 WHERE acc_id = $3`, balance, cmd.TrID, accID); err != nil {
 			return errors.Wrapf(err, "failed update balance for account %d", accID), false
 		}
 	}
@@ -273,7 +273,7 @@ func ProcessingOperations(tx *reform.TX, cmd *ProcessorCommand) (error, bool) {
 			// to skip if the balance didn't change
 			continue
 		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = balance_accepted + $1 WHERE acc_id = $2`, balance, accID); err != nil {
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = balance_accepted + $1, last_tx_id = $2 WHERE acc_id = $3`, balance, cmd.TrID, accID); err != nil {
 			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID), false
 		}
 	}
