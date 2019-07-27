@@ -156,7 +156,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
@@ -198,7 +198,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 			URL = *res.GetTx().GetProviderOperUrl()
 		})
 		sendCardDataInSberbank(t, URL)
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -219,7 +219,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 			})
 			require.NoError(t, err)
 		})
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -397,7 +397,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
@@ -439,7 +439,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 			URL = *res.GetTx().GetProviderOperUrl()
 		})
 		sendCardDataInSberbank(t, URL)
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 		t.Run("GetTransactionByID", func(t *testing.T) {
 			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
 				TxId: trID,
@@ -645,7 +645,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 			require.NoError(t, err)
 		})
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{

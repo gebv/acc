@@ -261,6 +261,18 @@ func Test01_01SimpleStrategy(t *testing.T) {
 			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
 
 		})
+		t.Run("BalanceChanges", func(t *testing.T) {
+			res, err := accC.BalanceChanges(authCtx, &api.BalanceChangesRequest{
+				Offset: 0,
+				Limit:  2,
+				AccId:  &accID1,
+			})
+			require.NoError(t, err)
+			require.Len(t, res.GetBalanceChanges(), 2)
+			require.EqualValues(t, accID1, res.GetBalanceChanges()[0].GetAccId())
+			require.EqualValues(t, balance1, res.GetBalanceChanges()[0].GetBalance())
+			require.EqualValues(t, balanceAccepted1, res.GetBalanceChanges()[0].GetBalanceAccepted())
+		})
 		t.Run("AcceptInvoice", func(t *testing.T) {
 			balanceAccepted1 -= 1000
 			balance2 += 1000
@@ -296,6 +308,21 @@ func Test01_01SimpleStrategy(t *testing.T) {
 			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
 			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
 
+		})
+		t.Run("BalanceChanges", func(t *testing.T) {
+			res, err := accC.BalanceChanges(authCtx, &api.BalanceChangesRequest{
+				Offset: 0,
+				Limit:  2,
+				AccId:  &accID1,
+			})
+			require.NoError(t, err)
+			require.Len(t, res.GetBalanceChanges(), 2)
+			require.EqualValues(t, accID1, res.GetBalanceChanges()[1].GetAccId())
+			require.NotEqual(t, balance1, res.GetBalanceChanges()[1].GetBalance())
+			require.NotEqual(t, balanceAccepted1, res.GetBalanceChanges()[1].GetBalanceAccepted())
+			require.EqualValues(t, accID1, res.GetBalanceChanges()[0].GetActualAccount().GetAccId())
+			require.EqualValues(t, balance1, res.GetBalanceChanges()[0].GetActualAccount().GetBalance())
+			require.EqualValues(t, balanceAccepted1, res.GetBalanceChanges()[0].GetActualAccount().GetBalanceAccepted())
 		})
 	})
 
