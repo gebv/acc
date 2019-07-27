@@ -151,15 +151,12 @@ message BalanceChanges {
         int64 balance = 3;
         int64 balance_accepted = 4;
     }
-    message Currency {
-        int64 curr_id = 1;
-        string key = 2;
-    }
     message Invoice {
         int64 invoice_id = 1;
         string key = 2;
         string strategy = 3;
         InvoiceStatus status = 4;
+        google.protobuf.BytesValue meta = 5 [(gogoproto.wktpointer) = true];
     }
     message Transaction {
         int64 tx_id = 1;
@@ -170,6 +167,7 @@ message BalanceChanges {
         google.protobuf.StringValue provider_oper_id = 6 [(gogoproto.wktpointer) = true];
         google.protobuf.StringValue provider_oper_status = 7 [(gogoproto.wktpointer) = true];
         google.protobuf.StringValue provider_oper_url = 8 [(gogoproto.wktpointer) = true];
+        google.protobuf.BytesValue meta = 9 [(gogoproto.wktpointer) = true];
     }
     message Operation {
         int64 oper_id = 1;
@@ -180,6 +178,7 @@ message BalanceChanges {
         bool hold = 6;
         google.protobuf.Int64Value hold_acc_id = 7 [(gogoproto.wktpointer) = true];
         OperStatus status = 8;
+        google.protobuf.BytesValue meta = 9 [(gogoproto.wktpointer) = true];
     }
     int64 ch_id = 1;
     int64 tx_id = 2;
@@ -187,9 +186,11 @@ message BalanceChanges {
     int64 amount = 4;
     int64 balance = 5;
     int64 balance_accepted = 6;
-    Account account = 7;
     Currency currency = 8;
     Invoice invoice = 9;
     Transaction transaction = 10;
     repeated Operation operations = 11;
+    int64 curr_id = 12;
+    Account actual_account = 13;
+    Transaction actual_transaction = 14;
 }
