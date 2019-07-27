@@ -137,3 +137,78 @@ func (this *Oper) Validate() error {
 	}
 	return nil
 }
+func (this *BalanceChanges) Validate() error {
+	if this.Account != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Account); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Account", err)
+		}
+	}
+	if this.Currency != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Currency); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Currency", err)
+		}
+	}
+	if this.Invoice != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Invoice); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Invoice", err)
+		}
+	}
+	if this.Transaction != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Transaction); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Transaction", err)
+		}
+	}
+	for _, item := range this.Operations {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Operations", err)
+			}
+		}
+	}
+	return nil
+}
+func (this *BalanceChanges_Account) Validate() error {
+	return nil
+}
+func (this *BalanceChanges_Currency) Validate() error {
+	return nil
+}
+func (this *BalanceChanges_Invoice) Validate() error {
+	return nil
+}
+func (this *BalanceChanges_Transaction) Validate() error {
+	if this.Key != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Key); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Key", err)
+		}
+	}
+	if this.ProviderOperId != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ProviderOperId); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ProviderOperId", err)
+		}
+	}
+	if this.ProviderOperStatus != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ProviderOperStatus); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ProviderOperStatus", err)
+		}
+	}
+	if this.ProviderOperUrl != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.ProviderOperUrl); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("ProviderOperUrl", err)
+		}
+	}
+	return nil
+}
+func (this *BalanceChanges_Operation) Validate() error {
+	if this.Key != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Key); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Key", err)
+		}
+	}
+	if this.HoldAccId != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.HoldAccId); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("HoldAccId", err)
+		}
+	}
+	return nil
+}

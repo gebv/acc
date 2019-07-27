@@ -63,3 +63,16 @@ func (this *GetAccountByKeyResponse) Validate() error {
 	}
 	return nil
 }
+func (this *BalanceChangesRequest) Validate() error {
+	return nil
+}
+func (this *BalanceChangesResponse) Validate() error {
+	for _, item := range this.BalanceChanges {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("BalanceChanges", err)
+			}
+		}
+	}
+	return nil
+}
