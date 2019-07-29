@@ -8,26 +8,19 @@ import (
 	"time"
 
 	"github.com/gebv/acca/api"
-	"github.com/gebv/acca/engine/strategies/invoices/simple"
-	tmoedelo "github.com/gebv/acca/engine/strategies/transactions/moedelo"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
 )
 
 func Test03_01MoedeloStrategy(t *testing.T) {
-	accC := api.NewAccountsClient(Conn)
-	invC := api.NewInvoicesClient(Conn)
-	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
-	var currID int64
-	var accID1 int64
-	var balance1 int64
-	var balanceAccepted1 int64
-	var accID2 int64
-	var balance2 int64
-	var balanceAccepted2 int64
-	var invID int64
-	var trID int64
+
+	h := NewHelperData()
+
+	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.1.1", "curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.1.2", "curr1"))
 
 	md := moedelo.NewProvider(
 		nil,
@@ -41,86 +34,9 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, kontragentID)
 
-	t.Run("CreateCurrency", func(t *testing.T) {
-		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		currID = res.GetCurrencyId()
-	})
-	t.Run("GetCurrency", func(t *testing.T) {
-		res, err := accC.GetCurrency(authCtx, &api.GetCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetCurrency())
-		require.EqualValues(t, currID, res.GetCurrency().GetCurrId())
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.1.1",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID1 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.1.1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-		balance1 = res.GetAccount().GetBalance()
-		balanceAccepted1 = res.GetAccount().GetBalanceAccepted()
-
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.1.2",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID2 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.1.2",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-		balance2 = res.GetAccount().GetBalance()
-		balanceAccepted2 = res.GetAccount().GetBalanceAccepted()
-
-	})
-
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", func(t *testing.T) {
-			res, err := invC.NewInvoice(authCtx, &api.NewInvoiceRequest{
-				Key:      "inv1",
-				Strategy: (&simple.Strategy{}).Name().String(),
-				Amount:   1000,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoiceId())
-			invID = res.GetInvoiceId()
-		})
-
-		t.Run("GetInvoiceByID", func(t *testing.T) {
-			res, err := invC.GetInvoiceByID(authCtx, &api.GetInvoiceByIDRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoice())
-			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoice().GetStatus())
-		})
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
 
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",
@@ -132,93 +48,38 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
 
-		t.Run("AddTransactionToInvoice", func(t *testing.T) {
-			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
-				InvoiceId: invID,
-				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
-				Amount:    1000,
-				Meta:      &meta,
-				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
-					{
-						SrcAccId:  accID1,
-						DstAccId:  accID2,
-						Strategy:  api.OperStrategy_RECHARGE_OPS,
-						Amount:    1000,
-						Meta:      nil,
-						Hold:      true,
-						HoldAccId: nil,
-					},
-				},
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTxId())
-			trID = res.GetTxId()
-		})
+		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
+			"inv1",
+			"tx1",
+			"moedelo",
+			1000,
+			&meta,
+			[]*api.AddTransactionToInvoiceRequest_Oper{
+				h.CreateOperation(
+					"acc3.1.1",
+					"acc3.1.2",
+					"",
+					true,
+					api.OperStrategy_RECHARGE_OPS,
+					1000,
+				),
+			},
+		))
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_DRAFT_TX, res.GetTx().GetStatus())
-		})
+		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		t.Run("AuthInvoice", func(t *testing.T) {
-			_, err := invC.AuthInvoice(authCtx, &api.AuthInvoiceRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-		})
+		h.Sleep(45) // listener updated every 30 second
 
-		time.Sleep(45 * time.Second) // listener updated every 30 second
+		t.Run("CheckBalances", h.CheckBalances("acc3.1.1", "curr1"))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.1.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckBalances", h.CheckBalances("acc3.1.2", "curr1"))
 
-		})
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.NotPaid.String(), api.TxStatus_AUTH_TX))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.1.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
-
-		})
-
-		var URL string
 		var billID int64
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperUrl())
-			URL = *res.GetTx().GetProviderOperUrl()
-			require.NotNil(t, res.GetTx().GetProviderOperId())
-			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
-			require.NoError(t, err)
-		})
-
 		t.Run("UpdateBill", func(t *testing.T) {
-			t.Log("MOE DELO URL: ", URL)
+			billID, err = strconv.ParseInt(h.GetTxProviderID("tx1"), 10, 64)
+			require.NoError(t, err)
 			status := moedelo.PartiallyPaid
 			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
 				{
@@ -233,18 +94,10 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 				&status,
 			)
 		})
-		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_HOLD_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.PartiallyPaid.String(), *res.GetTx().GetProviderOperStatus())
-		})
+		h.Sleep(45) // listener updated every 30 second
+
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.PartiallyPaid.String(), api.TxStatus_HOLD_TX))
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			bill, err := md.GetBill(billID)
@@ -253,11 +106,12 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			require.EqualValues(t, moedelo.PartiallyPaid, bill.Status)
 		})
 
+		h.BalanceInc("acc3.1.1", 1000)
+		h.AcceptedBalanceInc("acc3.1.1", 1000)
+		h.BalanceInc("acc3.1.2", 1000)
+		h.AcceptedBalanceInc("acc3.1.2", 1000)
+
 		t.Run("UpdateBill", func(t *testing.T) {
-			balance1 += 1000
-			balance2 += 1000
-			balanceAccepted1 += 1000
-			balanceAccepted2 += 1000
 			status := moedelo.Paid
 			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
 				{
@@ -272,42 +126,14 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 				&status,
 			)
 		})
-		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_ACCEPTED_TX, res.GetTx().GetStatus())
-		})
+		h.Sleep(45) // listener updated every 30 second
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.1.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_ACCEPTED_TX))
 
-		})
+		t.Run("CheckBalances", h.CheckBalances("acc3.1.1", "curr1"))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.1.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
-
-		})
+		t.Run("CheckBalances", h.CheckBalances("acc3.1.2", "curr1"))
 
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			bill, err := md.GetBill(billID)
@@ -320,18 +146,14 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 }
 
 func Test03_02MoedeloStrategy(t *testing.T) {
-	accC := api.NewAccountsClient(Conn)
-	invC := api.NewInvoicesClient(Conn)
-	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
-	var currID int64
-	var accID1 int64
-	var balance1 int64
-	var balanceAccepted1 int64
-	var accID2 int64
-	var balance2 int64
-	var balanceAccepted2 int64
-	var invID int64
-	var trID int64
+
+	h := NewHelperData()
+
+	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.2.1", "curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.2.2", "curr1"))
 
 	md := moedelo.NewProvider(
 		nil,
@@ -345,86 +167,10 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, kontragentID)
 
-	t.Run("CreateCurrency", func(t *testing.T) {
-		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		currID = res.GetCurrencyId()
-	})
-	t.Run("GetCurrency", func(t *testing.T) {
-		res, err := accC.GetCurrency(authCtx, &api.GetCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetCurrency())
-		require.EqualValues(t, currID, res.GetCurrency().GetCurrId())
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.2.1",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID1 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.2.1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-		balance1 = res.GetAccount().GetBalance()
-		balanceAccepted1 = res.GetAccount().GetBalanceAccepted()
-
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.2.2",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID2 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.2.2",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-		balance2 = res.GetAccount().GetBalance()
-		balanceAccepted2 = res.GetAccount().GetBalanceAccepted()
-
-	})
-
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", func(t *testing.T) {
-			res, err := invC.NewInvoice(authCtx, &api.NewInvoiceRequest{
-				Key:      "inv1",
-				Strategy: (&simple.Strategy{}).Name().String(),
-				Amount:   1000,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoiceId())
-			invID = res.GetInvoiceId()
-		})
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
 
-		t.Run("GetInvoiceByID", func(t *testing.T) {
-			res, err := invC.GetInvoiceByID(authCtx, &api.GetInvoiceByIDRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoice())
-			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoice().GetStatus())
-		})
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",
 			"kontragent_id": strconv.FormatInt(*kontragentID, 10),
@@ -435,93 +181,38 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
 
-		t.Run("AddTransactionToInvoice", func(t *testing.T) {
-			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
-				InvoiceId: invID,
-				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
-				Amount:    1000,
-				Meta:      &meta,
-				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
-					{
-						SrcAccId:  accID1,
-						DstAccId:  accID2,
-						Strategy:  api.OperStrategy_RECHARGE_OPS,
-						Amount:    1000,
-						Meta:      nil,
-						Hold:      true,
-						HoldAccId: nil,
-					},
-				},
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTxId())
-			trID = res.GetTxId()
-		})
+		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
+			"inv1",
+			"tx1",
+			"moedelo",
+			1000,
+			&meta,
+			[]*api.AddTransactionToInvoiceRequest_Oper{
+				h.CreateOperation(
+					"acc3.2.1",
+					"acc3.2.2",
+					"",
+					true,
+					api.OperStrategy_RECHARGE_OPS,
+					1000,
+				),
+			},
+		))
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_DRAFT_TX, res.GetTx().GetStatus())
-		})
+		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		t.Run("AuthInvoice", func(t *testing.T) {
-			_, err := invC.AuthInvoice(authCtx, &api.AuthInvoiceRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-		})
+		h.Sleep(45) // listener updated every 30 second
 
-		time.Sleep(45 * time.Second) // listener updated every 30 second
+		t.Run("CheckBalances", h.CheckBalances("acc3.2.1", "curr1"))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.2.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckBalances", h.CheckBalances("acc3.2.2", "curr1"))
 
-		})
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.NotPaid.String(), api.TxStatus_AUTH_TX))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.2.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
-
-		})
-
-		var URL string
 		var billID int64
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperUrl())
-			URL = *res.GetTx().GetProviderOperUrl()
-			require.NotNil(t, res.GetTx().GetProviderOperId())
-			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
-			require.NoError(t, err)
-		})
-
 		t.Run("UpdateBill", func(t *testing.T) {
-			t.Log("MOE DELO URL: ", URL)
+			billID, err = strconv.ParseInt(h.GetTxProviderID("tx1"), 10, 64)
+			require.NoError(t, err)
 			status := moedelo.PartiallyPaid
 			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
 				{
@@ -536,74 +227,31 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 				&status,
 			)
 		})
-		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_HOLD_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.PartiallyPaid.String(), *res.GetTx().GetProviderOperStatus())
-		})
-		t.Run("RejectInvoice", func(t *testing.T) {
-			_, err := invC.RejectInvoice(authCtx, &api.RejectInvoiceRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-		})
+		h.Sleep(45) // listener updated every 30 second
+
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.PartiallyPaid.String(), api.TxStatus_HOLD_TX))
+
+		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
+
 		time.Sleep(10 * time.Second)
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_REJECTED_TX, res.GetTx().GetStatus())
-		})
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.2.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
 
-		})
+		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_REJECTED_TX))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.2.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckBalances", h.CheckBalances("acc3.2.1", "curr1"))
 
-		})
+		t.Run("CheckBalances", h.CheckBalances("acc3.2.2", "curr1"))
 	})
 }
 
 func Test03_03MoedeloStrategy(t *testing.T) {
-	accC := api.NewAccountsClient(Conn)
-	invC := api.NewInvoicesClient(Conn)
-	authCtx := metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{}))
-	var currID int64
-	var accID1 int64
-	var balance1 int64
-	var balanceAccepted1 int64
-	var accID2 int64
-	var balance2 int64
-	var balanceAccepted2 int64
-	var invID int64
-	var trID int64
+	h := NewHelperData()
+
+	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.3.1", "curr1"))
+
+	t.Run("CreateAccount", h.CreateAccount("acc3.3.2", "curr1"))
 
 	md := moedelo.NewProvider(
 		nil,
@@ -617,86 +265,9 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, kontragentID)
 
-	t.Run("CreateCurrency", func(t *testing.T) {
-		res, err := accC.CreateCurrency(authCtx, &api.CreateCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		currID = res.GetCurrencyId()
-	})
-	t.Run("GetCurrency", func(t *testing.T) {
-		res, err := accC.GetCurrency(authCtx, &api.GetCurrencyRequest{
-			Key: "curr1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetCurrency())
-		require.EqualValues(t, currID, res.GetCurrency().GetCurrId())
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.3.1",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID1 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.3.1",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-		balance1 = res.GetAccount().GetBalance()
-		balanceAccepted1 = res.GetAccount().GetBalanceAccepted()
-
-	})
-	t.Run("CreateAccount", func(t *testing.T) {
-		res, err := accC.CreateAccount(authCtx, &api.CreateAccountRequest{
-			Key:        "acc3.3.2",
-			CurrencyId: currID,
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res)
-		accID2 = res.GetAccId()
-	})
-	t.Run("GetAccountByKey", func(t *testing.T) {
-		res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-			CurrId: currID,
-			Key:    "acc3.3.2",
-		})
-		require.NoError(t, err)
-		require.NotNil(t, res.GetAccount())
-		require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-		balance2 = res.GetAccount().GetBalance()
-		balanceAccepted2 = res.GetAccount().GetBalanceAccepted()
-
-	})
-
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", func(t *testing.T) {
-			res, err := invC.NewInvoice(authCtx, &api.NewInvoiceRequest{
-				Key:      "inv1",
-				Strategy: (&simple.Strategy{}).Name().String(),
-				Amount:   1000,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoiceId())
-			invID = res.GetInvoiceId()
-		})
-
-		t.Run("GetInvoiceByID", func(t *testing.T) {
-			res, err := invC.GetInvoiceByID(authCtx, &api.GetInvoiceByIDRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoice())
-			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoice().GetStatus())
-		})
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
 
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",
@@ -708,112 +279,55 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 		meta, err := json.Marshal(&Meta)
 		require.NoError(t, err)
 
-		t.Run("AddTransactionToInvoice", func(t *testing.T) {
-			res, err := invC.AddTransactionToInvoice(authCtx, &api.AddTransactionToInvoiceRequest{
-				InvoiceId: invID,
-				Strategy:  (&tmoedelo.Strategy{}).Name().String(),
-				Amount:    1000,
-				Meta:      &meta,
-				Operations: []*api.AddTransactionToInvoiceRequest_Oper{
-					{
-						SrcAccId:  accID1,
-						DstAccId:  accID2,
-						Strategy:  api.OperStrategy_RECHARGE_OPS,
-						Amount:    1000,
-						Meta:      nil,
-						Hold:      false,
-						HoldAccId: nil,
-					},
-					{
-						SrcAccId:  accID1,
-						DstAccId:  accID2,
-						Strategy:  api.OperStrategy_WITHDRAW_OPS,
-						Amount:    100,
-						Meta:      nil,
-						Hold:      false,
-						HoldAccId: nil,
-					},
-				},
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTxId())
-			trID = res.GetTxId()
-		})
+		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
+			"inv1",
+			"tx1",
+			"moedelo",
+			1000,
+			&meta,
+			[]*api.AddTransactionToInvoiceRequest_Oper{
+				h.CreateOperation(
+					"acc3.3.1",
+					"acc3.3.2",
+					"",
+					false,
+					api.OperStrategy_RECHARGE_OPS,
+					1000,
+				),
+				h.CreateOperation(
+					"acc3.3.1",
+					"acc3.3.2",
+					"",
+					false,
+					api.OperStrategy_WITHDRAW_OPS,
+					100,
+				),
+			},
+		))
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_DRAFT_TX, res.GetTx().GetStatus())
-		})
+		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		t.Run("AuthInvoice", func(t *testing.T) {
-			_, err := invC.AuthInvoice(authCtx, &api.AuthInvoiceRequest{
-				InvoiceId: invID,
-			})
-			require.NoError(t, err)
-		})
+		h.Sleep(45) // listener updated every 30 second
 
-		time.Sleep(45 * time.Second) // listener updated every 30 second
+		t.Run("CheckBalances", h.CheckBalances("acc3.3.1", "curr1"))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.3.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckBalances", h.CheckBalances("acc3.3.2", "curr1"))
 
-		})
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.NotPaid.String(), api.TxStatus_AUTH_TX))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.3.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
+		h.BalanceInc("acc3.3.1", 1000)
+		h.BalanceDec("acc3.3.1", 100)
+		h.BalanceInc("acc3.3.2", 1000)
+		h.BalanceDec("acc3.3.2", 100)
+		h.AcceptedBalanceInc("acc3.3.1", 1000)
+		h.AcceptedBalanceDec("acc3.3.1", 100)
+		h.AcceptedBalanceInc("acc3.3.2", 1000)
+		h.AcceptedBalanceDec("acc3.3.2", 100)
 
-		})
-
-		var URL string
 		var billID int64
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_AUTH_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.NotPaid.String(), *res.GetTx().GetProviderOperStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperUrl())
-			URL = *res.GetTx().GetProviderOperUrl()
-			require.NotNil(t, res.GetTx().GetProviderOperId())
-			billID, err = strconv.ParseInt(*res.GetTx().GetProviderOperId(), 10, 64)
-			require.NoError(t, err)
-		})
-
-		balance1 += 1000
-		balance1 -= 100
-		balance2 += 1000
-		balance2 -= 100
-		balanceAccepted1 += 1000
-		balanceAccepted1 -= 100
-		balanceAccepted2 += 1000
-		balanceAccepted2 -= 100
-
-		t.Log("MOE DELO URL: ", URL)
-
 		t.Run("UpdateBill", func(t *testing.T) {
+			billID, err = strconv.ParseInt(h.GetTxProviderID("tx1"), 10, 64)
+			require.NoError(t, err)
 			status := moedelo.Paid
 			err = md.UpdateBill(billID, *kontragentID, time.Now(), []moedelo.SalesDocumentItemModel{
 				{
@@ -828,42 +342,14 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 				&status,
 			)
 		})
-		time.Sleep(45 * time.Second) // listener updated every 30 second
 
-		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := invC.GetTransactionByID(authCtx, &api.GetTransactionByIDRequest{
-				TxId: trID,
-			})
-			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_ACCEPTED_TX, res.GetTx().GetStatus())
-			require.NotNil(t, res.GetTx().GetProviderOperStatus())
-			require.EqualValues(t, moedelo.Paid.String(), *res.GetTx().GetProviderOperStatus())
-		})
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.3.1",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID1, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance1, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted1, res.GetAccount().GetBalanceAccepted())
+		h.Sleep(45) // listener updated every 30 second
 
-		})
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.Paid.String(), api.TxStatus_ACCEPTED_TX))
 
-		t.Run("GetAccountByKey", func(t *testing.T) {
-			res, err := accC.GetAccountByKey(authCtx, &api.GetAccountByKeyRequest{
-				CurrId: currID,
-				Key:    "acc3.3.2",
-			})
-			require.NoError(t, err)
-			require.NotNil(t, res.GetAccount())
-			require.EqualValues(t, accID2, res.GetAccount().GetAccId())
-			require.EqualValues(t, balance2, res.GetAccount().GetBalance())
-			require.EqualValues(t, balanceAccepted2, res.GetAccount().GetBalanceAccepted())
+		t.Run("CheckBalances", h.CheckBalances("acc3.3.1", "curr1"))
 
-		})
+		t.Run("CheckBalances", h.CheckBalances("acc3.3.2", "curr1"))
+
 	})
 }
