@@ -36,7 +36,7 @@ DECLARE
     _transaction jsonb;
     _opers       jsonb;
 BEGIN
-    IF NEW.balance = OLD.balance THEN
+    IF NEW.balance = OLD.balance AND NEW.balance_accepted = OLD.balance_accepted THEN
         RETURN NEW;
     END IF;
 
@@ -44,7 +44,11 @@ BEGIN
         RAISE EXCEPTION 'last_tx_id cannot be null if changes balance';
     END IF;
 
-    _amount := NEW.balance - OLD.balance;
+    IF NEW.balance != OLD.balance THEN
+        _amount = NEW.balance - OLD.balance;
+    ELSEIF NEW.balance_accepted != OLD.balance_accepted THEN
+        _amount = NEW.balance_accepted - OLD.balance_accepted;
+    END IF;
 
     SELECT json_build_object(
                    'invoice_id', i.invoice_id,
