@@ -234,7 +234,7 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		time.Sleep(10 * time.Second)
+		h.Sleep(10)
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_REJECTED_TX))
 

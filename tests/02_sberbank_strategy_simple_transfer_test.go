@@ -3,7 +3,6 @@ package tests
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/gebv/acca/api"
 	"github.com/stretchr/testify/require"
@@ -60,7 +59,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		time.Sleep(15 * time.Second)
+		h.Sleep(15)
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "APPROVED", api.TxStatus_HOLD_TX))
 
@@ -123,7 +122,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		time.Sleep(15 * time.Second)
+		h.Sleep(15)
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.2.1", "curr1"))
 
@@ -133,7 +132,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		time.Sleep(15 * time.Second)
+		h.Sleep(15)
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "APPROVED", api.TxStatus_HOLD_TX))
 
@@ -143,7 +142,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		time.Sleep(10 * time.Second)
+		h.Sleep(10)
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_REJECTED_TX))
 
@@ -203,7 +202,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		time.Sleep(15 * time.Second)
+		h.Sleep(15)
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.3.1", "curr1"))
 
@@ -222,7 +221,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		time.Sleep(15 * time.Second)
+		h.Sleep(15)
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "DEPOSITED", api.TxStatus_ACCEPTED_TX))
 
