@@ -14,9 +14,11 @@ import (
 	"time"
 
 	"github.com/gebv/acca/api"
+	_ "github.com/gebv/acca/engine/strategies/invoices/refund"
 	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
 	_ "github.com/gebv/acca/engine/strategies/transactions/moedelo"
 	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank"
+	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank_refund"
 	_ "github.com/gebv/acca/engine/strategies/transactions/simple"
 	"github.com/gebv/acca/engine/worker"
 	"github.com/gebv/acca/interceptors/auth"
