@@ -9,9 +9,11 @@ import (
 	"time"
 
 	"github.com/gebv/acca/api"
+	"github.com/gebv/acca/engine/strategies/invoices/refund"
 	isimple "github.com/gebv/acca/engine/strategies/invoices/simple"
 	"github.com/gebv/acca/engine/strategies/transactions/moedelo"
 	"github.com/gebv/acca/engine/strategies/transactions/sberbank"
+	"github.com/gebv/acca/engine/strategies/transactions/sberbank_refund"
 	tsimple "github.com/gebv/acca/engine/strategies/transactions/simple"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/metadata"
@@ -49,11 +51,13 @@ func NewHelperData() *helperData {
 		txProviderIDs:    make(map[string]string),
 		istrategies: map[string]string{
 			"simple": new(isimple.Strategy).Name().String(),
+			"refund": new(refund.Strategy).Name().String(),
 		},
 		tstrategies: map[string]string{
-			"simple":   new(tsimple.Strategy).Name().String(),
-			"sberbank": new(sberbank.Strategy).Name().String(),
-			"moedelo":  new(moedelo.Strategy).Name().String(),
+			"simple":          new(tsimple.Strategy).Name().String(),
+			"sberbank":        new(sberbank.Strategy).Name().String(),
+			"sberbank_refund": new(sberbank_refund.Strategy).Name().String(),
+			"moedelo":         new(moedelo.Strategy).Name().String(),
 		},
 	}
 	return &h
@@ -109,11 +113,20 @@ func (h *helperData) CreateAccount(accKey, currKey string) func(t *testing.T) {
 	}
 }
 
-func (h *helperData) NewInvoice(key, strategy string) func(t *testing.T) {
+func (h *helperData) GetInvoiceID(key string) int64 {
+	return h.invoiceIDs[key]
+}
+
+func (h *helperData) GetTxID(key string) int64 {
+	return h.transactionIDs[key]
+}
+
+func (h *helperData) NewInvoice(key, strategy string, meta *[]byte) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Run("NewInvoice", func(t *testing.T) {
 			res, err := h.invC.NewInvoice(h.authCtx, &api.NewInvoiceRequest{
 				Key:      key,
+				Meta:     meta,
 				Strategy: h.istrategies[strategy],
 			})
 			require.NoError(t, err)

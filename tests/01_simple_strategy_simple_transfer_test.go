@@ -18,7 +18,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("ChangeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -54,7 +54,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 	})
 
 	t.Run("InternalWithHold", func(t *testing.T) {
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -104,7 +104,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("InternalReject", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -136,7 +136,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("InternalRejectWithHold", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -179,7 +179,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("ChangeFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -216,7 +216,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("InternalWithHoldFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -262,7 +262,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("InternalRejectFromTransaction", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -294,7 +294,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("InternalRejectWithHoldFromTransaction", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -338,7 +338,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("ChangeFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -405,7 +405,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("ChangeWithHoldFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -482,7 +482,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("ChangeWithHoldFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",
@@ -568,7 +568,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	t.Run("RejectWithHoldFromTransactions", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
 			"inv1",

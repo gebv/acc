@@ -36,7 +36,7 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",
@@ -169,7 +169,7 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",
@@ -267,7 +267,7 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"title":         "Сервис в тесте.",

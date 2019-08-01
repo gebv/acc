@@ -19,7 +19,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"callback":    "https://ya.ru",
@@ -92,7 +92,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"callback":    "https://ya.ru",
@@ -164,7 +164,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
-		t.Run("NewInvoice", h.NewInvoice("inv1", "simple"))
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
 		Meta := map[string]string{
 			"callback":    "https://ya.ru",
