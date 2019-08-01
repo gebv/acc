@@ -33,7 +33,7 @@ func SubToNATS(
 			if str := strategies.GetInvoiceStrategy(name); str != nil {
 				err := str.Dispatch(ctx, ffsm.State(m.Status), m.InvoiceID)
 				if err != nil {
-					log.Println("Failed dispatch invoice strategy.")
+					log.Println("Failed dispatch invoice strategy.", err)
 					if err := tx.Rollback(); err != nil {
 						log.Println("Failed tx rollback. ", err)
 					}

@@ -46,6 +46,7 @@ const (
 	APPROVED  = "APPROVED"
 	DEPOSITED = "DEPOSITED"
 	DECLINED  = "DECLINED"
+	REFUNDED  = "REFUNDED"
 )
 
 type SberbankOrderStatus struct {
@@ -330,6 +331,43 @@ func (p *Provider) Refund(orderID string, amount int64) error {
 		return errors.New(sr.ErrorMessage)
 	}
 	return nil
+}
+
+func (p *Provider) GetOrderRawStatus(orderID string) (*SberbankOrderStatus, error) {
+	_url, _ := url.Parse(p.cfg.EntrypointURL + "/payment/rest/getOrderStatusExtended.do")
+	q := _url.Query()
+	q.Add("orderId", orderID)
+	q.Add("token", p.cfg.Token)
+	_url.RawQuery = q.Encode()
+
+	var os SberbankOrderStatus
+	res, err := http.Get(_url.String())
+	if err != nil {
+		p.l.Warn(
+			"orderStatus: get url",
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed http get sberbank url")
+	}
+	defer res.Body.Close()
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		p.l.Warn(
+			"requestForOrderStatus: read body",
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed read body response from sberbank")
+	}
+	err = json.Unmarshal(body, &os)
+	if err != nil {
+		p.l.Warn(
+			"register: bad unmarshal request from sberbank",
+			zap.String("body", string(body)),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed unmarshal response from sberbank")
+	}
+	return &os, nil
 }
 
 type Config struct {
