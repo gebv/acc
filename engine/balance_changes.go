@@ -105,6 +105,7 @@ type OperationFromBalanceChanges struct {
 	OperID    int64             `json:"oper_id"`
 	SrcAccID  int64             `json:"src_acc_id"`
 	DstAccID  int64             `json:"dst_acc_id"`
+	Amount    int64             `json:"amount"`
 	Strategy  OperationStrategy `json:"strategy"`
 	Key       *string           `json:"key"`
 	Meta      *[]byte           `json:"meta"`
