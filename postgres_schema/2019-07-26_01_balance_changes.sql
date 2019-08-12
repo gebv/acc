@@ -70,6 +70,7 @@ BEGIN
                    'oper_id', o.oper_id,
                    'src_acc_id', o.src_acc_id,
                    'dst_acc_id', o.dst_acc_id,
+                   'amount', o.amount,
                    'strategy', o.strategy,
                    'key', o.key,
                    'meta', o.meta,
