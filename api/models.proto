@@ -97,7 +97,6 @@ message Invoice {
     google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
     google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true];
     google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true];
-    int64 amount = 9;
 }
 
 message Tx {
@@ -179,6 +178,7 @@ message BalanceChanges {
         google.protobuf.Int64Value hold_acc_id = 7 [(gogoproto.wktpointer) = true];
         OperStatus status = 8;
         google.protobuf.BytesValue meta = 9 [(gogoproto.wktpointer) = true];
+        int64 amount = 10;
     }
     int64 ch_id = 1;
     int64 tx_id = 2;

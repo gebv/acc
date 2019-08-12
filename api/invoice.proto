@@ -5,6 +5,7 @@ package api;
 import "api/models.proto";
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
 
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.marshaler_all) = true;
@@ -16,13 +17,13 @@ service Invoices {
     rpc NewInvoice (NewInvoiceRequest) returns (NewInvoiceResponse) {
     }
 
-    rpc GetInvoiceByID (GetInvoiceByIDRequest) returns (GetInvoiceByIDResponse) {
+    rpc GetInvoiceByIDs (GetInvoiceByIDsRequest) returns (GetInvoiceByIDsResponse) {
     }
 
     rpc AddTransactionToInvoice (AddTransactionToInvoiceRequest) returns (AddTransactionToInvoiceResponse) {
     }
 
-    rpc GetTransactionByID (GetTransactionByIDRequest) returns (GetTransactionByIDResponse) {
+    rpc GetTransactionByIDs (GetTransactionByIDsRequest) returns (GetTransactionByIDsResponse) {
     }
 
     rpc AuthInvoice (AuthInvoiceRequest) returns (AuthInvoiceResponse) {
@@ -50,17 +51,35 @@ message NewInvoiceRequest {
     // strategy стратегия работы с инвойсом.
     string strategy = 2;
     google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
-    int64 amount = 4;
 }
 message NewInvoiceResponse {
     int64 invoice_id = 1;
 }
 
-message GetInvoiceByIDRequest {
-    int64 invoice_id = 1;
+message GetInvoiceByIDsRequest {
+    repeated int64 invoice_ids = 1;
+    bool with_tx = 2;
 }
-message GetInvoiceByIDResponse {
-    Invoice invoice = 1;
+message GetInvoiceByIDsResponse {
+
+    message Invoice {
+        // invoice_id внутренний идентификатор инвойса.
+        int64 invoice_id = 1;
+        // key внешний уникальный идентицитора инвойса.
+        string key = 2;
+        // status состояние инвойса.
+        InvoiceStatus status = 3;
+        // next_status куда переходит инвойс.
+        InvoiceStatus next_status = 4;
+        // strategy стратегия работы с инвойсом.
+        string strategy = 5;
+        google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+        google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true];
+        google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true];
+        repeated Tx transactions = 9;
+    }
+
+    repeated Invoice invoices = 1;
 }
 
 message AddTransactionToInvoiceRequest {
@@ -88,11 +107,11 @@ message AddTransactionToInvoiceResponse {
     int64 tx_id = 1;
 }
 
-message GetTransactionByIDRequest {
-    int64 tx_id = 1;
+message GetTransactionByIDsRequest {
+    repeated int64 tx_ids = 1;
 }
-message GetTransactionByIDResponse {
-    Tx tx = 1;
+message GetTransactionByIDsResponse {
+    repeated Tx transactions = 1;
 }
 
 message AuthInvoiceRequest {
