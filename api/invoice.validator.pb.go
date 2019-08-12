@@ -7,6 +7,7 @@ import (
 	fmt "fmt"
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/golang/protobuf/proto"
+	_ "github.com/golang/protobuf/ptypes/timestamp"
 	_ "github.com/golang/protobuf/ptypes/wrappers"
 	github_com_mwitkow_go_proto_validators "github.com/mwitkow/go-proto-validators"
 	math "math"
@@ -30,13 +31,40 @@ func (this *NewInvoiceRequest) Validate() error {
 func (this *NewInvoiceResponse) Validate() error {
 	return nil
 }
-func (this *GetInvoiceByIDRequest) Validate() error {
+func (this *GetInvoiceByIDsRequest) Validate() error {
 	return nil
 }
-func (this *GetInvoiceByIDResponse) Validate() error {
-	if this.Invoice != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Invoice); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Invoice", err)
+func (this *GetInvoiceByIDsResponse) Validate() error {
+	for _, item := range this.Invoices {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Invoices", err)
+			}
+		}
+	}
+	return nil
+}
+func (this *GetInvoiceByIDsResponse_Invoice) Validate() error {
+	if this.Meta != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Meta); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("Meta", err)
+		}
+	}
+	if this.CreatedAt != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.CreatedAt); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("CreatedAt", err)
+		}
+	}
+	if this.UpdatedAt != nil {
+		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.UpdatedAt); err != nil {
+			return github_com_mwitkow_go_proto_validators.FieldError("UpdatedAt", err)
+		}
+	}
+	for _, item := range this.Transactions {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Transactions", err)
+			}
 		}
 	}
 	return nil
@@ -82,13 +110,15 @@ func (this *AddTransactionToInvoiceRequest_Oper) Validate() error {
 func (this *AddTransactionToInvoiceResponse) Validate() error {
 	return nil
 }
-func (this *GetTransactionByIDRequest) Validate() error {
+func (this *GetTransactionByIDsRequest) Validate() error {
 	return nil
 }
-func (this *GetTransactionByIDResponse) Validate() error {
-	if this.Tx != nil {
-		if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(this.Tx); err != nil {
-			return github_com_mwitkow_go_proto_validators.FieldError("Tx", err)
+func (this *GetTransactionByIDsResponse) Validate() error {
+	for _, item := range this.Transactions {
+		if item != nil {
+			if err := github_com_mwitkow_go_proto_validators.CallValidatorIfExists(item); err != nil {
+				return github_com_mwitkow_go_proto_validators.FieldError("Transactions", err)
+			}
 		}
 	}
 	return nil
