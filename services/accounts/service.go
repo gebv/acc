@@ -109,6 +109,7 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 					OperId:    op.OperID,
 					SrcAccId:  op.SrcAccID,
 					DstAccId:  op.DstAccID,
+					Amount:    op.Amount,
 					Strategy:  invoices.MapOperStrategyToApiTrStrategy[op.Strategy],
 					Key:       op.Key,
 					Hold:      op.Hold,

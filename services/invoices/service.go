@@ -10,6 +10,7 @@ import (
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/lib/pq"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
@@ -43,7 +44,6 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 	inv := &engine.Invoice{
 		Key:      key,
 		Strategy: strategy,
-		Amount:   req.GetAmount(),
 		Status:   engine.DRAFT_I,
 		Meta:     req.GetMeta(),
 		Payload:  nil,
@@ -54,27 +54,111 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 	return &api.NewInvoiceResponse{InvoiceId: inv.InvoiceID}, nil
 }
 
-func (s Server) GetInvoiceByID(ctx context.Context, req *api.GetInvoiceByIDRequest) (*api.GetInvoiceByIDResponse, error) {
-	inv := engine.Invoice{InvoiceID: req.GetInvoiceId()}
-	if err := s.db.Reload(&inv); err != nil {
-		return nil, errors.Wrap(err, "Failed get invoice by ID.")
+func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsRequest) (*api.GetInvoiceByIDsResponse, error) {
+	if len(req.GetInvoiceIds()) == 0 {
+		return &api.GetInvoiceByIDsResponse{}, nil
 	}
-	var nextStatus api.InvoiceStatus
-	if inv.NextStatus != nil {
-		nextStatus = MapInvStatusToApiInvStatus[*inv.NextStatus]
+	invoices := make([]*api.GetInvoiceByIDsResponse_Invoice, 0, len(req.GetInvoiceIds()))
+	switch req.GetWithTx() {
+	case true:
+		list, err := s.db.SelectAllFrom(
+			engine.ViewInvoiceTable,
+			"WHERE invoice_id = ANY ($1)",
+			pq.Int64Array(req.GetInvoiceIds()),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed get invoice by IDs.")
+		}
+		for _, v := range list {
+			inv := v.(*engine.ViewInvoice)
+			var nextStatus api.InvoiceStatus
+			if inv.NextStatus != nil {
+				nextStatus = MapInvStatusToApiInvStatus[*inv.NextStatus]
+			}
+			transactions := make([]*api.Tx, 0, len(inv.Transactions))
+			for _, tr := range inv.Transactions {
+				var nextStatusTr api.TxStatus
+				if tr.NextStatus != nil {
+					nextStatusTr = MapTrStatusToApiTrStatus[*tr.NextStatus]
+				}
+				opers := make([]*api.Oper, 0, len(tr.Operations))
+				for _, op := range tr.Operations {
+					opers = append(opers, &api.Oper{
+						OperId:    op.OperationID,
+						InvoiceId: op.InvoiceID,
+						TxId:      op.TransactionID,
+						SrcAccId:  op.SrcAccID,
+						Hold:      op.Hold,
+						HoldAccId: op.HoldAccID,
+						DstAccId:  op.DstAccID,
+						Strategy:  MapOperStrategyToApiTrStrategy[op.Strategy],
+						Amount:    op.Amount,
+						Key:       op.Key,
+						Meta:      op.Meta,
+						Status:    MapOperStatusToApiTrStatus[op.Status],
+						CreatedAt: &op.CreatedAt,
+						UpdatedAt: &op.UpdatedAt,
+					})
+				}
+				transactions = append(transactions, &api.Tx{
+					TxId:               tr.TransactionID,
+					InvoiceId:          tr.InvoiceID,
+					Key:                tr.Key,
+					Strategy:           tr.Strategy,
+					Amount:             tr.Amount,
+					Provider:           MapTrProviderToApiTrProvider[tr.Provider],
+					ProviderOperId:     tr.ProviderOperID,
+					ProviderOperStatus: tr.ProviderOperStatus,
+					ProviderOperUrl:    tr.ProviderOperUrl,
+					Meta:               tr.Meta,
+					Status:             MapTrStatusToApiTrStatus[tr.Status],
+					NextStatus:         nextStatusTr,
+					CreatedAt:          &tr.CreatedAt,
+					UpdatedAt:          &tr.UpdatedAt,
+					Operations:         opers,
+				})
+			}
+			invoices = append(invoices, &api.GetInvoiceByIDsResponse_Invoice{
+				InvoiceId:    inv.InvoiceID,
+				Key:          inv.Key,
+				Status:       MapInvStatusToApiInvStatus[inv.Status],
+				NextStatus:   nextStatus,
+				Strategy:     inv.Strategy,
+				Meta:         inv.Meta,
+				CreatedAt:    &inv.CreatedAt,
+				UpdatedAt:    &inv.UpdatedAt,
+				Transactions: transactions,
+			})
+		}
+	default:
+		list, err := s.db.SelectAllFrom(
+			engine.InvoiceTable,
+			"WHERE invoice_id = ANY ($1)",
+			pq.Int64Array(req.GetInvoiceIds()),
+		)
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed get invoice by IDs.")
+		}
+		for _, v := range list {
+			inv := v.(*engine.Invoice)
+			var nextStatus api.InvoiceStatus
+			if inv.NextStatus != nil {
+				nextStatus = MapInvStatusToApiInvStatus[*inv.NextStatus]
+			}
+			invoices = append(invoices, &api.GetInvoiceByIDsResponse_Invoice{
+				InvoiceId:  inv.InvoiceID,
+				Key:        inv.Key,
+				Status:     MapInvStatusToApiInvStatus[inv.Status],
+				NextStatus: nextStatus,
+				Strategy:   inv.Strategy,
+				Meta:       inv.Meta,
+				CreatedAt:  &inv.CreatedAt,
+				UpdatedAt:  &inv.UpdatedAt,
+			})
+		}
 	}
-	return &api.GetInvoiceByIDResponse{
-		Invoice: &api.Invoice{
-			InvoiceId:  inv.InvoiceID,
-			Key:        inv.Key,
-			Amount:     inv.Amount,
-			Status:     MapInvStatusToApiInvStatus[inv.Status],
-			NextStatus: nextStatus,
-			Strategy:   inv.Strategy,
-			Meta:       inv.Meta,
-			CreatedAt:  &inv.CreatedAt,
-			UpdatedAt:  &inv.UpdatedAt,
-		},
+	return &api.GetInvoiceByIDsResponse{
+		Invoices: invoices,
 	}, nil
 }
 
@@ -145,41 +229,42 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 	return &api.AddTransactionToInvoiceResponse{TxId: txID}, nil
 }
 
-func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionByIDRequest) (*api.GetTransactionByIDResponse, error) {
-	tr := engine.Transaction{TransactionID: req.GetTxId()}
-	if err := s.db.Reload(&tr); err != nil {
-		return nil, errors.Wrap(err, "Failed get transaction by ID.")
-	}
-	var nextStatus api.TxStatus
-	if tr.NextStatus != nil {
-		nextStatus = MapTrStatusToApiTrStatus[*tr.NextStatus]
-	}
-	list, err := s.db.SelectAllFrom(engine.OperationTable, "WHERE tx_id = $1", tr.TransactionID)
+func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransactionByIDsRequest) (*api.GetTransactionByIDsResponse, error) {
+	list, err := s.db.SelectAllFrom(
+		engine.ViewTransactionTable,
+		"WHERE tx_id = ANY ($1)",
+		pq.Int64Array(req.GetTxIds()),
+	)
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed get operation by transaction ID.")
+		return nil, errors.Wrap(err, "Failed get transaction by IDs.")
 	}
-	opers := make([]*api.Oper, 0, len(list))
+	transactions := make([]*api.Tx, 0, len(list))
 	for _, v := range list {
-		op := v.(*engine.Operation)
-		opers = append(opers, &api.Oper{
-			OperId:    op.OperationID,
-			InvoiceId: op.InvoiceID,
-			TxId:      op.TransactionID,
-			SrcAccId:  op.SrcAccID,
-			Hold:      op.Hold,
-			HoldAccId: op.HoldAccID,
-			DstAccId:  op.DstAccID,
-			Strategy:  MapOperStrategyToApiTrStrategy[op.Strategy],
-			Amount:    op.Amount,
-			Key:       op.Key,
-			Meta:      op.Meta,
-			Status:    MapOperStatusToApiTrStatus[op.Status],
-			CreatedAt: &op.CreatedAt,
-			UpdatedAt: &op.UpdatedAt,
-		})
-	}
-	return &api.GetTransactionByIDResponse{
-		Tx: &api.Tx{
+		tr := v.(*engine.ViewTransaction)
+		var nextStatusTr api.TxStatus
+		if tr.NextStatus != nil {
+			nextStatusTr = MapTrStatusToApiTrStatus[*tr.NextStatus]
+		}
+		opers := make([]*api.Oper, 0, len(tr.Operations))
+		for _, op := range tr.Operations {
+			opers = append(opers, &api.Oper{
+				OperId:    op.OperationID,
+				InvoiceId: op.InvoiceID,
+				TxId:      op.TransactionID,
+				SrcAccId:  op.SrcAccID,
+				Hold:      op.Hold,
+				HoldAccId: op.HoldAccID,
+				DstAccId:  op.DstAccID,
+				Strategy:  MapOperStrategyToApiTrStrategy[op.Strategy],
+				Amount:    op.Amount,
+				Key:       op.Key,
+				Meta:      op.Meta,
+				Status:    MapOperStatusToApiTrStatus[op.Status],
+				CreatedAt: &op.CreatedAt,
+				UpdatedAt: &op.UpdatedAt,
+			})
+		}
+		transactions = append(transactions, &api.Tx{
 			TxId:               tr.TransactionID,
 			InvoiceId:          tr.InvoiceID,
 			Key:                tr.Key,
@@ -191,11 +276,14 @@ func (s Server) GetTransactionByID(ctx context.Context, req *api.GetTransactionB
 			ProviderOperUrl:    tr.ProviderOperUrl,
 			Meta:               tr.Meta,
 			Status:             MapTrStatusToApiTrStatus[tr.Status],
-			NextStatus:         nextStatus,
+			NextStatus:         nextStatusTr,
 			CreatedAt:          &tr.CreatedAt,
 			UpdatedAt:          &tr.UpdatedAt,
 			Operations:         opers,
-		},
+		})
+	}
+	return &api.GetTransactionByIDsResponse{
+		Transactions: transactions,
 	}, nil
 }
 
