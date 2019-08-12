@@ -90,12 +90,13 @@ func Test04_01SberbankStrategy(t *testing.T) {
 		nil,
 	)
 	var extOrderID string
-	res, err := h.invC.GetTransactionByID(h.authCtx, &api.GetTransactionByIDRequest{
-		TxId: h.GetTxID("tx1"),
+	res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+		TxIds: []int64{h.GetTxID("tx1")},
 	})
 	require.NoError(t, err)
-	require.NotNil(t, res.GetTx().GetProviderOperId())
-	extOrderID = *res.GetTx().GetProviderOperId()
+	require.NotEmpty(t, res.GetTransactions())
+	require.NotNil(t, res.GetTransactions()[0].GetProviderOperId())
+	extOrderID = *res.GetTransactions()[0].GetProviderOperId()
 	t.Run("CheckSberbankStatus", func(t *testing.T) {
 		st, err := sberProvider.GetOrderRawStatus(extOrderID)
 		require.NoError(t, err)

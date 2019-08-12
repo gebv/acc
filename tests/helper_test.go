@@ -134,12 +134,12 @@ func (h *helperData) NewInvoice(key, strategy string, meta *[]byte) func(t *test
 			h.invoiceIDs[key] = res.GetInvoiceId()
 		})
 		t.Run("GetInvoiceByID", func(t *testing.T) {
-			res, err := h.invC.GetInvoiceByID(h.authCtx, &api.GetInvoiceByIDRequest{
-				InvoiceId: h.invoiceIDs[key],
+			res, err := h.invC.GetInvoiceByIDs(h.authCtx, &api.GetInvoiceByIDsRequest{
+				InvoiceIds: []int64{h.invoiceIDs[key]},
 			})
 			require.NoError(t, err)
-			require.NotEmpty(t, res.GetInvoice())
-			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoice().GetStatus())
+			require.NotEmpty(t, res.GetInvoices())
+			require.EqualValues(t, api.InvoiceStatus_DRAFT_I, res.GetInvoices()[0].GetStatus())
 		})
 	}
 }
@@ -187,12 +187,12 @@ func (h *helperData) AddTransactionToInvoice(
 		})
 
 		t.Run("GetTransactionByID", func(t *testing.T) {
-			res, err := h.invC.GetTransactionByID(h.authCtx, &api.GetTransactionByIDRequest{
-				TxId: h.transactionIDs[txKey],
+			res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+				TxIds: []int64{h.transactionIDs[txKey]},
 			})
 			require.NoError(t, err)
-			require.NotEmpty(t, res.GetTx())
-			require.EqualValues(t, api.TxStatus_DRAFT_TX, res.GetTx().GetStatus())
+			require.NotEmpty(t, res.GetTransactions())
+			require.EqualValues(t, api.TxStatus_DRAFT_TX, res.GetTransactions()[0].GetStatus())
 		})
 	}
 }
@@ -255,18 +255,18 @@ func (h *helperData) CheckBalances(accKey, currKey string) func(t *testing.T) {
 
 func (h *helperData) CheckTransactionWithProvider(txKey, providerStatus string, txStatus api.TxStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		res, err := h.invC.GetTransactionByID(h.authCtx, &api.GetTransactionByIDRequest{
-			TxId: h.transactionIDs[txKey],
+		res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+			TxIds: []int64{h.transactionIDs[txKey]},
 		})
 		require.NoError(t, err)
-		require.NotEmpty(t, res.GetTx())
-		require.EqualValues(t, txStatus, res.GetTx().GetStatus())
-		require.NotNil(t, res.GetTx().GetProviderOperStatus())
-		require.EqualValues(t, providerStatus, *res.GetTx().GetProviderOperStatus())
-		require.NotNil(t, res.GetTx().GetProviderOperUrl())
-		h.txProviderUrls[txKey] = *res.GetTx().GetProviderOperUrl()
-		require.NotNil(t, res.GetTx().GetProviderOperId())
-		h.txProviderIDs[txKey] = *res.GetTx().GetProviderOperId()
+		require.NotEmpty(t, res.GetTransactions())
+		require.EqualValues(t, txStatus, res.GetTransactions()[0].GetStatus())
+		require.NotNil(t, res.GetTransactions()[0].GetProviderOperStatus())
+		require.EqualValues(t, providerStatus, *res.GetTransactions()[0].GetProviderOperStatus())
+		require.NotNil(t, res.GetTransactions()[0].GetProviderOperUrl())
+		h.txProviderUrls[txKey] = *res.GetTransactions()[0].GetProviderOperUrl()
+		require.NotNil(t, res.GetTransactions()[0].GetProviderOperId())
+		h.txProviderIDs[txKey] = *res.GetTransactions()[0].GetProviderOperId()
 	}
 }
 
@@ -276,12 +276,12 @@ func (h *helperData) GetTxProviderID(txKey string) string {
 
 func (h *helperData) CheckTransaction(txKey string, txStatus api.TxStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		res, err := h.invC.GetTransactionByID(h.authCtx, &api.GetTransactionByIDRequest{
-			TxId: h.transactionIDs[txKey],
+		res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+			TxIds: []int64{h.transactionIDs[txKey]},
 		})
 		require.NoError(t, err)
-		require.NotEmpty(t, res.GetTx())
-		require.EqualValues(t, txStatus, res.GetTx().GetStatus())
+		require.NotEmpty(t, res.GetTransactions())
+		require.EqualValues(t, txStatus, res.GetTransactions()[0].GetStatus())
 	}
 }
 
