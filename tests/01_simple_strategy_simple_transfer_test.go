@@ -53,6 +53,43 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 	})
 
+	t.Run("ChangeFromInvoiceRechargeOperation", func(t *testing.T) {
+
+		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
+
+		t.Run("AddTransactionToInvoice", h.AddTransactionToInvoice(
+			"inv1",
+			"tx1",
+			"simple",
+			1000,
+			nil,
+			[]*api.AddTransactionToInvoiceRequest_Oper{
+				h.CreateOperation(
+					"acc1.1.1",
+					"acc1.1.2",
+					"",
+					false,
+					api.OperStrategy_RECHARGE_OPS,
+					1000,
+				),
+			},
+		))
+
+		h.BalanceInc("acc1.1.1", 1000)
+		h.AcceptedBalanceInc("acc1.1.1", 1000)
+		h.BalanceInc("acc1.1.2", 1000)
+		h.AcceptedBalanceInc("acc1.1.2", 1000)
+
+		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
+
+		h.Sleep(3)
+
+		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
+
+		t.Run("CheckBalances", h.CheckBalances("acc1.1.2", "curr1"))
+
+	})
+
 	t.Run("InternalWithHold", func(t *testing.T) {
 		t.Run("NewInvoice", h.NewInvoice("inv1", "simple", nil))
 
