@@ -1,0 +1,151 @@
+syntax = "proto3";
+
+package api;
+
+import "api/models.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/wrappers.proto";
+import "google/protobuf/timestamp.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.enumdecl_all) = true;
+
+service Invoices {
+
+    rpc NewInvoice (NewInvoiceRequest) returns (NewInvoiceResponse) {
+    }
+
+    rpc GetInvoiceByIDs (GetInvoiceByIDsRequest) returns (GetInvoiceByIDsResponse) {
+    }
+
+    rpc AddTransactionToInvoice (AddTransactionToInvoiceRequest) returns (AddTransactionToInvoiceResponse) {
+    }
+
+    rpc GetTransactionByIDs (GetTransactionByIDsRequest) returns (GetTransactionByIDsResponse) {
+    }
+
+    rpc AuthInvoice (AuthInvoiceRequest) returns (AuthInvoiceResponse) {
+    }
+
+    rpc AcceptInvoice (AcceptInvoiceRequest) returns (AcceptInvoiceResponse) {
+    }
+
+    rpc RejectInvoice (RejectInvoiceRequest) returns (RejectInvoiceResponse) {
+    }
+
+    rpc AuthTx (AuthTxRequest) returns (AuthTxResponse) {
+    }
+
+    rpc AcceptTx (AcceptTxRequest) returns (AcceptTxResponse) {
+    }
+
+    rpc RejectTx (RejectTxRequest) returns (RejectTxResponse) {
+    }
+}
+
+message NewInvoiceRequest {
+    // key внешний уникальный идентицитора инвойса.
+    string key = 1;
+    // strategy стратегия работы с инвойсом.
+    string strategy = 2;
+    google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
+}
+message NewInvoiceResponse {
+    int64 invoice_id = 1;
+}
+
+message GetInvoiceByIDsRequest {
+    repeated int64 invoice_ids = 1;
+    bool with_tx = 2;
+}
+message GetInvoiceByIDsResponse {
+
+    message Invoice {
+        // invoice_id внутренний идентификатор инвойса.
+        int64 invoice_id = 1;
+        // key внешний уникальный идентицитора инвойса.
+        string key = 2;
+        // status состояние инвойса.
+        InvoiceStatus status = 3;
+        // next_status куда переходит инвойс.
+        InvoiceStatus next_status = 4;
+        // strategy стратегия работы с инвойсом.
+        string strategy = 5;
+        google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+        google.protobuf.Timestamp created_at = 7 [(gogoproto.stdtime) = true];
+        google.protobuf.Timestamp updated_at = 8 [(gogoproto.stdtime) = true];
+        repeated Tx transactions = 9;
+    }
+
+    repeated Invoice invoices = 1;
+}
+
+message AddTransactionToInvoiceRequest {
+    message Oper {
+        int64 src_acc_id = 1;
+        int64 dst_acc_id = 2;
+        OperStrategy strategy = 3;
+        int64 amount = 4;
+        google.protobuf.StringValue key = 5 [(gogoproto.wktpointer) = true];
+        google.protobuf.BytesValue meta = 6 [(gogoproto.wktpointer) = true];
+        bool hold = 7;
+        google.protobuf.Int64Value hold_acc_id = 8 [(gogoproto.wktpointer) = true];
+    }
+    // invoice_id связанный с транзакцией инвойс.
+    int64 invoice_id = 1;
+    // key Уникальный внешний идентификатор транзакции (опционально).
+    google.protobuf.StringValue key = 2 [(gogoproto.wktpointer) = true];
+    // strategy стратегия работы с инвойсом.
+    string strategy = 3;
+    google.protobuf.BytesValue meta = 4 [(gogoproto.wktpointer) = true];
+    repeated Oper operations = 5;
+    int64 amount = 6;
+}
+message AddTransactionToInvoiceResponse {
+    int64 tx_id = 1;
+}
+
+message GetTransactionByIDsRequest {
+    repeated int64 tx_ids = 1;
+}
+message GetTransactionByIDsResponse {
+    repeated Tx transactions = 1;
+}
+
+message AuthInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message AuthInvoiceResponse {
+}
+
+message AcceptInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message AcceptInvoiceResponse {
+}
+
+message RejectInvoiceRequest {
+    int64 invoice_id = 1;
+}
+message RejectInvoiceResponse {
+}
+
+message AuthTxRequest {
+    int64 tx_id = 1;
+}
+message AuthTxResponse {
+}
+
+message AcceptTxRequest {
+    int64 tx_id = 1;
+}
+message AcceptTxResponse {
+}
+
+message RejectTxRequest {
+    int64 tx_id = 1;
+}
+message RejectTxResponse {
+}

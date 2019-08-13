@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"flag"
+	"fmt"
+	"log"
 	"math/rand"
 	"net"
 	"os"
@@ -11,14 +13,36 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gebv/acca/engine"
+	"github.com/gebv/acca/api"
+	_ "github.com/gebv/acca/engine/strategies/invoices/refund"
+	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
+	_ "github.com/gebv/acca/engine/strategies/transactions/moedelo"
+	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank"
+	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank_refund"
+	_ "github.com/gebv/acca/engine/strategies/transactions/simple"
+	"github.com/gebv/acca/engine/worker"
+	"github.com/gebv/acca/interceptors/auth"
+	"github.com/gebv/acca/interceptors/recover"
+	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
+	"github.com/gebv/acca/provider/moedelo"
+	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/services"
+	"github.com/gebv/acca/services/accounts"
+	"github.com/gebv/acca/services/auditor"
+	"github.com/gebv/acca/services/invoices"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/labstack/echo"
+	echo_middleware "github.com/labstack/echo/middleware"
 	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+	"gopkg.in/nats-io/gnatsd.v2/server"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 )
@@ -51,52 +75,94 @@ func main() {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
 	}
 
+	sNats, err := server.NewServer(&server.Options{
+		Host:           "127.0.0.1",
+		Port:           4222,
+		NoLog:          true,
+		NoSigs:         true,
+		MaxControlLine: 2048,
+	})
+	if err != nil || sNats == nil {
+		panic(fmt.Sprintf("No NATS Server object returned: %v", err))
+	}
+
+	// Run server in Go routine.
+	go sNats.Start()
+
+	// Wait for accept loop(s) to be started
+	if !sNats.ReadyForConnections(10 * time.Second) {
+		panic("Unable to start NATS Server in Go Routine")
+	}
+
+	n, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		log.Fatal(err)
+	}
+	nc, err := nats.NewEncodedConn(n, nats.JSON_ENCODER)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	sberProvider := sberbank.NewProvider(
+		db,
+		sberbank.Config{
+			EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
+			Token:         os.Getenv("SBERBANK_TOKEN"),
+			Password:      os.Getenv("SBERBANK_PASSWORD"),
+			UserName:      os.Getenv("SBERBANK_USER_NAME"),
+		},
+		nc,
+	)
+
+	moeDeloProvider := moedelo.NewProvider(
+		db,
+		moedelo.Config{
+			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+			Token:         os.Getenv("MOEDELO_TOKEN"),
+		},
+		nc,
+	)
+
+	worker.SubToNATS(nc, db, sberProvider, moeDeloProvider)
+
 	lis, err := net.Listen("tcp", *grpcAddrsF)
 	if err != nil {
 		zap.L().Panic("Failed to listen.", zap.Error(err))
 	}
 
+	// аудитор http запросов (сохраняет в БД все реквесты и респонсы)
+	httpAuditor := auditor.NewHttpAuditor(sqlDB)
+	defer httpAuditor.Stop()
+	prometheus.MustRegister(httpAuditor)
+
+	serv := services.NewService(db)
+
 	s := grpc.NewServer(
-		grpc.UnaryInterceptor(middleware.ChainUnaryServer()),
-		grpc.StreamInterceptor(middleware.ChainStreamServer()),
+		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
+			grpc_prometheus.UnaryServerInterceptor,
+			settingsInterceptor.Unary(VERSION),
+			recover.Unary(),
+			auth.Unary(serv, httpAuditor),
+		)),
+		grpc.StreamInterceptor(middleware.ChainStreamServer(
+			grpc_prometheus.StreamServerInterceptor,
+			settingsInterceptor.Stream(VERSION),
+			recover.Stream(),
+			auth.Stream(serv),
+		)),
 	)
 
-	accountManager := engine.NewAccountManager(db)
-	currID, err := accountManager.UpsertCurrency("curr1", nil)
-	if err != nil {
-		zap.L().Panic("Failed create currency.", zap.Error(err))
-	}
-	acc1ID, err := accountManager.CreateAccount(currID, "first", nil)
-	if err != nil && err != engine.ErrAccountExists {
-		zap.L().Panic("Failed create account.", zap.Error(err))
-	}
-	if acc1ID == 0 {
-		acc, err := accountManager.FindAccountByKey(currID, "first")
-		if err != nil {
-			zap.L().Panic("Failed find account.", zap.Error(err))
-		}
-		acc1ID = acc.AccountID
-	}
-	acc2ID, err := accountManager.CreateAccount(currID, "second", nil)
-	if err != nil && err != engine.ErrAccountExists {
-		zap.L().Panic("Failed create account.", zap.Error(err))
-	}
-	if acc2ID == 0 {
-		acc, err := accountManager.FindAccountByKey(currID, "second")
-		if err != nil {
-			zap.L().Panic("Failed find account.", zap.Error(err))
-		}
-		acc2ID = acc.AccountID
-	}
+	accServ := accounts.NewServer(db)
+	invServ := invoices.NewServer(db, nc)
 
-	eng := engine.NewSimpleService(db)
-	if _, err := eng.InternalTransfer(acc1ID, acc2ID, 100); err != nil {
-		zap.L().Panic("Failed to internal transfer.", zap.Error(err))
-	}
+	api.RegisterAccountsServer(s, accServ)
+	api.RegisterInvoicesServer(s, invServ)
 
 	// graceful stop
 	go func() {
 		<-ctx.Done()
+		nc.Drain()
+		n.Drain()
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 		defer cancel()
@@ -106,6 +172,7 @@ func main() {
 
 		}()
 		s.GracefulStop()
+		sNats.Shutdown()
 	}()
 
 	// TODO: Registry servers
@@ -117,6 +184,12 @@ func main() {
 
 	var wg sync.WaitGroup
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		moeDeloProvider.RunCheckStatusListener(ctx)
+	}()
+
 	zap.L().Info("gRPC server listen address.", zap.String("address", lis.Addr().String()))
 	wg.Add(1)
 	go func() {
@@ -125,6 +198,13 @@ func main() {
 			zap.L().Panic("Failed to serve.", zap.Error(err))
 		}
 	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		serverWebhookSberbank(ctx, sberProvider)
+	}()
+
 	wg.Wait()
 
 	// - внутренний grpc АПИ
@@ -245,4 +325,56 @@ func setupPostgres(conn string, maxLifetime time.Duration, maxOpen, maxIdle int)
 	zap.L().Info("Postgres - Connected!")
 
 	return sqlDB
+}
+
+func serverWebhookSberbank(ctx context.Context, provider *sberbank.Provider) {
+
+	e := echo.New()
+
+	e.Use(echo_middleware.CORSWithConfig(echo_middleware.CORSConfig{
+		AllowOrigins: []string{"*"},
+		AllowMethods: []string{
+			echo.GET,
+			echo.PUT,
+			echo.POST,
+			echo.DELETE,
+			echo.OPTIONS,
+			echo.CONNECT,
+			echo.HEAD,
+			echo.TRACE,
+		},
+	}))
+
+	e.Use(echo_middleware.Recover())
+
+	e.Use(echo_middleware.Logger())
+
+	e.GET("/webhook/sberbank", provider.SberbankWebhookHandler())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		zap.L().Info("start server sberbank webhook ", zap.String("address", "/webhook/sberbank"))
+		if err := e.Start(":10003"); err != nil {
+			zap.L().Error("failed run server sberbank webhook", zap.Error(err))
+		}
+		wg.Done()
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		<-ctx.Done()
+		Ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+		err := e.Shutdown(Ctx)
+		if err != nil {
+			zap.L().Error("failed shutdown server sberbank webhook", zap.Error(err))
+		}
+		err = e.Close()
+		if err != nil {
+			zap.L().Error("failed close server sberbank webhook", zap.Error(err))
+		}
+		zap.L().Debug("success shutdown server sberbank webhook")
+	}()
+	wg.Wait()
 }

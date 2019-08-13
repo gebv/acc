@@ -17,7 +17,7 @@ const (
 func NewTransactionProcessor(db *reform.DB) *transactionProcessor {
 	p := &transactionProcessor{
 		db:        db,
-		toProcess: make(chan *processorCommand, toProcessCap),
+		toProcess: make(chan *ProcessorCommand, toProcessCap),
 		l:         zap.L().Named("tx_processor"),
 		// TODO: add prometheus metrics
 	}
@@ -30,7 +30,7 @@ func NewTransactionProcessor(db *reform.DB) *transactionProcessor {
 type transactionProcessor struct {
 	db        *reform.DB
 	wg        sync.WaitGroup
-	toProcess chan *processorCommand
+	toProcess chan *ProcessorCommand
 	l         *zap.Logger
 }
 
@@ -39,29 +39,29 @@ func (p *transactionProcessor) runPocessor() error {
 	var err error
 	for cmd := range p.toProcess {
 		err = p.db.InTransaction(func(tx *reform.TX) error {
-			currentTx := &Transaction{TransactionID: cmd.txID}
+			currentTx := &Transaction{TransactionID: cmd.TrID}
 			if err := tx.Reload(currentTx); err != nil {
 				return errors.Wrap(err, "failed find transaction")
 			}
 
-			if currentTx.UpdatedAt.UnixNano() != cmd.updatedAt.UnixNano() {
+			if currentTx.UpdatedAt.UnixNano() != cmd.UpdatedAt.UnixNano() {
 				return errors.New("transaction is rejected by the processor - not matched updated_at")
 			}
-			if !currentTx.Status.Match(cmd.currentStatus) {
+			if !currentTx.Status.Match(cmd.CurrentStatus) {
 				return errors.New("transaction is rejected by the processor - not matched status")
 			}
-			if !transactionStatusTransitionChart.Allowed(cmd.currentStatus, cmd.nextStatus) {
+			if !transactionStatusTransitionChart.Allowed(cmd.CurrentStatus, cmd.NextStatus) {
 				return errors.New("transaction is rejected by the processor - not allowed transition status")
 			}
 
 			// TODO: в зависимости от провайдера процедура
 			// - Сбербанк, в случае статуса AUTH авторизация операции в сбербанке (получение OperID, OperStatus)
 
-			if err := processingOperations(tx, cmd); err != nil {
+			if err, _ := ProcessingOperations(tx, cmd); err != nil {
 				return errors.Wrap(err, "failed process")
 			}
 
-			currentTx.Status = cmd.nextStatus
+			currentTx.Status = cmd.NextStatus
 			if err := tx.UpdateColumns(currentTx, "updated_at", "status"); err != nil {
 				return errors.Wrap(err, "failed update transaction")
 			}
@@ -69,7 +69,7 @@ func (p *transactionProcessor) runPocessor() error {
 			return nil
 		})
 		if err != nil {
-			p.l.Error("failed process transaction", zap.Error(err), zap.Int64("tx_id", cmd.txID), zap.Time("tx_version_at", cmd.updatedAt))
+			p.l.Error("failed process transaction", zap.Error(err), zap.Int64("tx_id", cmd.TrID), zap.Time("tx_version_at", cmd.UpdatedAt))
 			continue
 		}
 	}
@@ -203,11 +203,11 @@ func (t *transactionProcessor) RejectTx(txID int64) error {
 }
 
 func (t *transactionProcessor) Process(txID int64, updatedAt time.Time, currentStatus, nextStatus TransactionStatus) error {
-	msg := &processorCommand{
-		txID:          txID,
-		updatedAt:     updatedAt,
-		currentStatus: currentStatus,
-		nextStatus:    nextStatus,
+	msg := &ProcessorCommand{
+		TrID:          txID,
+		UpdatedAt:     updatedAt,
+		CurrentStatus: currentStatus,
+		NextStatus:    nextStatus,
 	}
 
 	select {
@@ -219,24 +219,42 @@ func (t *transactionProcessor) Process(txID int64, updatedAt time.Time, currentS
 	return nil
 }
 
-// обработка операций в транзакции
-func processingOperations(tx *reform.TX, cmd *processorCommand) error {
-	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", cmd.txID)
+// холд операци в транзакции
+func IsHoldOperations(tx *reform.TX, trID int64) (error, bool) {
+	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", trID)
 	if err != nil {
-		return errors.Wrap(err, "failed find operations")
+		return errors.Wrap(err, "failed find operations"), false
 	}
+	var isHold bool
+	for _, ioper := range opers {
+		oper := ioper.(*Operation)
+		if oper.Hold {
+			isHold = true
+		}
+	}
+	return nil, isHold
+}
 
+// обработка операций в транзакции
+func ProcessingOperations(tx *reform.TX, cmd *ProcessorCommand) (error, bool) {
+	opers, err := tx.SelectAllFrom((&Operation{}).View(), "WHERE tx_id = $1 ORDER BY oper_id ASC FOR UPDATE", cmd.TrID)
+	if err != nil {
+		return errors.Wrap(err, "failed find operations"), false
+	}
+	var isHold bool
 	sm := newLowLevelMoneyTransferStrategy()
 	for _, ioper := range opers {
 		oper := ioper.(*Operation)
-
-		if err := sm.Process(cmd.nextStatus, oper); err != nil {
-			return errors.Wrapf(err, "failed process operation %d", oper.OperationID)
+		if oper.Hold {
+			isHold = true
+		}
+		if err := sm.Process(cmd.NextStatus, oper); err != nil {
+			return errors.Wrapf(err, "failed process operation %d", oper.OperationID), false
 		}
 
 		// store operation status after process
 		if err := tx.UpdateColumns(oper, "updated_at", "status"); err != nil {
-			return errors.Wrapf(err, "failed update operation %d after process", oper.OperationID)
+			return errors.Wrapf(err, "failed update operation %d after process", oper.OperationID), false
 		}
 	}
 
@@ -246,8 +264,8 @@ func processingOperations(tx *reform.TX, cmd *processorCommand) error {
 			// to skip if the balance didn't change
 			continue
 		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = $1 WHERE acc_id = $2`, balance, accID); err != nil {
-			return errors.Wrapf(err, "failed update balance for account %d", accID)
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance = balance + $1, last_tx_id = $2 WHERE acc_id = $3`, balance, cmd.TrID, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance for account %d", accID), false
 		}
 	}
 	for accID, balance := range sm.accountAcceptedBalances {
@@ -255,10 +273,10 @@ func processingOperations(tx *reform.TX, cmd *processorCommand) error {
 			// to skip if the balance didn't change
 			continue
 		}
-		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = $1 WHERE acc_id = $2`, balance, accID); err != nil {
-			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID)
+		if _, err := tx.Exec(`UPDATE acca.accounts SET balance_accepted = balance_accepted + $1, last_tx_id = $2 WHERE acc_id = $3`, balance, cmd.TrID, accID); err != nil {
+			return errors.Wrapf(err, "failed update balance_accepted for account %d", accID), false
 		}
 	}
 
-	return nil
+	return nil, isHold
 }

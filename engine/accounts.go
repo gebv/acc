@@ -23,6 +23,7 @@ type Account struct {
 	Balance         int64     `reform:"balance"`
 	BalanceAccepted int64     `reform:"balance_accepted"`
 	Meta            *[]byte   `reform:"meta"`
+	LastTxID        *int64    `reform:"last_tx_id"`
 	UpdatedAt       time.Time `reform:"updated_at"`
 	CreatedAt       time.Time `reform:"created_at"`
 }

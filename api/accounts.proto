@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package api;
+
+import "api/models.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "google/protobuf/wrappers.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.enumdecl_all) = true;
+
+service Accounts {
+    rpc CreateCurrency (CreateCurrencyRequest) returns (CreateCurrencyResponse) {
+    }
+
+    rpc GetCurrency (GetCurrencyRequest) returns (GetCurrencyResponse) {
+    }
+
+    rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
+    }
+
+    rpc GetAccountByKey (GetAccountByKeyRequest) returns (GetAccountByKeyResponse) {
+    }
+
+    rpc BalanceChanges (BalanceChangesRequest) returns (BalanceChangesResponse) {
+    }
+}
+
+message CreateCurrencyRequest {
+    string key = 1;
+    google.protobuf.BytesValue meta = 2 [(gogoproto.wktpointer) = true];
+}
+
+
+message CreateCurrencyResponse {
+    int64 currency_id = 1;
+}
+
+message GetCurrencyRequest {
+    string key = 1;
+}
+
+message GetCurrencyResponse {
+    Currency currency = 1;
+}
+
+message CreateAccountRequest {
+    string key = 1;
+    int64 currency_id = 2;
+    google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
+}
+
+message CreateAccountResponse {
+    int64 acc_id = 1;
+}
+
+message GetAccountByKeyRequest {
+    int64 curr_id = 1;
+    string key = 2;
+}
+
+message GetAccountByKeyResponse {
+    Account account = 1;
+}
+
+message BalanceChangesRequest {
+    int64 offset = 1;
+    int64 limit = 2;
+    google.protobuf.Int64Value acc_id = 3 [(gogoproto.wktpointer) = true];
+}
+
+message BalanceChangesResponse {
+    repeated BalanceChanges balance_changes = 1;
+}

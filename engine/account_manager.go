@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ErrAccountExists    = errors.New("account exists")
-	ErrAccountNotExists = errors.New("account not exists")
+	ErrAccountExists     = errors.New("account exists")
+	ErrAccountNotExists  = errors.New("account not exists")
+	ErrCurrencyNotExists = errors.New("currency not exists")
 )
 
 func NewAccountManager(db *reform.DB) *AccountManager {
@@ -25,6 +26,21 @@ func NewAccountManager(db *reform.DB) *AccountManager {
 type AccountManager struct {
 	db     *reform.DB
 	logger *zap.Logger
+}
+
+// GetCurrency get currency by key.
+func (m *AccountManager) GetCurrency(currencyName string) (*Currency, error) {
+	currencyName = formatKey(currencyName)
+
+	var curr Currency
+	if err := m.db.FindOneTo(&curr, "key", currencyName); err != nil {
+		if err != reform.ErrNoRows {
+			m.logger.Error("Failed find currency by key", zap.Error(err), zap.String("currency_key", currencyName))
+			return nil, ErrAccountNotExists
+		}
+		return nil, errors.Wrap(err, "Failed find currency by Key")
+	}
+	return &curr, nil
 }
 
 // UpsertCurrency create or update currency by key.

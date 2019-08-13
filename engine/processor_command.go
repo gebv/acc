@@ -2,11 +2,11 @@ package engine
 
 import "time"
 
-type processorCommand struct {
-	txID          int64
-	currentStatus TransactionStatus
-	nextStatus    TransactionStatus
-	updatedAt     time.Time
+type ProcessorCommand struct {
+	TrID          int64
+	CurrentStatus TransactionStatus
+	NextStatus    TransactionStatus
+	UpdatedAt     time.Time
 
 	// TODO: расширить модель и добавить
 	// - смена статуса для транзакции

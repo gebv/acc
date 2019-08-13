@@ -142,7 +142,7 @@ func (v *accountTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *accountTableType) Columns() []string {
-	return []string{"acc_id", "curr_id", "key", "balance", "balance_accepted", "meta", "updated_at", "created_at"}
+	return []string{"acc_id", "curr_id", "key", "balance", "balance_accepted", "meta", "last_tx_id", "updated_at", "created_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -162,21 +162,22 @@ func (v *accountTableType) PKColumnIndex() uint {
 
 // AccountTable represents accounts view or table in SQL database.
 var AccountTable = &accountTableType{
-	s: parse.StructInfo{Type: "Account", SQLSchema: "acca", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", Type: "int64", Column: "acc_id"}, {Name: "CurrencyID", Type: "int64", Column: "curr_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Balance", Type: "int64", Column: "balance"}, {Name: "BalanceAccepted", Type: "int64", Column: "balance_accepted"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Account", SQLSchema: "acca", SQLName: "accounts", Fields: []parse.FieldInfo{{Name: "AccountID", Type: "int64", Column: "acc_id"}, {Name: "CurrencyID", Type: "int64", Column: "curr_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Balance", Type: "int64", Column: "balance"}, {Name: "BalanceAccepted", Type: "int64", Column: "balance_accepted"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "LastTxID", Type: "*int64", Column: "last_tx_id"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(Account).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Account) String() string {
-	res := make([]string, 8)
+	res := make([]string, 9)
 	res[0] = "AccountID: " + reform.Inspect(s.AccountID, true)
 	res[1] = "CurrencyID: " + reform.Inspect(s.CurrencyID, true)
 	res[2] = "Key: " + reform.Inspect(s.Key, true)
 	res[3] = "Balance: " + reform.Inspect(s.Balance, true)
 	res[4] = "BalanceAccepted: " + reform.Inspect(s.BalanceAccepted, true)
 	res[5] = "Meta: " + reform.Inspect(s.Meta, true)
-	res[6] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
-	res[7] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[6] = "LastTxID: " + reform.Inspect(s.LastTxID, true)
+	res[7] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[8] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -190,6 +191,7 @@ func (s *Account) Values() []interface{} {
 		s.Balance,
 		s.BalanceAccepted,
 		s.Meta,
+		s.LastTxID,
 		s.UpdatedAt,
 		s.CreatedAt,
 	}
@@ -205,6 +207,7 @@ func (s *Account) Pointers() []interface{} {
 		&s.Balance,
 		&s.BalanceAccepted,
 		&s.Meta,
+		&s.LastTxID,
 		&s.UpdatedAt,
 		&s.CreatedAt,
 	}
