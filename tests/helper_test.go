@@ -23,7 +23,6 @@ type helperData struct {
 	accC             api.AccountsClient
 	invC             api.InvoicesClient
 	authCtx          context.Context
-	currIDs          map[string]int64
 	accIDs           map[string]int64
 	balances         map[int64]int64
 	acceptedBalances map[int64]int64
@@ -38,10 +37,11 @@ type helperData struct {
 func NewHelperData() *helperData {
 
 	h := helperData{
-		accC:             api.NewAccountsClient(Conn),
-		invC:             api.NewInvoicesClient(Conn),
-		authCtx:          metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{})),
-		currIDs:          make(map[string]int64),
+		accC: api.NewAccountsClient(Conn),
+		invC: api.NewInvoicesClient(Conn),
+		authCtx: metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{
+			accessTokenMDKey: AccessToken,
+		})),
 		accIDs:           make(map[string]int64),
 		balances:         make(map[int64]int64),
 		acceptedBalances: make(map[int64]int64),
@@ -70,12 +70,10 @@ func (h *helperData) Sleep(s int) {
 func (h *helperData) CreateCurrency(key string) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Run("CreateCurrency", func(t *testing.T) {
-			res, err := h.accC.CreateCurrency(h.authCtx, &api.CreateCurrencyRequest{
+			_, err := h.accC.CreateCurrency(h.authCtx, &api.CreateCurrencyRequest{
 				Key: key,
 			})
 			require.NoError(t, err)
-			require.NotEmpty(t, res)
-			h.currIDs[key] = res.GetCurrencyId()
 		})
 		t.Run("GetCurrency", func(t *testing.T) {
 			res, err := h.accC.GetCurrency(h.authCtx, &api.GetCurrencyRequest{
@@ -83,7 +81,6 @@ func (h *helperData) CreateCurrency(key string) func(t *testing.T) {
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetCurrency())
-			require.EqualValues(t, h.currIDs[key], res.GetCurrency().GetCurrId())
 		})
 	}
 }
@@ -92,8 +89,8 @@ func (h *helperData) CreateAccount(accKey, currKey string) func(t *testing.T) {
 	return func(t *testing.T) {
 		t.Run("CreateAccount", func(t *testing.T) {
 			res, err := h.accC.CreateAccount(h.authCtx, &api.CreateAccountRequest{
-				Key:        accKey,
-				CurrencyId: h.currIDs[currKey],
+				Key:         accKey,
+				CurrencyKey: currKey,
 			})
 			require.NoError(t, err)
 			require.NotEmpty(t, res)
@@ -101,8 +98,8 @@ func (h *helperData) CreateAccount(accKey, currKey string) func(t *testing.T) {
 		})
 		t.Run("GetAccountByKey", func(t *testing.T) {
 			res, err := h.accC.GetAccountByKey(h.authCtx, &api.GetAccountByKeyRequest{
-				Key:    accKey,
-				CurrId: h.currIDs[currKey],
+				Key:     accKey,
+				CurrKey: currKey,
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res.GetAccount())
@@ -242,8 +239,8 @@ func (h *helperData) RejectInvoice(invKey string) func(t *testing.T) {
 func (h *helperData) CheckBalances(accKey, currKey string) func(t *testing.T) {
 	return func(t *testing.T) {
 		res, err := h.accC.GetAccountByKey(h.authCtx, &api.GetAccountByKeyRequest{
-			Key:    accKey,
-			CurrId: h.currIDs[currKey],
+			Key:     accKey,
+			CurrKey: currKey,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, res.GetAccount())

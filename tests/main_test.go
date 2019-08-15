@@ -94,6 +94,19 @@ func runGo(bin string, args ...string) {
 	}
 }
 
+func createAccessToken() string {
+	out, err := exec.Command(filepath.Join("..", "bin", "acca-race"), "--gen-access-token").Output()
+	if err != nil {
+		panic(err)
+	}
+	if len(out) >= 79 {
+		accessToken := string(out)[15:79]
+		log.Println("ACCESS TOKEN: ", accessToken)
+		return accessToken
+	}
+	panic("Not create access token")
+}
+
 func setup() {
 
 	runPostgresMigrations()
@@ -162,6 +175,8 @@ func TestMain(m *testing.M) {
 		// defer runMake("down")
 
 		setup()
+
+		AccessToken = createAccessToken()
 
 		go runGo(
 			"acca-race",
