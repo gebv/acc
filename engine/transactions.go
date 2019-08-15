@@ -17,6 +17,8 @@ type Transaction struct {
 	// TransactionID внутренний идентификатор транзакции.
 	TransactionID int64 `reform:"tx_id,pk"`
 
+	ClientID *int64 `reform:"client_id"`
+
 	// InvoiceID связанный с транзакцией инвойс.
 	InvoiceID int64 `reform:"invoice_id"`
 
@@ -91,6 +93,8 @@ const (
 type ViewTransaction struct {
 	// TransactionID внутренний идентификатор транзакции.
 	TransactionID int64 `reform:"tx_id,pk"`
+
+	ClientID *int64 `reform:"client_id"`
 
 	// InvoiceID связанный с транзакцией инвойс.
 	InvoiceID int64 `reform:"invoice_id"`

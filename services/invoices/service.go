@@ -10,6 +10,7 @@ import (
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/services"
 	"github.com/lib/pq"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
@@ -30,6 +31,8 @@ type Server struct {
 }
 
 func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*api.NewInvoiceResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	key := strings.TrimSpace(strings.ToLower(req.GetKey()))
 	strategy := strings.TrimSpace(strings.ToLower(req.GetStrategy()))
 
@@ -42,6 +45,7 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 	}
 
 	inv := &engine.Invoice{
+		ClientID: &clientID,
 		Key:      key,
 		Strategy: strategy,
 		Status:   engine.DRAFT_I,
@@ -55,6 +59,8 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 }
 
 func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsRequest) (*api.GetInvoiceByIDsResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	if len(req.GetInvoiceIds()) == 0 {
 		return &api.GetInvoiceByIDsResponse{}, nil
 	}
@@ -63,7 +69,8 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 	case true:
 		list, err := s.db.SelectAllFrom(
 			engine.ViewInvoiceTable,
-			"WHERE invoice_id = ANY ($1)",
+			"WHERE client_id = $1 AND invoice_id = ANY ($2)",
+			clientID,
 			pq.Int64Array(req.GetInvoiceIds()),
 		)
 		if err != nil {
@@ -133,7 +140,8 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 	default:
 		list, err := s.db.SelectAllFrom(
 			engine.InvoiceTable,
-			"WHERE invoice_id = ANY ($1)",
+			"WHERE client_id = $1 AND invoice_id = ANY ($2)",
+			clientID,
 			pq.Int64Array(req.GetInvoiceIds()),
 		)
 		if err != nil {
@@ -163,9 +171,14 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 }
 
 func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransactionToInvoiceRequest) (*api.AddTransactionToInvoiceResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
+	}
+	if invoice.ClientID == nil || *invoice.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	if !invoice.Status.Match(engine.DRAFT_I) {
 		return nil, errors.New("not allowed add transaction (invoice is not draft)")
@@ -185,6 +198,7 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 	var txID int64
 	err := s.db.InTransaction(func(tx *reform.TX) error {
 		tr := &engine.Transaction{
+			ClientID:  &clientID,
 			InvoiceID: req.GetInvoiceId(),
 			Strategy:  strategy,
 			Amount:    req.GetAmount(),
@@ -230,9 +244,12 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 }
 
 func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransactionByIDsRequest) (*api.GetTransactionByIDsResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	list, err := s.db.SelectAllFrom(
 		engine.ViewTransactionTable,
-		"WHERE tx_id = ANY ($1)",
+		"WHERE client_id = $1 AND tx_id = ANY ($2)",
+		clientID,
 		pq.Int64Array(req.GetTxIds()),
 	)
 	if err != nil {
@@ -288,9 +305,14 @@ func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransaction
 }
 
 func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*api.AuthInvoiceResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
+	}
+	if invoice.ClientID == nil || *invoice.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	if !invoice.Status.Match(engine.DRAFT_I) {
 		return nil, errors.New("not transition to auth (invoice is not draft)")
@@ -307,9 +329,14 @@ func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*
 }
 
 func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest) (*api.AcceptInvoiceResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
+	}
+	if invoice.ClientID == nil || *invoice.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
 		InvoiceID: invoice.InvoiceID,
@@ -323,9 +350,14 @@ func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest
 }
 
 func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest) (*api.RejectInvoiceResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
+	}
+	if invoice.ClientID == nil || *invoice.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
 		InvoiceID: invoice.InvoiceID,
@@ -339,9 +371,14 @@ func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest
 }
 
 func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTxResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")
+	}
+	if tx.ClientID == nil || *tx.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
 	if !tx.Status.Match(engine.DRAFT_TX) {
 		return nil, errors.New("not transition to auth (transaction is not draft)")
@@ -358,9 +395,14 @@ func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTx
 }
 
 func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.AcceptTxResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")
+	}
+	if tx.ClientID == nil || *tx.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
 		TransactionID: tx.TransactionID,
@@ -374,9 +416,14 @@ func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.Ac
 }
 
 func (s Server) RejectTx(ctx context.Context, req *api.RejectTxRequest) (*api.RejectTxResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")
+	}
+	if tx.ClientID == nil || *tx.ClientID != clientID {
+		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
 		TransactionID: tx.TransactionID,

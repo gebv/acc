@@ -46,6 +46,8 @@ type Invoice struct {
 	// InvoiceID внутренний идентификатор инвойса.
 	InvoiceID int64 `reform:"invoice_id,pk"`
 
+	ClientID *int64 `reform:"client_id"`
+
 	// Key внешний уникальный идентицитора инвойса.
 	Key string `reform:"key"`
 
@@ -87,6 +89,8 @@ func (i *Invoice) BeforeUpdate() error {
 type ViewInvoice struct {
 	// InvoiceID внутренний идентификатор инвойса.
 	InvoiceID int64 `reform:"invoice_id,pk"`
+
+	ClientID *int64 `reform:"client_id"`
 
 	// Key внешний уникальный идентицитора инвойса.
 	Key string `reform:"key"`

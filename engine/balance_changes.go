@@ -13,6 +13,7 @@ import (
 
 //reform:acca.view_balance_changes
 type ViewBalanceChanges struct {
+	ClientID          *int64                        `reform:"client_id"`
 	ChID              int64                         `reform:"ch_id"`
 	TxID              int64                         `reform:"tx_id"`
 	AccID             int64                         `reform:"acc_id"`
