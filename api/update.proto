@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package api;
+
+service Updates {
+    // Подписка на уведомления.
+    rpc GetUpdate (GetUpdateRequest) returns (stream Update) {
+    }
+}
+
+message GetUpdateRequest {
+}
+
+message UpdatedInvoice {
+    int64 invoice_id = 1;
+}
+
+message UpdatedTransaction {
+    int64 transaction_id = 1;
+}
+
+message Update {
+    oneof type {
+        UpdatedInvoice updated_invoice = 1;
+        UpdatedTransaction updated_transaction = 2;
+    }
+}
