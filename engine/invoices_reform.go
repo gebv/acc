@@ -27,7 +27,7 @@ func (v *invoiceTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *invoiceTableType) Columns() []string {
-	return []string{"invoice_id", "key", "status", "next_status", "strategy", "meta", "payload", "updated_at", "created_at"}
+	return []string{"invoice_id", "client_id", "key", "status", "next_status", "strategy", "meta", "payload", "updated_at", "created_at"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -47,22 +47,23 @@ func (v *invoiceTableType) PKColumnIndex() uint {
 
 // InvoiceTable represents invoices view or table in SQL database.
 var InvoiceTable = &invoiceTableType{
-	s: parse.StructInfo{Type: "Invoice", SQLSchema: "acca", SQLName: "invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Status", Type: "InvoiceStatus", Column: "status"}, {Name: "NextStatus", Type: "*InvoiceStatus", Column: "next_status"}, {Name: "Strategy", Type: "string", Column: "strategy"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Payload", Type: "*[]uint8", Column: "payload"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "Invoice", SQLSchema: "acca", SQLName: "invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "ClientID", Type: "*int64", Column: "client_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Status", Type: "InvoiceStatus", Column: "status"}, {Name: "NextStatus", Type: "*InvoiceStatus", Column: "next_status"}, {Name: "Strategy", Type: "string", Column: "strategy"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Payload", Type: "*[]uint8", Column: "payload"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}}, PKFieldIndex: 0},
 	z: new(Invoice).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s Invoice) String() string {
-	res := make([]string, 9)
+	res := make([]string, 10)
 	res[0] = "InvoiceID: " + reform.Inspect(s.InvoiceID, true)
-	res[1] = "Key: " + reform.Inspect(s.Key, true)
-	res[2] = "Status: " + reform.Inspect(s.Status, true)
-	res[3] = "NextStatus: " + reform.Inspect(s.NextStatus, true)
-	res[4] = "Strategy: " + reform.Inspect(s.Strategy, true)
-	res[5] = "Meta: " + reform.Inspect(s.Meta, true)
-	res[6] = "Payload: " + reform.Inspect(s.Payload, true)
-	res[7] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
-	res[8] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[1] = "ClientID: " + reform.Inspect(s.ClientID, true)
+	res[2] = "Key: " + reform.Inspect(s.Key, true)
+	res[3] = "Status: " + reform.Inspect(s.Status, true)
+	res[4] = "NextStatus: " + reform.Inspect(s.NextStatus, true)
+	res[5] = "Strategy: " + reform.Inspect(s.Strategy, true)
+	res[6] = "Meta: " + reform.Inspect(s.Meta, true)
+	res[7] = "Payload: " + reform.Inspect(s.Payload, true)
+	res[8] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[9] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
 	return strings.Join(res, ", ")
 }
 
@@ -71,6 +72,7 @@ func (s Invoice) String() string {
 func (s *Invoice) Values() []interface{} {
 	return []interface{}{
 		s.InvoiceID,
+		s.ClientID,
 		s.Key,
 		s.Status,
 		s.NextStatus,
@@ -87,6 +89,7 @@ func (s *Invoice) Values() []interface{} {
 func (s *Invoice) Pointers() []interface{} {
 	return []interface{}{
 		&s.InvoiceID,
+		&s.ClientID,
 		&s.Key,
 		&s.Status,
 		&s.NextStatus,
@@ -160,7 +163,7 @@ func (v *viewInvoiceTableType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *viewInvoiceTableType) Columns() []string {
-	return []string{"invoice_id", "key", "amount", "status", "next_status", "strategy", "meta", "payload", "updated_at", "created_at", "transactions"}
+	return []string{"invoice_id", "client_id", "key", "amount", "status", "next_status", "strategy", "meta", "payload", "updated_at", "created_at", "transactions"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -180,24 +183,25 @@ func (v *viewInvoiceTableType) PKColumnIndex() uint {
 
 // ViewInvoiceTable represents v_invoices view or table in SQL database.
 var ViewInvoiceTable = &viewInvoiceTableType{
-	s: parse.StructInfo{Type: "ViewInvoice", SQLSchema: "acca", SQLName: "v_invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Status", Type: "InvoiceStatus", Column: "status"}, {Name: "NextStatus", Type: "*InvoiceStatus", Column: "next_status"}, {Name: "Strategy", Type: "string", Column: "strategy"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Payload", Type: "*[]uint8", Column: "payload"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Transactions", Type: "Transactions", Column: "transactions"}}, PKFieldIndex: 0},
+	s: parse.StructInfo{Type: "ViewInvoice", SQLSchema: "acca", SQLName: "v_invoices", Fields: []parse.FieldInfo{{Name: "InvoiceID", Type: "int64", Column: "invoice_id"}, {Name: "ClientID", Type: "*int64", Column: "client_id"}, {Name: "Key", Type: "string", Column: "key"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Status", Type: "InvoiceStatus", Column: "status"}, {Name: "NextStatus", Type: "*InvoiceStatus", Column: "next_status"}, {Name: "Strategy", Type: "string", Column: "strategy"}, {Name: "Meta", Type: "*[]uint8", Column: "meta"}, {Name: "Payload", Type: "*[]uint8", Column: "payload"}, {Name: "UpdatedAt", Type: "time.Time", Column: "updated_at"}, {Name: "CreatedAt", Type: "time.Time", Column: "created_at"}, {Name: "Transactions", Type: "Transactions", Column: "transactions"}}, PKFieldIndex: 0},
 	z: new(ViewInvoice).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s ViewInvoice) String() string {
-	res := make([]string, 11)
+	res := make([]string, 12)
 	res[0] = "InvoiceID: " + reform.Inspect(s.InvoiceID, true)
-	res[1] = "Key: " + reform.Inspect(s.Key, true)
-	res[2] = "Amount: " + reform.Inspect(s.Amount, true)
-	res[3] = "Status: " + reform.Inspect(s.Status, true)
-	res[4] = "NextStatus: " + reform.Inspect(s.NextStatus, true)
-	res[5] = "Strategy: " + reform.Inspect(s.Strategy, true)
-	res[6] = "Meta: " + reform.Inspect(s.Meta, true)
-	res[7] = "Payload: " + reform.Inspect(s.Payload, true)
-	res[8] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
-	res[9] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
-	res[10] = "Transactions: " + reform.Inspect(s.Transactions, true)
+	res[1] = "ClientID: " + reform.Inspect(s.ClientID, true)
+	res[2] = "Key: " + reform.Inspect(s.Key, true)
+	res[3] = "Amount: " + reform.Inspect(s.Amount, true)
+	res[4] = "Status: " + reform.Inspect(s.Status, true)
+	res[5] = "NextStatus: " + reform.Inspect(s.NextStatus, true)
+	res[6] = "Strategy: " + reform.Inspect(s.Strategy, true)
+	res[7] = "Meta: " + reform.Inspect(s.Meta, true)
+	res[8] = "Payload: " + reform.Inspect(s.Payload, true)
+	res[9] = "UpdatedAt: " + reform.Inspect(s.UpdatedAt, true)
+	res[10] = "CreatedAt: " + reform.Inspect(s.CreatedAt, true)
+	res[11] = "Transactions: " + reform.Inspect(s.Transactions, true)
 	return strings.Join(res, ", ")
 }
 
@@ -206,6 +210,7 @@ func (s ViewInvoice) String() string {
 func (s *ViewInvoice) Values() []interface{} {
 	return []interface{}{
 		s.InvoiceID,
+		s.ClientID,
 		s.Key,
 		s.Amount,
 		s.Status,
@@ -224,6 +229,7 @@ func (s *ViewInvoice) Values() []interface{} {
 func (s *ViewInvoice) Pointers() []interface{} {
 	return []interface{}{
 		&s.InvoiceID,
+		&s.ClientID,
 		&s.Key,
 		&s.Amount,
 		&s.Status,

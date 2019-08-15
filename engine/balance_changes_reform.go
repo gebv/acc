@@ -27,7 +27,7 @@ func (v *viewBalanceChangesViewType) Name() string {
 
 // Columns returns a new slice of column names for that view or table in SQL database.
 func (v *viewBalanceChangesViewType) Columns() []string {
-	return []string{"ch_id", "tx_id", "acc_id", "curr_id", "amount", "balance", "balance_accepted", "invoice", "transaction", "operations", "actual_account", "actual_transaction"}
+	return []string{"client_id", "ch_id", "tx_id", "acc_id", "curr_id", "amount", "balance", "balance_accepted", "invoice", "transaction", "operations", "actual_account", "actual_transaction"}
 }
 
 // NewStruct makes a new struct for that view or table.
@@ -37,25 +37,26 @@ func (v *viewBalanceChangesViewType) NewStruct() reform.Struct {
 
 // ViewBalanceChangesView represents view_balance_changes view or table in SQL database.
 var ViewBalanceChangesView = &viewBalanceChangesViewType{
-	s: parse.StructInfo{Type: "ViewBalanceChanges", SQLSchema: "acca", SQLName: "view_balance_changes", Fields: []parse.FieldInfo{{Name: "ChID", Type: "int64", Column: "ch_id"}, {Name: "TxID", Type: "int64", Column: "tx_id"}, {Name: "AccID", Type: "int64", Column: "acc_id"}, {Name: "CurrID", Type: "int64", Column: "curr_id"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Balance", Type: "int64", Column: "balance"}, {Name: "BalanceAccepted", Type: "int64", Column: "balance_accepted"}, {Name: "Invoice", Type: "InvoiceFromBalanceChanges", Column: "invoice"}, {Name: "Transaction", Type: "TransactionFromBalanceChanges", Column: "transaction"}, {Name: "Operations", Type: "*Operations", Column: "operations"}, {Name: "Account", Type: "AccountFromBalanceChanges", Column: "actual_account"}, {Name: "ActualTransaction", Type: "TransactionFromBalanceChanges", Column: "actual_transaction"}}, PKFieldIndex: -1},
+	s: parse.StructInfo{Type: "ViewBalanceChanges", SQLSchema: "acca", SQLName: "view_balance_changes", Fields: []parse.FieldInfo{{Name: "ClientID", Type: "*int64", Column: "client_id"}, {Name: "ChID", Type: "int64", Column: "ch_id"}, {Name: "TxID", Type: "int64", Column: "tx_id"}, {Name: "AccID", Type: "int64", Column: "acc_id"}, {Name: "CurrID", Type: "int64", Column: "curr_id"}, {Name: "Amount", Type: "int64", Column: "amount"}, {Name: "Balance", Type: "int64", Column: "balance"}, {Name: "BalanceAccepted", Type: "int64", Column: "balance_accepted"}, {Name: "Invoice", Type: "InvoiceFromBalanceChanges", Column: "invoice"}, {Name: "Transaction", Type: "TransactionFromBalanceChanges", Column: "transaction"}, {Name: "Operations", Type: "*Operations", Column: "operations"}, {Name: "Account", Type: "AccountFromBalanceChanges", Column: "actual_account"}, {Name: "ActualTransaction", Type: "TransactionFromBalanceChanges", Column: "actual_transaction"}}, PKFieldIndex: -1},
 	z: new(ViewBalanceChanges).Values(),
 }
 
 // String returns a string representation of this struct or record.
 func (s ViewBalanceChanges) String() string {
-	res := make([]string, 12)
-	res[0] = "ChID: " + reform.Inspect(s.ChID, true)
-	res[1] = "TxID: " + reform.Inspect(s.TxID, true)
-	res[2] = "AccID: " + reform.Inspect(s.AccID, true)
-	res[3] = "CurrID: " + reform.Inspect(s.CurrID, true)
-	res[4] = "Amount: " + reform.Inspect(s.Amount, true)
-	res[5] = "Balance: " + reform.Inspect(s.Balance, true)
-	res[6] = "BalanceAccepted: " + reform.Inspect(s.BalanceAccepted, true)
-	res[7] = "Invoice: " + reform.Inspect(s.Invoice, true)
-	res[8] = "Transaction: " + reform.Inspect(s.Transaction, true)
-	res[9] = "Operations: " + reform.Inspect(s.Operations, true)
-	res[10] = "Account: " + reform.Inspect(s.Account, true)
-	res[11] = "ActualTransaction: " + reform.Inspect(s.ActualTransaction, true)
+	res := make([]string, 13)
+	res[0] = "ClientID: " + reform.Inspect(s.ClientID, true)
+	res[1] = "ChID: " + reform.Inspect(s.ChID, true)
+	res[2] = "TxID: " + reform.Inspect(s.TxID, true)
+	res[3] = "AccID: " + reform.Inspect(s.AccID, true)
+	res[4] = "CurrID: " + reform.Inspect(s.CurrID, true)
+	res[5] = "Amount: " + reform.Inspect(s.Amount, true)
+	res[6] = "Balance: " + reform.Inspect(s.Balance, true)
+	res[7] = "BalanceAccepted: " + reform.Inspect(s.BalanceAccepted, true)
+	res[8] = "Invoice: " + reform.Inspect(s.Invoice, true)
+	res[9] = "Transaction: " + reform.Inspect(s.Transaction, true)
+	res[10] = "Operations: " + reform.Inspect(s.Operations, true)
+	res[11] = "Account: " + reform.Inspect(s.Account, true)
+	res[12] = "ActualTransaction: " + reform.Inspect(s.ActualTransaction, true)
 	return strings.Join(res, ", ")
 }
 
@@ -63,6 +64,7 @@ func (s ViewBalanceChanges) String() string {
 // Returned interface{} values are never untyped nils.
 func (s *ViewBalanceChanges) Values() []interface{} {
 	return []interface{}{
+		s.ClientID,
 		s.ChID,
 		s.TxID,
 		s.AccID,
@@ -82,6 +84,7 @@ func (s *ViewBalanceChanges) Values() []interface{} {
 // Returned interface{} values are never untyped nils.
 func (s *ViewBalanceChanges) Pointers() []interface{} {
 	return []interface{}{
+		&s.ClientID,
 		&s.ChID,
 		&s.TxID,
 		&s.AccID,
