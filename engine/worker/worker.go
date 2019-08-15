@@ -41,7 +41,9 @@ func SubToNATS(
 				}
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
+					//return
 				}
+				// TODO отправить клиенту сообщение для GetUpdates
 				return
 			}
 		}
@@ -71,7 +73,9 @@ func SubToNATS(
 				}
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
+					//return
 				}
+				// TODO отправить клиенту сообщение для GetUpdates
 				return
 			}
 		}
