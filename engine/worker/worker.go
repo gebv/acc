@@ -9,6 +9,7 @@ import (
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/services/updater"
 	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 )
@@ -41,9 +42,17 @@ func SubToNATS(
 				}
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
-					//return
+					return
 				}
-				// TODO отправить клиенту сообщение для GetUpdates
+				if err := nc.Publish(updater.SubjectFromInvoice(m.ClientID, m.InvoiceID), &updater.Update{
+					UpdatedInvoice: &updater.UpdatedInvoice{
+						InvoiceID: m.InvoiceID,
+						Status:    m.Status,
+					},
+				}); err != nil {
+					log.Println("Failed publish invoice. ", err)
+					return
+				}
 				return
 			}
 		}
@@ -73,9 +82,17 @@ func SubToNATS(
 				}
 				if err := tx.Commit(); err != nil {
 					log.Println("Failed tx commit. ", err)
-					//return
+					return
 				}
-				// TODO отправить клиенту сообщение для GetUpdates
+				if err := nc.Publish(updater.SubjectFromTransaction(m.ClientID, m.TransactionID), &updater.Update{
+					UpdatedTransaction: &updater.UpdatedTransaction{
+						TransactionID: m.TransactionID,
+						Status:        m.Status,
+					},
+				}); err != nil {
+					log.Println("Failed publish transaction. ", err)
+					return
+				}
 				return
 			}
 		}
