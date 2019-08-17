@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
@@ -20,6 +21,11 @@ import (
 )
 
 type helperData struct {
+	rw               sync.RWMutex
+	accU             api.UpdatesClient
+	update           api.Updates_GetUpdateClient
+	updates          []*api.Update
+	updateCh         chan *api.Update
 	accC             api.AccountsClient
 	invC             api.InvoicesClient
 	authCtx          context.Context
@@ -34,11 +40,13 @@ type helperData struct {
 	tstrategies      map[string]string
 }
 
-func NewHelperData() *helperData {
-
+func NewHelperData(t *testing.T) *helperData {
 	h := helperData{
-		accC: api.NewAccountsClient(Conn),
-		invC: api.NewInvoicesClient(Conn),
+		accU:     api.NewUpdatesClient(Conn),
+		updates:  make([]*api.Update, 0, 100),
+		updateCh: make(chan *api.Update, 100),
+		accC:     api.NewAccountsClient(Conn),
+		invC:     api.NewInvoicesClient(Conn),
 		authCtx: metadata.NewOutgoingContext(Ctx, metadata.New(map[string]string{
 			accessTokenMDKey: AccessToken,
 		})),
@@ -60,11 +68,93 @@ func NewHelperData() *helperData {
 			"moedelo":         new(moedelo.Strategy).Name().String(),
 		},
 	}
+	res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
+	require.NoError(t, err)
+	h.update = res
+	go func() {
+		for {
+			u, err := h.update.Recv()
+			if err != nil {
+				return
+			}
+			h.rw.Lock()
+			h.updates = append(h.updates, u)
+			h.rw.Unlock()
+			h.updateCh <- u
+		}
+	}()
 	return &h
 }
 
-func (h *helperData) Sleep(s int) {
-	time.Sleep(time.Duration(s) * time.Second)
+func (h *helperData) CompareUpdates(updates []*api.Update) func(t *testing.T) {
+	return func(t *testing.T) {
+		h.rw.RLock()
+		defer h.rw.RUnlock()
+		require.Len(t, h.updates, len(updates))
+		for i, u := range updates {
+			if u.GetUpdatedInvoice() != nil {
+				require.EqualValues(
+					t,
+					u.GetUpdatedInvoice().GetInvoiceId(),
+					h.updates[i].GetUpdatedInvoice().GetInvoiceId(),
+				)
+				require.EqualValues(
+					t,
+					u.GetUpdatedInvoice().GetStatus(),
+					h.updates[i].GetUpdatedInvoice().GetStatus(),
+				)
+			} else {
+				require.EqualValues(
+					t,
+					u.GetUpdatedTransaction().GetTransactionId(),
+					h.updates[i].GetUpdatedTransaction().GetTransactionId(),
+				)
+				require.EqualValues(
+					t,
+					u.GetUpdatedTransaction().GetStatus(),
+					h.updates[i].GetUpdatedTransaction().GetStatus(),
+				)
+			}
+		}
+	}
+}
+
+func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) func(t *testing.T) {
+	return func(t *testing.T) {
+		timer := time.NewTimer(33 * time.Second)
+		defer timer.Stop()
+		for {
+			select {
+			case u := <-h.updateCh:
+				if u.GetUpdatedInvoice().GetInvoiceId() == h.invoiceIDs[invKey] &&
+					u.GetUpdatedInvoice().GetStatus() == invStatus {
+					return
+				}
+			case <-timer.C:
+				t.Error("timeout")
+				return
+			}
+		}
+	}
+}
+
+func (h *helperData) WaitTransaction(txKey string, txStatus api.TxStatus) func(t *testing.T) {
+	return func(t *testing.T) {
+		timer := time.NewTimer(33 * time.Second)
+		defer timer.Stop()
+		for {
+			select {
+			case u := <-h.updateCh:
+				if u.GetUpdatedTransaction().GetTransactionId() == h.transactionIDs[txKey] &&
+					u.GetUpdatedTransaction().GetStatus() == txStatus {
+					return
+				}
+			case <-timer.C:
+				t.Error("timeout")
+				return
+			}
+		}
+	}
 }
 
 func (h *helperData) CreateCurrency(key string) func(t *testing.T) {
