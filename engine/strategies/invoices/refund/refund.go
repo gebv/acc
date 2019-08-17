@@ -201,6 +201,60 @@ func (s *Strategy) load() {
 		)
 		s.s.Add(
 			ffsm.State(engine.DRAFT_I),
+			ffsm.State(engine.ACCEPTED_I),
+			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
+				invID, ok := payload.(int64)
+				if !ok {
+					log.Println("Invoice bad Payload: ", payload)
+					return
+				}
+				tx := strategies.GetTXContext(ctx)
+				if tx == nil {
+					return ctx, errors.New("Not reform tx in context.")
+				}
+				inv := engine.Invoice{InvoiceID: invID}
+				if err := tx.Reload(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
+				}
+				if inv.Strategy != nameStrategy.String() {
+					return ctx, errors.New("Invoice strategy not nameStrategy.")
+				}
+				if inv.Status != engine.DRAFT_I {
+					return ctx, errors.New("Invoice status not auth.")
+				}
+				// Установить статус куда происходит переход
+				ns := engine.ACCEPTED_I
+				inv.NextStatus = &ns
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
+				next := true
+				list, err := tx.SelectAllFrom(engine.TransactionTable, "WHERE invoice_id = $1", invID)
+				if err != nil {
+					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
+				}
+				for _, v := range list {
+					tr := v.(*engine.Transaction)
+					if !tr.Status.Match(engine.ACCEPTED_TX) {
+						next = false
+						break
+					}
+				}
+				if !next {
+					return ctx, nil
+				}
+				// Установить статус после проделанных операций
+				inv.Status = engine.ACCEPTED_I
+				inv.NextStatus = nil
+				if err := tx.Save(&inv); err != nil {
+					return ctx, errors.Wrap(err, "Failed save invoice by ID.")
+				}
+				return ctx, nil
+			},
+			"draft>accepted",
+		)
+		s.s.Add(
+			ffsm.State(engine.DRAFT_I),
 			ffsm.State(engine.MREJECTED_I),
 			func(ctx context.Context, payload ffsm.Payload) (context context.Context, e error) {
 				invID, ok := payload.(int64)
