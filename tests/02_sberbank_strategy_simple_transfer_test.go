@@ -9,7 +9,7 @@ import (
 )
 
 func Test02_01SberbankStrategy(t *testing.T) {
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -49,7 +49,9 @@ func Test02_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(15)
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.1.1", "curr1"))
 
@@ -59,7 +61,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "APPROVED", api.TxStatus_HOLD_TX))
 
@@ -70,7 +72,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AcceptInvoice", h.AcceptInvoice("inv1"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_ACCEPTED_TX))
 
@@ -82,7 +84,7 @@ func Test02_01SberbankStrategy(t *testing.T) {
 }
 
 func Test02_02SberbankStrategy(t *testing.T) {
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -122,7 +124,9 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(15)
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.2.1", "curr1"))
 
@@ -132,7 +136,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "APPROVED", api.TxStatus_HOLD_TX))
 
@@ -142,9 +146,11 @@ func Test02_02SberbankStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		h.Sleep(10)
+		// Так как отмена транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_REJECTED_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_REJECTED_TX))
 
-		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_REJECTED_TX))
+		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "REVERSED", api.TxStatus_REJECTED_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.2.1", "curr1"))
 
@@ -154,7 +160,7 @@ func Test02_02SberbankStrategy(t *testing.T) {
 }
 
 func Test02_03SberbankStrategy(t *testing.T) {
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -202,7 +208,9 @@ func Test02_03SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(15)
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc2.3.1", "curr1"))
 
@@ -221,7 +229,7 @@ func Test02_03SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", "DEPOSITED", api.TxStatus_ACCEPTED_TX))
 

@@ -14,7 +14,7 @@ import (
 
 func Test03_01MoedeloStrategy(t *testing.T) {
 
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -68,7 +68,9 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(45) // listener updated every 30 second
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc3.1.1", "curr1"))
 
@@ -93,9 +95,10 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			},
 				&status,
 			)
+			require.NoError(t, err)
 		})
 
-		h.Sleep(45) // listener updated every 30 second
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.PartiallyPaid.String(), api.TxStatus_HOLD_TX))
 
@@ -125,9 +128,10 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 			},
 				&status,
 			)
+			require.NoError(t, err)
 		})
 
-		h.Sleep(45) // listener updated every 30 second
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_ACCEPTED_TX))
 
@@ -147,7 +151,7 @@ func Test03_01MoedeloStrategy(t *testing.T) {
 
 func Test03_02MoedeloStrategy(t *testing.T) {
 
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -201,7 +205,9 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(45) // listener updated every 30 second
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc3.2.1", "curr1"))
 
@@ -226,15 +232,18 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 			},
 				&status,
 			)
+			require.NoError(t, err)
 		})
 
-		h.Sleep(45) // listener updated every 30 second
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.PartiallyPaid.String(), api.TxStatus_HOLD_TX))
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		h.Sleep(10)
+		// Так как отмена транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_REJECTED_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_REJECTED_TX))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_REJECTED_TX))
 
@@ -245,7 +254,7 @@ func Test03_02MoedeloStrategy(t *testing.T) {
 }
 
 func Test03_03MoedeloStrategy(t *testing.T) {
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -307,7 +316,9 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(45) // listener updated every 30 second
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc3.3.1", "curr1"))
 
@@ -341,9 +352,10 @@ func Test03_03MoedeloStrategy(t *testing.T) {
 			},
 				&status,
 			)
+			require.NoError(t, err)
 		})
 
-		h.Sleep(45) // listener updated every 30 second
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", moedelo.Paid.String(), api.TxStatus_ACCEPTED_TX))
 
