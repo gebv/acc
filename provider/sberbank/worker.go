@@ -1,13 +1,10 @@
 package sberbank
 
 import (
-	"context"
 	"encoding/json"
-	"time"
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
-	"github.com/gebv/acca/ffsm"
 	"go.uber.org/zap"
 )
 
@@ -22,6 +19,7 @@ const (
 
 type MessageToSberbank struct {
 	Command       Command
+	ClientID      *int64
 	TransactionID int64
 	Strategy      string
 	Status        engine.TransactionStatus
@@ -98,7 +96,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 			tr.ProviderOperStatus = &status
 			tr.ProviderOperUrl = &urlForm
 			if err := tx.Save(&tr); err != nil {
-				p.l.Error("Failed reload transaction. ", zap.Error(err))
+				p.l.Error("Failed save transaction. ", zap.Error(err))
 				if err := tx.Rollback(); err != nil {
 					p.l.Error("Failed tx rollback. ", zap.Error(err))
 				}
@@ -106,34 +104,15 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 			}
 			if err := tx.Commit(); err != nil {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
-			}
-			tx, err := p.db.Begin()
-			if err != nil {
-				p.l.Error("Failed begin transaction DB.", zap.Error(err))
 				return
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			ctx = strategies.SetNatsToContext(ctx, p.nc)
-			ctx = strategies.SetTXContext(ctx, tx)
-			if name := strategies.ExistTrName(m.Strategy); name != strategies.UNDEFINED_TR {
-				if str := strategies.GetTransactionStrategy(name); str != nil {
-					err := str.Dispatch(ctx, ffsm.State(m.Status), m.TransactionID)
-					if err != nil {
-						p.l.Error("Failed dispatch transaction strategy. ", zap.Error(err))
-						if err := tx.Rollback(); err != nil {
-							p.l.Error("Failed tx rollback. ", zap.Error(err))
-						}
-						return
-					}
-					if err := tx.Commit(); err != nil {
-						p.l.Error("Failed tx commit. ", zap.Error(err))
-					}
-					return
-				}
-			}
-			if err := tx.Rollback(); err != nil {
-				p.l.Error("Failed tx rollback. ", zap.Error(err))
+			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+				ClientID:      m.ClientID,
+				TransactionID: m.TransactionID,
+				Strategy:      m.Strategy,
+				Status:        m.Status,
+			}); err != nil {
+				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
 		case ReverseForHold:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
@@ -187,36 +166,26 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				}
 				return
 			}
-			if err := tx.Commit(); err != nil {
-				p.l.Error("Failed tx commit. ", zap.Error(err))
-			}
-			tx, err := p.db.Begin()
-			if err != nil {
-				p.l.Error("Failed begin transaction DB.", zap.Error(err))
+			status := REVERSED
+			tr.ProviderOperStatus = &status
+			if err := tx.Save(&tr); err != nil {
+				p.l.Error("Failed save transaction. ", zap.Error(err))
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
 				return
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			ctx = strategies.SetNatsToContext(ctx, p.nc)
-			ctx = strategies.SetTXContext(ctx, tx)
-			if name := strategies.ExistTrName(m.Strategy); name != strategies.UNDEFINED_TR {
-				if str := strategies.GetTransactionStrategy(name); str != nil {
-					err := str.Dispatch(ctx, ffsm.State(m.Status), m.TransactionID)
-					if err != nil {
-						p.l.Error("Failed dispatch transaction strategy. ", zap.Error(err))
-						if err := tx.Rollback(); err != nil {
-							p.l.Error("Failed tx rollback. ", zap.Error(err))
-						}
-						return
-					}
-					if err := tx.Commit(); err != nil {
-						p.l.Error("Failed tx commit. ", zap.Error(err))
-					}
-					return
-				}
+			if err := tx.Commit(); err != nil {
+				p.l.Error("Failed tx commit. ", zap.Error(err))
+				return
 			}
-			if err := tx.Rollback(); err != nil {
-				p.l.Error("Failed tx rollback. ", zap.Error(err))
+			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+				ClientID:      m.ClientID,
+				TransactionID: m.TransactionID,
+				Strategy:      m.Strategy,
+				Status:        m.Status,
+			}); err != nil {
+				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
 		case Refund:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
@@ -280,34 +249,15 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 			}
 			if err := tx.Commit(); err != nil {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
-			}
-			tx, err := p.db.Begin()
-			if err != nil {
-				p.l.Error("Failed begin transaction DB.", zap.Error(err))
 				return
 			}
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-			ctx = strategies.SetNatsToContext(ctx, p.nc)
-			ctx = strategies.SetTXContext(ctx, tx)
-			if name := strategies.ExistTrName(m.Strategy); name != strategies.UNDEFINED_TR {
-				if str := strategies.GetTransactionStrategy(name); str != nil {
-					err := str.Dispatch(ctx, ffsm.State(m.Status), m.TransactionID)
-					if err != nil {
-						p.l.Error("Failed dispatch transaction strategy. ", zap.Error(err))
-						if err := tx.Rollback(); err != nil {
-							p.l.Error("Failed tx rollback. ", zap.Error(err))
-						}
-						return
-					}
-					if err := tx.Commit(); err != nil {
-						p.l.Error("Failed tx commit. ", zap.Error(err))
-					}
-					return
-				}
-			}
-			if err := tx.Rollback(); err != nil {
-				p.l.Error("Failed tx rollback. ", zap.Error(err))
+			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+				ClientID:      m.ClientID,
+				TransactionID: m.TransactionID,
+				Strategy:      m.Strategy,
+				Status:        m.Status,
+			}); err != nil {
+				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
 		default:
 			p.l.Warn("Not processed command in message of sberbank in nats.")
