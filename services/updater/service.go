@@ -32,10 +32,8 @@ func (s *Server) GetUpdate(req *api.GetUpdateRequest, stream api.Updates_GetUpda
 
 	var chErr = make(chan error)
 	s.l.Info("Subscribed.", zap.Int64("client_id", clientID))
-	sub, err := s.nc.Subscribe(fmt.Sprintf("client.%d.>", clientID), func(m *struct{}) {
-		// TODO обработать сообщение и отправить в stream
-		var u *api.Update
-		if err := stream.Send(u); err != nil {
+	sub, err := s.nc.Subscribe(fmt.Sprintf("client.%d.>", clientID), func(m *Update) {
+		if err := stream.Send(convertUpdate(m)); err != nil {
 			chErr <- err
 		}
 	})
@@ -83,4 +81,18 @@ func (s *Server) GetUpdate(req *api.GetUpdateRequest, stream api.Updates_GetUpda
 	}
 
 	return nil
+}
+
+func SubjectFromInvoice(clientID *int64, invoiceID int64) string {
+	if clientID == nil {
+		return fmt.Sprintf("client.nil.invoice.%d", invoiceID)
+	}
+	return fmt.Sprintf("client.%d.invoice.%d", *clientID, invoiceID)
+}
+
+func SubjectFromTransaction(clientID *int64, transactionID int64) string {
+	if clientID == nil {
+		return fmt.Sprintf("client.nil.transaction.%d", transactionID)
+	}
+	return fmt.Sprintf("client.%d.transaction.%d", *clientID, transactionID)
 }
