@@ -30,6 +30,7 @@ import (
 	"github.com/gebv/acca/services/accounts"
 	"github.com/gebv/acca/services/auditor"
 	"github.com/gebv/acca/services/invoices"
+	"github.com/gebv/acca/services/updater"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo"
@@ -120,6 +121,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	sUpdater := updater.NewServer(nc)
+
 	sberProvider := sberbank.NewProvider(
 		db,
 		sberbank.Config{
@@ -174,6 +177,7 @@ func main() {
 
 	api.RegisterAccountsServer(s, accServ)
 	api.RegisterInvoicesServer(s, invServ)
+	api.RegisterUpdatesServer(s, sUpdater)
 
 	// graceful stop
 	go func() {
