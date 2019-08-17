@@ -111,12 +111,14 @@ func GetNatsFromContext(ctx context.Context) *nats.EncodedConn {
 }
 
 type MessageUpdateTransaction struct {
+	ClientID      *int64
 	TransactionID int64
 	Strategy      string
 	Status        engine.TransactionStatus
 }
 
 type MessageUpdateInvoice struct {
+	ClientID  *int64
 	InvoiceID int64
 	Strategy  string
 	Status    engine.InvoiceStatus

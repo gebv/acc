@@ -105,6 +105,7 @@ func (s *Strategy) load() {
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.AUTH_TX,
@@ -598,6 +599,7 @@ func (s *Strategy) load() {
 					tr := v.(*engine.Transaction)
 
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,
@@ -653,6 +655,7 @@ func (s *Strategy) load() {
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.ACCEPTED_TX,
@@ -708,6 +711,7 @@ func (s *Strategy) load() {
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,
@@ -763,6 +767,7 @@ func (s *Strategy) load() {
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.ACCEPTED_TX,
@@ -818,6 +823,7 @@ func (s *Strategy) load() {
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+						ClientID:      tr.ClientID,
 						TransactionID: tr.TransactionID,
 						Strategy:      tr.Strategy,
 						Status:        engine.REJECTED_TX,

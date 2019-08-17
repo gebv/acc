@@ -155,6 +155,7 @@ func (s *Strategy) load() {
 				}
 				err = nc.Publish(sberbank.SUBJECT, &sberbank.MessageToSberbank{
 					Command:       sberbank.Refund,
+					ClientID:      tr.ClientID,
 					TransactionID: tr.TransactionID,
 					Strategy:      tr.Strategy,
 					Status:        engine.AUTH_TX,
@@ -227,6 +228,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
 				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    invStatus,
@@ -276,6 +278,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
 				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,

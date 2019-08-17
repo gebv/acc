@@ -62,10 +62,9 @@ func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.
 	fsm := ffsm.MachineFrom(s.s, &st)
 	err := fsm.Dispatch(ctx, state, payload)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
-	return tx.Commit()
+	return nil
 }
 
 func (s *Strategy) load() {
@@ -128,6 +127,7 @@ func (s *Strategy) load() {
 					return ctx, errors.New("Not nats connection in context.")
 				}
 				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    invStatus,
@@ -191,6 +191,7 @@ func (s *Strategy) load() {
 					return ctx, errors.New("Not nats connection in context.")
 				}
 				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.ACCEPTED_I,
@@ -254,6 +255,7 @@ func (s *Strategy) load() {
 					return ctx, errors.New("Not nats connection in context.")
 				}
 				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,
@@ -303,6 +305,7 @@ func (s *Strategy) load() {
 					return ctx, errors.New("Not nats connection in context.")
 				}
 				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,

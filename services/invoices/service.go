@@ -318,6 +318,7 @@ func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*
 		return nil, errors.New("not transition to auth (invoice is not draft)")
 	}
 	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.AUTH_I,
@@ -339,6 +340,7 @@ func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest
 		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.MACCEPTED_I,
@@ -360,6 +362,7 @@ func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest
 		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.MREJECTED_I,
@@ -384,6 +387,7 @@ func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTx
 		return nil, errors.New("not transition to auth (transaction is not draft)")
 	}
 	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.AUTH_TX,
@@ -405,6 +409,7 @@ func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.Ac
 		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.ACCEPTED_TX,
@@ -426,6 +431,7 @@ func (s Server) RejectTx(ctx context.Context, req *api.RejectTxRequest) (*api.Re
 		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
 	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.REJECTED_TX,
