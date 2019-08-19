@@ -23,8 +23,8 @@ SELECT t.*,
                        'updated_at', o.updated_at
                    )
            ) AS operations
-FROM transactions AS t
-         INNER JOIN operations AS o USING (tx_id)
+FROM acca.transactions AS t
+         INNER JOIN acca.operations AS o USING (tx_id)
 GROUP BY 1;
 
 CREATE OR REPLACE VIEW acca.v_invoices as
@@ -48,8 +48,8 @@ SELECT i.*,
                        'operations', t.operations
                    )
            ) AS transactions
-FROM invoices AS i
-         INNER JOIN v_transactions AS t USING (invoice_id)
+FROM acca.invoices AS i
+         INNER JOIN acca.v_transactions AS t USING (invoice_id)
 GROUP BY 1;
 
 COMMIT;

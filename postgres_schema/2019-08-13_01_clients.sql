@@ -7,15 +7,18 @@ CREATE TABLE acca.clients
     created_at   timestamp with time zone NOT NULL
 );
 
-DROP INDEX currencies_key_gist_idx;
-ALTER TABLE currencies
+DROP INDEX acca.currencies_key_gist_idx;
+
+ALTER TABLE acca.currencies
     ALTER COLUMN key TYPE VARCHAR USING key::VARCHAR,
     ADD CONSTRAINT len_key CHECK ( length(key) > 2);
-ALTER TABLE currencies
+ALTER TABLE acca.currencies
     ADD client_id BIGINT REFERENCES acca.clients (client_id);
-DROP INDEX currencies_key_uniq_idx;
+
+DROP INDEX acca.currencies_key_uniq_idx;
+
 CREATE UNIQUE INDEX currencies_key_uniq_idx
-    ON currencies (client_id, key);
+    ON acca.currencies (client_id, key);
 
 ALTER TABLE acca.accounts
     ADD COLUMN client_id BIGINT REFERENCES acca.clients (client_id);
@@ -145,8 +148,8 @@ SELECT t.*,
                        'updated_at', o.updated_at
                    )
            ) AS operations
-FROM transactions AS t
-         INNER JOIN operations AS o USING (tx_id)
+FROM acca.transactions AS t
+         INNER JOIN acca.operations AS o USING (tx_id)
 GROUP BY 1;
 
 CREATE OR REPLACE VIEW acca.v_invoices as
@@ -170,8 +173,8 @@ SELECT i.*,
                        'operations', t.operations
                    )
            ) AS transactions
-FROM invoices AS i
-         INNER JOIN v_transactions AS t USING (invoice_id)
+FROM acca.invoices AS i
+         INNER JOIN acca.v_transactions AS t USING (invoice_id)
 GROUP BY 1;
 
 
