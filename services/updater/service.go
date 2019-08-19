@@ -85,14 +85,14 @@ func (s *Server) GetUpdate(req *api.GetUpdateRequest, stream api.Updates_GetUpda
 
 func SubjectFromInvoice(clientID *int64, invoiceID int64) string {
 	if clientID == nil {
-		return fmt.Sprintf("client.nil.invoice.%d", invoiceID)
+		return fmt.Sprintf("internal.invoice.%d", invoiceID)
 	}
 	return fmt.Sprintf("client.%d.invoice.%d", *clientID, invoiceID)
 }
 
 func SubjectFromTransaction(clientID *int64, transactionID int64) string {
 	if clientID == nil {
-		return fmt.Sprintf("client.nil.transaction.%d", transactionID)
+		return fmt.Sprintf("internal.transaction.%d", transactionID)
 	}
 	return fmt.Sprintf("client.%d.transaction.%d", *clientID, transactionID)
 }
