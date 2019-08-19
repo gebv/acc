@@ -6,6 +6,7 @@ import (
 
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine"
+	"github.com/gebv/acca/services"
 	"github.com/gebv/acca/services/invoices"
 	"google.golang.org/grpc/codes"
 	"gopkg.in/reform.v1"
@@ -22,9 +23,22 @@ type Server struct {
 }
 
 func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountRequest) (*api.CreateAccountResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	m := engine.NewAccountManager(s.db)
 
-	accID, err := m.CreateAccount(req.GetCurrencyId(), req.GetKey(), req.GetMeta())
+	curr, err := m.GetCurrency(clientID, req.GetCurrencyKey())
+	if err != nil {
+		if err == engine.ErrCurrencyNotExists {
+			return nil, api.MakeError(codes.NotFound, "currency not found")
+		}
+		if err == engine.ErrInvalidCurrencyKey {
+			return nil, api.MakeError(codes.InvalidArgument, "Invalid key.")
+		}
+		return nil, errors.Wrapf(err, "Failed get currency %q.", req.GetKey())
+	}
+
+	accID, err := m.CreateAccount(clientID, curr.CurrencyID, req.GetKey(), req.GetMeta())
 
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed create new account %q.", req.GetKey())
@@ -35,10 +49,14 @@ func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountReques
 }
 
 func (s *Server) GetCurrency(ctx context.Context, req *api.GetCurrencyRequest) (*api.GetCurrencyResponse, error) {
-	curr, err := engine.NewAccountManager(s.db).GetCurrency(req.GetKey())
+	clientID := services.GetClient(ctx).ClientID
+	curr, err := engine.NewAccountManager(s.db).GetCurrency(clientID, req.GetKey())
 	if err != nil {
 		if err == engine.ErrCurrencyNotExists {
 			return nil, api.MakeError(codes.NotFound, "currency not found")
+		}
+		if err == engine.ErrInvalidCurrencyKey {
+			return nil, api.MakeError(codes.InvalidArgument, "Invalid key.")
 		}
 		return nil, errors.Wrapf(err, "Failed get currency %q.", req.GetKey())
 	}
@@ -52,19 +70,34 @@ func (s *Server) GetCurrency(ctx context.Context, req *api.GetCurrencyRequest) (
 }
 
 func (s *Server) CreateCurrency(ctx context.Context, req *api.CreateCurrencyRequest) (*api.CreateCurrencyResponse, error) {
-	currID, err := engine.NewAccountManager(s.db).UpsertCurrency(req.GetKey(), req.GetMeta())
+	clientID := services.GetClient(ctx).ClientID
+	err := engine.NewAccountManager(s.db).UpsertCurrency(clientID, req.GetKey(), req.GetMeta())
 	if err != nil {
+		if err == engine.ErrInvalidCurrencyKey {
+			return nil, api.MakeError(codes.InvalidArgument, "Invalid key.")
+		}
 		return nil, errors.Wrapf(err, "Failed create new currency %q.", req.GetKey())
 	}
-	return &api.CreateCurrencyResponse{
-		CurrencyId: currID,
-	}, nil
+	return &api.CreateCurrencyResponse{}, nil
 }
 
 func (s *Server) GetAccountByKey(ctx context.Context, req *api.GetAccountByKeyRequest) (*api.GetAccountByKeyResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
+
 	m := engine.NewAccountManager(s.db)
 
-	acc, err := m.FindAccountByKey(req.GetCurrId(), req.GetKey())
+	curr, err := m.GetCurrency(clientID, req.GetCurrKey())
+	if err != nil {
+		if err == engine.ErrCurrencyNotExists {
+			return nil, api.MakeError(codes.NotFound, "currency not found")
+		}
+		if err == engine.ErrInvalidCurrencyKey {
+			return nil, api.MakeError(codes.InvalidArgument, "Invalid key.")
+		}
+		return nil, errors.Wrapf(err, "Failed get currency %q.", req.GetKey())
+	}
+
+	acc, err := m.FindAccountByKey(clientID, curr.CurrencyID, req.GetKey())
 	if err != nil {
 		if err == engine.ErrAccountNotExists {
 			return nil, api.MakeError(codes.NotFound, "account not found")
@@ -84,12 +117,13 @@ func (s *Server) GetAccountByKey(ctx context.Context, req *api.GetAccountByKeyRe
 }
 
 func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequest) (*api.BalanceChangesResponse, error) {
+	clientID := services.GetClient(ctx).ClientID
 
 	var tail string
-	args := make([]interface{}, 0, 3)
+	args := make([]interface{}, 0, 4)
 	if req.GetAccId() != nil {
-		tail += "WHERE acc_id = $1"
-		args = append(args, req.GetAccId())
+		tail += "WHERE client_id = $1 AND acc_id = $2"
+		args = append(args, clientID, req.GetAccId())
 	}
 	tail += fmt.Sprintf(" OFFSET $%d LIMIT $%d", len(args)+1, len(args)+2)
 	args = append(args, req.GetOffset(), req.GetLimit())

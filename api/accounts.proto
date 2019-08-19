@@ -35,7 +35,6 @@ message CreateCurrencyRequest {
 
 
 message CreateCurrencyResponse {
-    int64 currency_id = 1;
 }
 
 message GetCurrencyRequest {
@@ -48,7 +47,7 @@ message GetCurrencyResponse {
 
 message CreateAccountRequest {
     string key = 1;
-    int64 currency_id = 2;
+    string currency_key = 2;
     google.protobuf.BytesValue meta = 3 [(gogoproto.wktpointer) = true];
 }
 
@@ -57,7 +56,7 @@ message CreateAccountResponse {
 }
 
 message GetAccountByKeyRequest {
-    int64 curr_id = 1;
+    string curr_key = 1;
     string key = 2;
 }
 

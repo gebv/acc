@@ -11,6 +11,7 @@ import (
 //reform:acca.currencies
 type Currency struct {
 	CurrencyID int64   `reform:"curr_id,pk"`
+	ClientID   *int64  `reform:"client_id"`
 	Key        string  `reform:"key"`
 	Meta       *[]byte `reform:"meta"`
 }
@@ -18,6 +19,7 @@ type Currency struct {
 //reform:acca.accounts
 type Account struct {
 	AccountID       int64     `reform:"acc_id,pk"`
+	ClientID        *int64    `reform:"client_id"`
 	CurrencyID      int64     `reform:"curr_id"`
 	Key             string    `reform:"key"`
 	Balance         int64     `reform:"balance"`

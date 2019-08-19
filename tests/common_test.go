@@ -10,8 +10,13 @@ import (
 )
 
 var (
-	Conn *grpc.ClientConn
-	Ctx  context.Context
+	Conn        *grpc.ClientConn
+	Ctx         context.Context
+	AccessToken string
+)
+
+const (
+	accessTokenMDKey = "access-token"
 )
 
 func assertGRPCError(t testing.TB, expected *status.Status, actual error) {

@@ -8,7 +8,7 @@ import (
 
 func Test01_01SimpleStrategy(t *testing.T) {
 
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -45,7 +45,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -82,7 +82,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -115,7 +115,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -129,7 +129,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AcceptInvoice", h.AcceptInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -163,7 +163,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -197,7 +197,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -207,7 +207,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -243,7 +243,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -277,7 +277,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -289,7 +289,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AcceptTx", h.AcceptTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -321,7 +321,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectTx", h.RejectTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -355,7 +355,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -365,7 +365,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectTx", h.RejectTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -420,7 +420,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -433,7 +433,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -487,7 +487,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -497,7 +497,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -509,7 +509,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AcceptTx", h.AcceptTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -561,7 +561,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -571,7 +571,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -583,7 +583,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AcceptTx", h.AcceptTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -595,7 +595,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AcceptTx", h.AcceptTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -647,7 +647,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -657,7 +657,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("AuthTx", h.AuthTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_WAIT_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -667,7 +667,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectTx", h.RejectTx("tx1"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 
@@ -677,7 +677,7 @@ func Test01_01SimpleStrategy(t *testing.T) {
 
 		t.Run("RejectTx", h.RejectTx("tx2"))
 
-		h.Sleep(3)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckBalances", h.CheckBalances("acc1.1.1", "curr1"))
 

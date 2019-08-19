@@ -12,7 +12,7 @@ import (
 )
 
 func Test04_01SberbankStrategy(t *testing.T) {
-	h := NewHelperData()
+	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
@@ -52,7 +52,9 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv1"))
 
-		h.Sleep(15)
+		// Так как авторизация транзакции проходит через 2 запроса.
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
+		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
 
@@ -62,14 +64,12 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("SendCardDataInSberbank", h.SendCardDataInSberbank("tx1"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
 		h.BalanceInc("acc4.1.1", 1000)
 		h.AcceptedBalanceInc("acc4.1.1", 1000)
 		h.BalanceInc("acc4.1.2", 1000)
 		h.AcceptedBalanceInc("acc4.1.2", 1000)
-
-		t.Run("CheckTransaction", h.CheckTransaction("tx1", api.TxStatus_ACCEPTED_TX))
 
 		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
 
@@ -141,7 +141,7 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("RejectInvoice", h.RejectInvoice("inv2"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv2", api.InvoiceStatus_REJECTED_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_REJECTED_TX))
 
@@ -200,7 +200,7 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv2"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv2", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_ACCEPTED_TX))
 
@@ -254,7 +254,7 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv2"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv2", api.InvoiceStatus_AUTH_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_DRAFT_TX))
 
@@ -313,7 +313,7 @@ func Test04_01SberbankStrategy(t *testing.T) {
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv2"))
 
-		h.Sleep(15)
+		t.Run("WaitInvoice", h.WaitInvoice("inv2", api.InvoiceStatus_ACCEPTED_I))
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_ACCEPTED_TX))
 

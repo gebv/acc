@@ -102,6 +102,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 			}
 			// Отправляем сообщение на переход транзакции в ACCEPTED
 			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.ACCEPTED_TX,
@@ -130,6 +131,7 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 				return err
 			}
 			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.HOLD_TX,
@@ -200,6 +202,7 @@ func (p *Provider) failSberbankWebhookHandler(c echo.Context) error {
 				return err
 			}
 			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.REJECTED_TX,

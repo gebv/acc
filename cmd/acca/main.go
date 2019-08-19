@@ -30,6 +30,7 @@ import (
 	"github.com/gebv/acca/services/accounts"
 	"github.com/gebv/acca/services/auditor"
 	"github.com/gebv/acca/services/invoices"
+	"github.com/gebv/acca/services/updater"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo"
@@ -48,10 +49,12 @@ import (
 )
 
 var (
-	VERSION         = "dev"
-	pgConnF         = flag.String("pg-conn", "postgres://acca:acca@127.0.0.1:5432/acca?sslmode=disable", "PostgreSQL connection string.")
-	grpcAddrsF      = flag.String("grpc-addrs", "127.0.0.1:10001", "gRPC listen address.")
-	grpcReflectionF = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
+	VERSION               = "dev"
+	pgConnF               = flag.String("pg-conn", "postgres://acca:acca@127.0.0.1:5432/acca?sslmode=disable", "PostgreSQL connection string.")
+	grpcAddrsF            = flag.String("grpc-addrs", "127.0.0.1:10001", "gRPC listen address.")
+	grpcReflectionF       = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
+	genAccessTokenF       = flag.Bool("gen-access-token", false, "access_token generation.")
+	createSystemAccountsF = flag.Bool("create-system-accounts", false, "creating a system accounts.")
 )
 
 func main() {
@@ -73,6 +76,21 @@ func main() {
 	_, err := db.Exec("SELECT version();")
 	if err != nil {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
+	}
+
+	if *genAccessTokenF {
+		zap.L().Info("Generation Access Token.")
+		client := services.NewClient()
+		if err := db.Save(client); err != nil {
+			zap.L().Error("Failed save client.", zap.Error(err))
+		}
+		fmt.Println("ACCESS TOKEN: ", client.AccessToken)
+		return
+	}
+
+	if *createSystemAccountsF {
+		zap.L().Info("Create system accounts.")
+		return
 	}
 
 	sNats, err := server.NewServer(&server.Options{
@@ -102,6 +120,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	sUpdater := updater.NewServer(nc)
 
 	sberProvider := sberbank.NewProvider(
 		db,
@@ -157,6 +177,7 @@ func main() {
 
 	api.RegisterAccountsServer(s, accServ)
 	api.RegisterInvoicesServer(s, invServ)
+	api.RegisterUpdatesServer(s, sUpdater)
 
 	// graceful stop
 	go func() {

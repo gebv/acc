@@ -12,6 +12,7 @@ import (
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
+	"github.com/gebv/acca/services/updater"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
 )
@@ -26,12 +27,17 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 	}
 	afterDate := *tm
 	var nextDate time.Time
+	var timeout bool
 	var skip bool
 	var push bool
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 	for ctx.Err() == nil {
-		<-ticker.C
+		if timeout {
+			<-ticker.C
+		} else {
+			timeout = true
+		}
 		_l.Debug("Get data in MD")
 		nextDate = time.Now()
 		listBill, err := p.GetListBills(&afterDate, &nextDate)
@@ -136,6 +142,15 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 						}
 						if err := store.SetStatus(orderID, MOEDELO, strconv.Itoa(int(bill.Status))); err != nil {
 							_l.Error("Failed set status to external transaction. ", zap.Error(err))
+						}
+						if err := p.nc.Publish(updater.SubjectFromTransaction(tr.ClientID, tr.TransactionID), &updater.Update{
+							UpdatedTransaction: &updater.UpdatedTransaction{
+								TransactionID: tr.TransactionID,
+								Status:        engine.TransactionStatus(status),
+							},
+						}); err != nil {
+							_l.Error("Failed publish transaction. ", zap.Error(err))
+							continue
 						}
 						continue
 					}

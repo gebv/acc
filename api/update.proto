@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package api;
+
+import "api/models.proto";
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.marshaler_all) = true;
+
+service Updates {
+    // Подписка на уведомления.
+    rpc GetUpdate (GetUpdateRequest) returns (stream Update) {
+    }
+}
+
+message GetUpdateRequest {
+}
+
+message UpdatedInvoice {
+    int64 invoice_id = 1;
+    InvoiceStatus status = 2;
+}
+
+message UpdatedTransaction {
+    int64 transaction_id = 1;
+    TxStatus status = 2;
+}
+
+message Update {
+    oneof type {
+        UpdatedInvoice updated_invoice = 1;
+        UpdatedTransaction updated_transaction = 2;
+    }
+}
