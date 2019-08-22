@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -99,12 +100,11 @@ func createAccessToken() string {
 	if err != nil {
 		panic(err)
 	}
-	if len(out) >= 79 {
-		accessToken := string(out)[15:79]
-		log.Println("ACCESS TOKEN: ", accessToken)
-		return accessToken
+	var conf map[string]interface{}
+	if err := json.Unmarshal(out, &conf); err != nil {
+		panic(err)
 	}
-	panic("Not create access token")
+	return conf["access_token"].(string)
 }
 
 func setup() {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -133,9 +134,14 @@ func main() {
 		if err != nil {
 			zap.L().Error("Failed create system account.", zap.Error(err))
 		}
-		fmt.Println("CURRENCY: rub")
-		fmt.Println("SYSTEM ACCOUNT ID: ", accID)
-		fmt.Println("ACCESS TOKEN: ", client.AccessToken)
+		conf := map[string]interface{}{
+			"currentcy":         "rub",
+			"system_account_id": accID,
+			"access_token":      client.AccessToken,
+		}
+		if err := json.NewEncoder(os.Stdout).Encode(conf); err != nil {
+			panic(err)
+		}
 		return
 	}
 
