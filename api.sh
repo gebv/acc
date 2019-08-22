@@ -6,7 +6,7 @@
 
 grpcurl \
   -rpc-header 'x-request-id: api-sh-test-123' \
-  -rpc-header 'access-token: cfb25eb22addb7d7edb743388a0f6b406e3fea368f2dd742c18a6a816791d74e' \
+  -rpc-header 'access-token: dcb01ad8bc58fb43d93eab37b08f3ba6b0011ceef64cb24abd29db0934e8bc6e' \
   -plaintext \
   -import-path ./ \
   -proto ./api/accounts.proto \
@@ -20,5 +20,5 @@ grpcurl \
   -proto google/protobuf/wrappers.proto \
   -v \
   -d $1 \
-  127.0.0.1:10001 \
+  127.0.0.1:10011 \
   $2

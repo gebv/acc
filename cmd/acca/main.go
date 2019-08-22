@@ -13,7 +13,24 @@ import (
 	"sync"
 	"time"
 
+	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	"github.com/labstack/echo"
+	echo_middleware "github.com/labstack/echo/middleware"
+	_ "github.com/lib/pq"
+	"github.com/nats-io/nats.go"
+	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"golang.org/x/sys/unix"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+	"gopkg.in/nats-io/gnatsd.v2/server"
+	"gopkg.in/reform.v1"
+	"gopkg.in/reform.v1/dialects/postgresql"
+
 	"github.com/gebv/acca/api"
+	"github.com/gebv/acca/engine"
 	_ "github.com/gebv/acca/engine/strategies/invoices/refund"
 	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
 	_ "github.com/gebv/acca/engine/strategies/transactions/moedelo"
@@ -31,30 +48,14 @@ import (
 	"github.com/gebv/acca/services/auditor"
 	"github.com/gebv/acca/services/invoices"
 	"github.com/gebv/acca/services/updater"
-	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	"github.com/labstack/echo"
-	echo_middleware "github.com/labstack/echo/middleware"
-	_ "github.com/lib/pq"
-	"github.com/nats-io/nats.go"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"golang.org/x/sys/unix"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-	"gopkg.in/nats-io/gnatsd.v2/server"
-	"gopkg.in/reform.v1"
-	"gopkg.in/reform.v1/dialects/postgresql"
 )
 
 var (
-	VERSION               = "dev"
-	pgConnF               = flag.String("pg-conn", "postgres://acca:acca@127.0.0.1:5432/acca?sslmode=disable", "PostgreSQL connection string.")
-	grpcAddrsF            = flag.String("grpc-addrs", "127.0.0.1:10001", "gRPC listen address.")
-	grpcReflectionF       = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
-	genAccessTokenF       = flag.Bool("gen-access-token", false, "access_token generation.")
-	createSystemAccountsF = flag.Bool("create-system-accounts", false, "creating a system accounts.")
+	VERSION         = "dev"
+	pgConnF         = flag.String("pg-conn", "postgres://acca:acca@127.0.0.1:5433/acca?sslmode=disable", "PostgreSQL connection string.")
+	grpcAddrsF      = flag.String("grpc-addrs", "127.0.0.1:10011", "gRPC listen address.")
+	grpcReflectionF = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
+	genAccessTokenF = flag.Bool("gen-access-token", false, "access_token generation.")
 )
 
 func main() {
@@ -71,6 +72,42 @@ func main() {
 	defer syncLogger()
 	handleTerm(cancel)
 
+	//vaultClient, tmpErr := vault.NewClient(&vault.Config{
+	//	Address: "http://0.0.0.0:8200",
+	//})
+	//if tmpErr != nil {
+	//	zap.L().Panic("Failed client VAULT.", zap.Error(tmpErr))
+	//}
+	//
+	//vaultClient.SetToken("s.z7xl8qcGtKqTG3mPXw8DAuIn")
+	//
+	//secr, e := vaultClient.Logical().List("secret/metadata")
+	//log.Println("!!!!!!! e: ", e)
+	//log.Println("!!!!!!! secr: ", secr)
+	//log.Println("!!!!!!! secr: ", secr.Data)
+	//
+	//data := map[string]interface{}{
+	//	"key1": "string_data",
+	//	"key2": 123321,
+	//	"key3": map[string]string{
+	//		"str_key": "str_data",
+	//	},
+	//	"key4": api.Currency{
+	//		CurrId: 123,
+	//		Key:    "321123",
+	//		Meta:   nil,
+	//	},
+	//}
+	//secr, e = vaultClient.Logical().Write("secret/data/z", data)
+	//log.Println("!!!!!!! e: ", e)
+	//log.Println("!!!!!!! secr: ", secr)
+	//
+	//secr, e = vaultClient.Logical().Read("secret/data/z")
+	//log.Println("!!!!!!! e: ", e)
+	//log.Println("!!!!!!! secr: ", secr)
+	//log.Println("!!!!!!! data: ", secr.Data)
+	//
+	//return
 	sqlDB := setupPostgres(*pgConnF, 0, 5, 5)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(zap.L().Sugar().Debugf))
 	_, err := db.Exec("SELECT version();")
@@ -84,12 +121,21 @@ func main() {
 		if err := db.Save(client); err != nil {
 			zap.L().Error("Failed save client.", zap.Error(err))
 		}
+		am := engine.NewAccountManager(db)
+		if err := am.UpsertCurrency(client.ClientID, "rub", nil); err != nil {
+			zap.L().Error("Failed save currency.", zap.Error(err))
+		}
+		curr, err := am.GetCurrency(client.ClientID, "rub")
+		if err != nil {
+			zap.L().Error("Failed load currency.", zap.Error(err))
+		}
+		accID, err := am.CreateAccount(client.ClientID, curr.CurrencyID, "system", nil)
+		if err != nil {
+			zap.L().Error("Failed create system account.", zap.Error(err))
+		}
+		fmt.Println("CURRENCY: rub")
+		fmt.Println("SYSTEM ACCOUNT ID: ", accID)
 		fmt.Println("ACCESS TOKEN: ", client.AccessToken)
-		return
-	}
-
-	if *createSystemAccountsF {
-		zap.L().Info("Create system accounts.")
 		return
 	}
 
