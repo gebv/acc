@@ -57,6 +57,7 @@ var (
 	grpcAddrsF      = flag.String("grpc-addrs", "127.0.0.1:10011", "gRPC listen address.")
 	grpcReflectionF = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
 	genAccessTokenF = flag.Bool("gen-access-token", false, "access_token generation.")
+	currencyF       = flag.String("currency", "rub", "currency from acccess_token generation.")
 )
 
 func main() {
@@ -123,10 +124,10 @@ func main() {
 			zap.L().Error("Failed save client.", zap.Error(err))
 		}
 		am := engine.NewAccountManager(db)
-		if err := am.UpsertCurrency(client.ClientID, "rub", nil); err != nil {
+		if err := am.UpsertCurrency(client.ClientID, *currencyF, nil); err != nil {
 			zap.L().Error("Failed save currency.", zap.Error(err))
 		}
-		curr, err := am.GetCurrency(client.ClientID, "rub")
+		curr, err := am.GetCurrency(client.ClientID, *currencyF)
 		if err != nil {
 			zap.L().Error("Failed load currency.", zap.Error(err))
 		}
@@ -135,7 +136,7 @@ func main() {
 			zap.L().Error("Failed create system account.", zap.Error(err))
 		}
 		conf := map[string]interface{}{
-			"currentcy":         "rub",
+			"currentcy":         *currencyF,
 			"system_account_id": accID,
 			"access_token":      client.AccessToken,
 		}
