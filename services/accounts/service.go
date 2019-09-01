@@ -41,6 +41,9 @@ func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountReques
 	accID, err := m.CreateAccount(clientID, curr.CurrencyID, req.GetKey(), req.GetMeta())
 
 	if err != nil {
+		if err == engine.ErrAccountExists {
+			return nil, api.MakeError(codes.AlreadyExists, "Already exists.")
+		}
 		return nil, errors.Wrapf(err, "Failed create new account %q.", req.GetKey())
 	}
 	return &api.CreateAccountResponse{

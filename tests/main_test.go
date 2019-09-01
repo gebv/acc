@@ -2,6 +2,7 @@ package tests
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -44,7 +45,7 @@ func runPostgresMigrations() {
 
 	// wait for PostgreSQL to start
 	for i := 0; i < 5; i++ {
-		cmd := exec.Command(psql, "-q", "-h", *DockerHostF, "-d", database, "-U", username, "-c", "SELECT version();")
+		cmd := exec.Command(psql, "-q", "-h", *DockerHostF, "-p", "5433", "-d", database, "-U", username, "-c", "SELECT version();")
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
@@ -63,7 +64,7 @@ func runPostgresMigrations() {
 	}
 
 	for _, file := range files {
-		cmd := exec.Command(psql, "-q", "-h", *DockerHostF, "-d", database, "-U", username, "-v", "ON_ERROR_STOP=1", "-f", file)
+		cmd := exec.Command(psql, "-q", "-h", *DockerHostF, "-p", "5433", "-d", database, "-U", username, "-v", "ON_ERROR_STOP=1", "-f", file)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Env = append(os.Environ(), "PGPASSWORD="+password)
@@ -99,12 +100,11 @@ func createAccessToken() string {
 	if err != nil {
 		panic(err)
 	}
-	if len(out) >= 79 {
-		accessToken := string(out)[15:79]
-		log.Println("ACCESS TOKEN: ", accessToken)
-		return accessToken
+	var conf map[string]interface{}
+	if err := json.Unmarshal(out, &conf); err != nil {
+		panic(err)
 	}
-	panic("Not create access token")
+	return conf["access_token"].(string)
 }
 
 func setup() {
@@ -119,7 +119,7 @@ var DockerHostF = flag.String("docker-host-address", "127.0.0.1", "Docker addres
 func TestMain(m *testing.M) {
 	onlySetupF := flag.Bool("only-setup", false, "Only setup: put settings to Consul, migrate database and exit.")
 	skipSetupF := flag.Bool("skip-setup", false, "Skip setup: run tests and exit.")
-	grpcAddrF := flag.String("grpc-addr", "127.0.0.1:10001", "gRPC client API address")
+	grpcAddrF := flag.String("grpc-addr", "127.0.0.1:10011", "gRPC client API address")
 
 	log.SetPrefix("testmain: ")
 	log.SetFlags(0)
