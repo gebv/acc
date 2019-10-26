@@ -2,8 +2,16 @@ package invoices
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/lib/pq"
+	"github.com/nats-io/nats.go"
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"gopkg.in/reform.v1"
 
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine"
@@ -11,11 +19,6 @@ import (
 	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/sberbank"
 	"github.com/gebv/acca/services"
-	"github.com/lib/pq"
-	"github.com/nats-io/nats.go"
-	"github.com/pkg/errors"
-	"google.golang.org/grpc/codes"
-	"gopkg.in/reform.v1"
 )
 
 func NewServer(db *reform.DB, nc *nats.EncodedConn) *Server {
@@ -32,6 +35,14 @@ type Server struct {
 
 func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*api.NewInvoiceResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
+
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("key", req.GetKey()),
+		trace.StringAttribute("strategy", req.GetStrategy()),
+	)
 
 	key := strings.TrimSpace(strings.ToLower(req.GetKey()))
 	strategy := strings.TrimSpace(strings.ToLower(req.GetStrategy()))
@@ -60,7 +71,16 @@ func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*ap
 
 func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsRequest) (*api.GetInvoiceByIDsResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	invoiceIDs := make([]string, 0, len(req.GetInvoiceIds()))
+	for _, v := range req.GetInvoiceIds() {
+		invoiceIDs = append(invoiceIDs, strconv.FormatInt(v, 10))
+	}
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("invoice_ids", strings.Join(invoiceIDs, ", ")),
+	)
 	if len(req.GetInvoiceIds()) == 0 {
 		return &api.GetInvoiceByIDsResponse{}, nil
 	}
@@ -172,7 +192,19 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 
 func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransactionToInvoiceRequest) (*api.AddTransactionToInvoiceResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	var key string
+	if req.GetKey() != nil {
+		key = *req.GetKey()
+	}
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("invoice_id", req.GetInvoiceId()),
+		trace.StringAttribute("key", key),
+		trace.StringAttribute("strategy", req.GetStrategy()),
+		trace.Int64Attribute("amount", req.GetAmount()),
+	)
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
@@ -245,7 +277,16 @@ func (s Server) AddTransactionToInvoice(ctx context.Context, req *api.AddTransac
 
 func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransactionByIDsRequest) (*api.GetTransactionByIDsResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	txIDs := make([]string, 0, len(req.GetTxIds()))
+	for _, v := range req.GetTxIds() {
+		txIDs = append(txIDs, strconv.FormatInt(v, 10))
+	}
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("tx_ids", strings.Join(txIDs, ", ")),
+	)
 	list, err := s.db.SelectAllFrom(
 		engine.ViewTransactionTable,
 		"WHERE client_id = $1 AND tx_id = ANY ($2)",
@@ -306,7 +347,12 @@ func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransaction
 
 func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*api.AuthInvoiceResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("invoice_id", req.GetInvoiceId()),
+	)
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
@@ -331,7 +377,12 @@ func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*
 
 func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest) (*api.AcceptInvoiceResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("invoice_id", req.GetInvoiceId()),
+	)
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
@@ -353,7 +404,12 @@ func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest
 
 func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest) (*api.RejectInvoiceResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("invoice_id", req.GetInvoiceId()),
+	)
 	invoice := &engine.Invoice{InvoiceID: req.GetInvoiceId()}
 	if err := s.db.Reload(invoice); err != nil {
 		return nil, errors.Wrap(err, "failed find invocie by ID")
@@ -375,7 +431,12 @@ func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest
 
 func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTxResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("tx_id", req.GetTxId()),
+	)
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")
@@ -400,7 +461,12 @@ func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTx
 
 func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.AcceptTxResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("tx_id", req.GetTxId()),
+	)
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")
@@ -422,7 +488,12 @@ func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.Ac
 
 func (s Server) RejectTx(ctx context.Context, req *api.RejectTxRequest) (*api.RejectTxResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("tx_id", req.GetTxId()),
+	)
 	tx := &engine.Transaction{TransactionID: req.GetTxId()}
 	if err := s.db.Reload(tx); err != nil {
 		return nil, errors.Wrap(err, "failed find transaction by ID")

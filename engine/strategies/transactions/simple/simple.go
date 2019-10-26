@@ -6,11 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
-	"github.com/pkg/errors"
 )
 
 const nameStrategy strategies.TrStrategyName = "transaction_simple_strategy"
@@ -46,10 +48,16 @@ func (s *Strategy) MetaValidation(meta *[]byte) error {
 }
 
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
+	ctx, span := trace.StartSpan(ctx, "Dispatch")
+	defer span.End()
 	trID, ok := payload.(int64)
 	if !ok {
 		return errors.New("bad_payload")
 	}
+	span.AddAttributes(
+		trace.Int64Attribute("tx_id", trID),
+		trace.StringAttribute("state", state.String()),
+	)
 	tx := strategies.GetTXContext(ctx)
 	if tx == nil {
 		return errors.New("Not reform tx.")
@@ -78,6 +86,13 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
+				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				defer span.End()
+				span.AddAttributes(
+					trace.Int64Attribute("tx_id", trID),
+					trace.StringAttribute("src", string(engine.DRAFT_TX)),
+					trace.StringAttribute("dst", string(engine.AUTH_TX)),
+				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -148,6 +163,13 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
+				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				defer span.End()
+				span.AddAttributes(
+					trace.Int64Attribute("tx_id", trID),
+					trace.StringAttribute("src", string(engine.HOLD_TX)),
+					trace.StringAttribute("dst", string(engine.ACCEPTED_TX)),
+				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -212,6 +234,13 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
+				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				defer span.End()
+				span.AddAttributes(
+					trace.Int64Attribute("tx_id", trID),
+					trace.StringAttribute("src", string(engine.HOLD_TX)),
+					trace.StringAttribute("dst", string(engine.REJECTED_TX)),
+				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -276,6 +305,13 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
+				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				defer span.End()
+				span.AddAttributes(
+					trace.Int64Attribute("tx_id", trID),
+					trace.StringAttribute("src", string(engine.DRAFT_TX)),
+					trace.StringAttribute("dst", string(engine.REJECTED_TX)),
+				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
