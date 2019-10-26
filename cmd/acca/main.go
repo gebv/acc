@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"contrib.go.opencensus.io/exporter/stackdriver"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
@@ -206,6 +207,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	bqCl, err := bigquery.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
+	if err != nil {
+		zap.L().Panic("Failed new client bigquery.", zap.Error(err))
+	}
+
 	sUpdater := updater.NewServer(nc)
 
 	sberProvider := sberbank.NewProvider(
@@ -236,7 +242,7 @@ func main() {
 	}
 
 	// аудитор http запросов (сохраняет в БД все реквесты и респонсы)
-	httpAuditor := auditor.NewHttpAuditor(sqlDB)
+	httpAuditor := auditor.NewHttpAuditor(bqCl)
 	defer httpAuditor.Stop()
 	prometheus.MustRegister(httpAuditor)
 

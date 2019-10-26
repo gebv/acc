@@ -2,11 +2,12 @@ package auditor
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
+	"log"
 	"sync"
 	"time"
 
+	"cloud.google.com/go/bigquery"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
@@ -33,13 +34,27 @@ type httpAuditMessage struct {
 	body []byte
 }
 
+func (m *httpAuditMessage) Save() (map[string]bigquery.Value, string, error) {
+	return map[string]bigquery.Value{
+		"created_at": m.createdAt,
+		"request_id": m.requestID,
+		"method":     m.method,
+		"user_id":    m.userID,
+		"device_id":  m.deviceID,
+		"body":       string(m.body),
+		"user_ip":    m.ip,
+		"proxy_ip":   m.proxyIP,
+		"user_agent": m.userAgent,
+		"session_id": m.sessionID,
+	}, "", nil
+}
+
 type HttpAuditor struct {
-	db          *sql.DB
-	toConvert   chan *httpAuditMessage
-	toInsert    chan *httpAuditMessage
-	l           *zap.Logger
-	insertQuery string
-	wg          sync.WaitGroup
+	cl        *bigquery.Client
+	toConvert chan *httpAuditMessage
+	toInsert  chan *httpAuditMessage
+	l         *zap.Logger
+	wg        sync.WaitGroup
 
 	mConvertLen     prometheus.Gauge
 	mConvertCap     prometheus.Gauge
@@ -49,25 +64,12 @@ type HttpAuditor struct {
 	mInsertDuration prometheus.Histogram
 }
 
-func NewHttpAuditor(db *sql.DB) *HttpAuditor {
-	q := `INSERT INTO activity.http_requests (
-		created_at,
-		request_id,
-		method,
-		user_id,
-		device_id,
-		body,
-		user_ip,
-		proxy_ip,
-		user_agent,
-		session_id
-	) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+func NewHttpAuditor(cl *bigquery.Client) *HttpAuditor {
 	a := &HttpAuditor{
-		db:          db,
-		toConvert:   make(chan *httpAuditMessage, toConvertCap),
-		toInsert:    make(chan *httpAuditMessage, toInsertCap),
-		l:           zap.L().Named("auditor"),
-		insertQuery: q,
+		cl:        cl,
+		toConvert: make(chan *httpAuditMessage, toConvertCap),
+		toInsert:  make(chan *httpAuditMessage, toInsertCap),
+		l:         zap.L().Named("auditor"),
 		mConvertLen: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "auditor_convert_len",
 			Help: "Length of internal convert channel.",
@@ -155,56 +157,29 @@ func (a *HttpAuditor) runInserter() {
 				insert = true
 			}
 		}
-
-		a.insertBatch(messages)
+		if len(messages) > 0 {
+			a.insertBatch(messages)
+		}
 	}
 }
 
 func (a *HttpAuditor) insertBatch(messages []*httpAuditMessage) {
 	start := time.Now()
-	tx, err := a.db.Begin()
-	if err != nil {
-		a.l.Error("Failed to begin transaction.", zap.Error(err))
-		return
-	}
-
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer func() {
-		if err = tx.Commit(); err != nil {
-			a.l.Error("Failed to commit transaction.", zap.Error(err))
-			return
-		}
+		cancel()
 		d := time.Since(start)
 		a.mInsertSize.Observe(float64(len(messages)))
 		a.mInsertDuration.Observe(d.Seconds())
+		log.Println("!!! inserted : ", len(messages))
+		log.Println("!!! inserted duration : ", d)
 		a.l.Debug("Audit log messages inserted.", zap.Int("count", len(messages)), zap.Duration("duration", d))
 	}()
-
-	stmt, err := tx.Prepare(a.insertQuery)
-	if err != nil {
-		a.l.Error("Failed to prepare statement.", zap.Error(err))
-		return
-	}
-	defer func() {
-		if err = stmt.Close(); err != nil {
-			a.l.Error("Failed to close statement.", zap.Error(err))
-		}
-	}()
-
-	for _, m := range messages {
-		if _, err = stmt.Exec(
-			m.createdAt,
-			m.requestID,
-			m.method,
-			m.userID,
-			m.deviceID,
-			string(m.body),
-			m.ip,
-			m.proxyIP,
-			m.userAgent,
-			m.sessionID,
-		); err != nil {
-			a.l.Error("Failed to insert audit log message.", zap.Error(err))
-		}
+	if err := a.cl.Dataset("activity").Table("http_requests").Inserter().Put(
+		ctx,
+		messages,
+	); err != nil {
+		a.l.Error("Failed to put audit log message.", zap.Error(err))
 	}
 }
 
