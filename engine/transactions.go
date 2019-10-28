@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gebv/acca/provider"
 	"github.com/pkg/errors"
+
+	"github.com/gebv/acca/provider"
 )
 
 //go:generate reform

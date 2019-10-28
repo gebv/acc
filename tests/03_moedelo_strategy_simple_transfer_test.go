@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/provider/moedelo"
-	"github.com/stretchr/testify/require"
 )
 
 func Test03_01MoedeloStrategy(t *testing.T) {

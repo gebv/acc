@@ -860,6 +860,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "cloud.google.com/go/bigquery",
     "contrib.go.opencensus.io/exporter/stackdriver",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
