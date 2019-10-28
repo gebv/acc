@@ -3,7 +3,6 @@ package auditor
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"sync"
 	"time"
 
@@ -171,8 +170,6 @@ func (a *HttpAuditor) insertBatch(messages []*httpAuditMessage) {
 		d := time.Since(start)
 		a.mInsertSize.Observe(float64(len(messages)))
 		a.mInsertDuration.Observe(d.Seconds())
-		log.Println("!!! inserted : ", len(messages))
-		log.Println("!!! inserted duration : ", d)
 		a.l.Debug("Audit log messages inserted.", zap.Int("count", len(messages)), zap.Duration("duration", d))
 	}()
 	if err := a.cl.Dataset("activity").Table("http_requests").Inserter().Put(
