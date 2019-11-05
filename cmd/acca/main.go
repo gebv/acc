@@ -38,12 +38,15 @@ import (
 	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank"
 	_ "github.com/gebv/acca/engine/strategies/transactions/sberbank_refund"
 	_ "github.com/gebv/acca/engine/strategies/transactions/simple"
+	_ "github.com/gebv/acca/engine/strategies/transactions/stripe"
+	_ "github.com/gebv/acca/engine/strategies/transactions/stripe_refund"
 	"github.com/gebv/acca/engine/worker"
 	"github.com/gebv/acca/interceptors/auth"
 	"github.com/gebv/acca/interceptors/recover"
 	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/provider/stripe"
 	"github.com/gebv/acca/services"
 	"github.com/gebv/acca/services/accounts"
 	"github.com/gebv/acca/services/auditor"
@@ -196,7 +199,12 @@ func main() {
 		nc,
 	)
 
-	worker.SubToNATS(nc, db, sberProvider, moeDeloProvider)
+	stripeProvider := stripe.NewProvider(
+		db,
+		nc,
+	)
+
+	worker.SubToNATS(nc, db, sberProvider, moeDeloProvider, stripeProvider)
 
 	lis, err := net.Listen("tcp", *grpcAddrsF)
 	if err != nil {
@@ -276,7 +284,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		serverWebhookSberbank(ctx, sberProvider)
+		serverWebhookSberbank(ctx, sberProvider, stripeProvider)
 	}()
 
 	wg.Wait()
@@ -401,7 +409,7 @@ func setupPostgres(conn string, maxLifetime time.Duration, maxOpen, maxIdle int)
 	return sqlDB
 }
 
-func serverWebhookSberbank(ctx context.Context, provider *sberbank.Provider) {
+func serverWebhookSberbank(ctx context.Context, providerSber *sberbank.Provider, providerStripe *stripe.Provider) {
 
 	e := echo.New()
 
@@ -423,14 +431,16 @@ func serverWebhookSberbank(ctx context.Context, provider *sberbank.Provider) {
 
 	e.Use(echo_middleware.Logger())
 
-	e.GET("/webhook/sberbank", provider.SberbankWebhookHandler())
+	e.GET("/webhook/sberbank", providerSber.SberbankWebhookHandler())
+	e.POST("/webhook/stripe", providerStripe.StripeWebhookHandler())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		zap.L().Info("start server sberbank webhook ", zap.String("address", "/webhook/sberbank"))
+		zap.L().Info("start server stripe webhook ", zap.String("address", "/webhook/stripe"))
 		if err := e.Start(":10003"); err != nil {
-			zap.L().Error("failed run server sberbank webhook", zap.Error(err))
+			zap.L().Error("failed run server webhooks", zap.Error(err))
 		}
 		wg.Done()
 	}()
@@ -438,6 +448,8 @@ func serverWebhookSberbank(ctx context.Context, provider *sberbank.Provider) {
 	go func() {
 		defer wg.Done()
 		<-ctx.Done()
+		log.Printf("Stoped webhook, sleep 3 sec\n")
+		time.Sleep(3 * time.Second) // Слип из-за тестов, не успивает прийти последнее сообщение по webhook
 		Ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 		defer cancel()
 		err := e.Shutdown(Ctx)
