@@ -7,13 +7,14 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
-	"github.com/pkg/errors"
 )
 
-const nameStrategy strategies.InvStrategyName = "invoice_recharge_strategy"
+const nameStrategy strategies.InvStrategyName = "invoice_refund_strategy"
 
 func init() {
 	s := &Strategy{
