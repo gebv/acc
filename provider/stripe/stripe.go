@@ -10,12 +10,14 @@ import (
 	"github.com/stripe/stripe-go/customer"
 	"github.com/stripe/stripe-go/paymentintent"
 	"github.com/stripe/stripe-go/paymentmethod"
+	"github.com/stripe/stripe-go/refund"
 	"github.com/stripe/stripe-go/setupintent"
 
 	"github.com/gebv/acca/provider"
 )
 
 func NewProvider(db *reform.DB, nc *nats.EncodedConn) *Provider {
+	stripe.Key = "sk_test_70xlY8mQwBcRn68OyfM5s3VR00BxaUcrf4"
 	return &Provider{
 		db: db,
 		nc: nc,
@@ -105,7 +107,7 @@ func (p *Provider) PaymentIntent(
 		PaymentMethod: pmID,
 		Confirm:       confirm, // Если карта обязательно подтверждение 3D secure, то будет ошибка.
 		// OffSession:    stripe.Bool(true), // Баз Confirm не указывать, ошибка.
-		//SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)), // С последующим использованием карты.
+		//SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)), // С последующим использованием карты. может быть указан на клиенте
 	})
 	if err != nil {
 		p.l.Warn(
@@ -123,6 +125,43 @@ func (p *Provider) PaymentIntent(
 	return paymentIntent, nil
 }
 
+// Выставляем счет клиенту с холдированием.
+func (p *Provider) PaymentIntentWithHold(
+	amount int64,
+	currency stripe.Currency,
+	customerID *string,
+	pmID *string,
+	confirm *bool,
+) (*stripe.PaymentIntent, error) {
+	pi, err := paymentintent.New(&stripe.PaymentIntentParams{
+		Amount:   stripe.Int64(amount),
+		Currency: stripe.String(string(currency)),
+		PaymentMethodTypes: []*string{
+			stripe.String("card"),
+		},
+		Customer:      customerID,
+		PaymentMethod: pmID,
+		CaptureMethod: stripe.String("manual"), // TODO проверить, если будет указано Confirm может нужно убрать manual
+		Confirm:       confirm,                 // Если карта обязательно подтверждение 3D secure, то будет ошибка.
+		// OffSession:    stripe.Bool(true), // Баз Confirm не указывать, ошибка.
+		//SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)), // С последующим использованием карты. может быть указана на клиенту.
+	})
+	if err != nil {
+		p.l.Warn(
+			"Failed payment intent",
+			zap.String("customer_id", stripe.StringValue(customerID)),
+			zap.String("payment_method", stripe.StringValue(pmID)),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed payment intent")
+	}
+	err = p.s.NewOrder(pi.ID, STRIPE, string(pi.Status))
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed insert stripe payment intent")
+	}
+	return pi, nil
+}
+
 func (p *Provider) Confirm(paymentIntentID string, pmID *string) error {
 	var paymentIntent *stripe.PaymentIntentConfirmParams
 	if pmID != nil {
@@ -131,7 +170,7 @@ func (p *Provider) Confirm(paymentIntentID string, pmID *string) error {
 			// OffSession:    stripe.Bool(true), // Если для карты обязательно 3D secure будет ошибка
 		}
 	}
-	_, err := paymentintent.Confirm(
+	pi, err := paymentintent.Confirm(
 		paymentIntentID,
 		paymentIntent,
 	)
@@ -144,15 +183,109 @@ func (p *Provider) Confirm(paymentIntentID string, pmID *string) error {
 		)
 		return errors.Wrap(err, "Failed confirm payment intent")
 	}
+	if pi.Status != stripe.PaymentIntentStatusSucceeded {
+		err = errors.New("failed_status_payment_intent")
+		p.l.Warn(
+			"Failed confirm status payment intent",
+			zap.String("payment_intent_id", paymentIntentID),
+			zap.String("status", string(pi.Status)),
+			zap.Error(err),
+		)
+		return err
+	}
 	return nil
 }
 
-// TODO добавить метот отмены холда
-func (p *Provider) ReverseForHold() error {
+// подтвердить захолдированные средства
+func (p *Provider) Capture(paymentIntentID string, amount int64) error {
+	pi, err := paymentintent.Capture(paymentIntentID, &stripe.PaymentIntentCaptureParams{
+		AmountToCapture: stripe.Int64(amount),
+	})
+	if err != nil {
+		p.l.Warn(
+			"Failed capture payment intent",
+			zap.String("payment_intent_id", paymentIntentID),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed capture payment intent")
+	}
+	if pi.Status != stripe.PaymentIntentStatusSucceeded {
+		err = errors.New("failed_status_payment_intent")
+		p.l.Warn(
+			"Failed capture status payment intent",
+			zap.String("payment_intent_id", paymentIntentID),
+			zap.String("status", string(pi.Status)),
+			zap.Error(err),
+		)
+		return err
+	}
 	return nil
 }
 
-// TODO добавить метот отмены холда
-func (p *Provider) Refund() error {
+func (p *Provider) Cancel(paymentIntentID string) error {
+	pi, err := paymentintent.Cancel(
+		paymentIntentID,
+		nil,
+	)
+	if err != nil {
+		p.l.Warn(
+			"Failed cancel payment intent",
+			zap.String("payment_intent_id", paymentIntentID),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed cancel payment intent")
+	}
+	if pi.Status != stripe.PaymentIntentStatusCanceled {
+		err = errors.New("failed_status_payment_intent")
+		p.l.Warn(
+			"Failed cancel status payment intent",
+			zap.String("payment_intent_id", paymentIntentID),
+			zap.String("status", string(pi.Status)),
+			zap.Error(err),
+		)
+		return err
+	}
 	return nil
+}
+
+// Возврат средств от charge
+func (p *Provider) Refund(chargeID string, amount *int64) error {
+	re, err := refund.New(&stripe.RefundParams{
+		Charge: stripe.String(chargeID),
+		Amount: amount,
+	})
+	if err != nil {
+		p.l.Warn(
+			"Failed refund charge",
+			zap.String("charge_id", chargeID),
+			zap.Error(err),
+		)
+		return errors.Wrap(err, "Failed refund charge")
+	}
+	if re.Status != stripe.RefundStatusSucceeded {
+		err = errors.New("failed_status_refund_charge")
+		p.l.Warn(
+			"Failed cancel status payment intent",
+			zap.String("charge_id", chargeID),
+			zap.String("status", string(re.Status)),
+			zap.Error(err),
+		)
+		return err
+	}
+	return nil
+}
+
+func (p *Provider) GetPaymentIntent(
+	piID string,
+) (*stripe.PaymentIntent, error) {
+	paymentIntent, err := paymentintent.Get(piID, nil)
+	if err != nil {
+		p.l.Warn(
+			"Failed get payment intent",
+			zap.String("payment_intent_id", piID),
+			zap.Error(err),
+		)
+		return nil, errors.Wrap(err, "Failed payment intent")
+	}
+	return paymentIntent, nil
 }
