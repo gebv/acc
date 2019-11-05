@@ -5,13 +5,15 @@ import (
 	"log"
 	"time"
 
+	"github.com/nats-io/nats.go"
+	"gopkg.in/reform.v1"
+
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/provider/stripe"
 	"github.com/gebv/acca/services/updater"
-	"github.com/nats-io/nats.go"
-	"gopkg.in/reform.v1"
 )
 
 func SubToNATS(
@@ -19,6 +21,7 @@ func SubToNATS(
 	db *reform.DB,
 	providerSber *sberbank.Provider,
 	providerMoeDelo *moedelo.Provider,
+	providerStripe *stripe.Provider,
 ) {
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		tx, err := db.Begin()
@@ -101,5 +104,6 @@ func SubToNATS(
 		}
 	})
 	nc.QueueSubscribe(sberbank.SUBJECT, "queue", providerSber.NatsHandler())
+	nc.QueueSubscribe(stripe.SUBJECT, "queue", providerStripe.NatsHandler())
 	nc.QueueSubscribe(moedelo.SUBJECT, "queue", providerMoeDelo.NatsHandler())
 }

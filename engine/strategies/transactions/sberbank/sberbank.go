@@ -6,12 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/sberbank"
-	"github.com/pkg/errors"
 )
 
 const nameStrategy strategies.TrStrategyName = "transaction_sberbank_strategy"
