@@ -278,6 +278,8 @@ func Test_Simple2(t *testing.T) {
 				assert.Equal(t, tt.feedback, gotMsg)
 			}()
 
+			time.Sleep(time.Millisecond * 10)
+
 			err := m.Dispatch(tt.ctx, tt.initState, tt.payload)
 
 			if tt.err != nil {
