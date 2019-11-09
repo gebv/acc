@@ -12,18 +12,47 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.enumdecl_all) = true;
 
 service Accounts {
+    // CreateCurrency создание валюты.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Invalid key."
+    //   - 5 (NotFound) "currency not found"
+    //   - 6 (AlreadyExists) "Already exists."
     rpc CreateCurrency (CreateCurrencyRequest) returns (CreateCurrencyResponse) {
     }
 
+    // GetCurrency получить валюты.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Invalid key."
+    //   - 5 (NotFound) "currency not found"
     rpc GetCurrency (GetCurrencyRequest) returns (GetCurrencyResponse) {
     }
 
+    // CreateAccount создать балансный счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Invalid key."
     rpc CreateAccount (CreateAccountRequest) returns (CreateAccountResponse) {
     }
 
+    // GetAccountByKey получить балансный счет по ключу и валюте.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Invalid key."
+    //   - 5 (NotFound) "currency not found"
+    //   - 5 (NotFound) "account not found"
     rpc GetAccountByKey (GetAccountByKeyRequest) returns (GetAccountByKeyResponse) {
     }
 
+    // BalanceChanges получить список изменений балансного счета по его id.
+    //
+    // Errors:
+    //   - Common errors
     rpc BalanceChanges (BalanceChangesRequest) returns (BalanceChangesResponse) {
     }
 }

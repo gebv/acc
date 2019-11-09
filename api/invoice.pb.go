@@ -1312,15 +1312,66 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type InvoicesClient interface {
+	// NewInvoice создает счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Meta is not validate."
+	//   - 5 (NotFound) "Strategy is not found."
 	NewInvoice(ctx context.Context, in *NewInvoiceRequest, opts ...grpc.CallOption) (*NewInvoiceResponse, error)
+	// GetInvoiceByIDs получить список счетов по его идентификаторами.
+	//
+	// Errors:
+	//   - Common errors
 	GetInvoiceByIDs(ctx context.Context, in *GetInvoiceByIDsRequest, opts ...grpc.CallOption) (*GetInvoiceByIDsResponse, error)
+	// AddTransactionToInvoice добавить транзакцию в счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Meta is not validate."
+	//   - 5 (NotFound) "Invoice is not found."
+	//   - 5 (NotFound) "Strategy is not found."
 	AddTransactionToInvoice(ctx context.Context, in *AddTransactionToInvoiceRequest, opts ...grpc.CallOption) (*AddTransactionToInvoiceResponse, error)
+	// GetTransactionByIDs получить список транзакций по их идентификаторам.
+	//
+	// Errors:
+	//   - Common errors
 	GetTransactionByIDs(ctx context.Context, in *GetTransactionByIDsRequest, opts ...grpc.CallOption) (*GetTransactionByIDsResponse, error)
+	// AuthInvoice авторизировать счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	AuthInvoice(ctx context.Context, in *AuthInvoiceRequest, opts ...grpc.CallOption) (*AuthInvoiceResponse, error)
+	// AcceptInvoice подтвердить счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	AcceptInvoice(ctx context.Context, in *AcceptInvoiceRequest, opts ...grpc.CallOption) (*AcceptInvoiceResponse, error)
+	// RejectInvoice отменить счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	RejectInvoice(ctx context.Context, in *RejectInvoiceRequest, opts ...grpc.CallOption) (*RejectInvoiceResponse, error)
+	// AuthTx авторизировать транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	AuthTx(ctx context.Context, in *AuthTxRequest, opts ...grpc.CallOption) (*AuthTxResponse, error)
+	// AcceptTx подтвердить транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	AcceptTx(ctx context.Context, in *AcceptTxRequest, opts ...grpc.CallOption) (*AcceptTxResponse, error)
+	// RejectTx отменить транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	RejectTx(ctx context.Context, in *RejectTxRequest, opts ...grpc.CallOption) (*RejectTxResponse, error)
 }
 
@@ -1424,15 +1475,66 @@ func (c *invoicesClient) RejectTx(ctx context.Context, in *RejectTxRequest, opts
 
 // InvoicesServer is the server API for Invoices service.
 type InvoicesServer interface {
+	// NewInvoice создает счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Meta is not validate."
+	//   - 5 (NotFound) "Strategy is not found."
 	NewInvoice(context.Context, *NewInvoiceRequest) (*NewInvoiceResponse, error)
+	// GetInvoiceByIDs получить список счетов по его идентификаторами.
+	//
+	// Errors:
+	//   - Common errors
 	GetInvoiceByIDs(context.Context, *GetInvoiceByIDsRequest) (*GetInvoiceByIDsResponse, error)
+	// AddTransactionToInvoice добавить транзакцию в счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Meta is not validate."
+	//   - 5 (NotFound) "Invoice is not found."
+	//   - 5 (NotFound) "Strategy is not found."
 	AddTransactionToInvoice(context.Context, *AddTransactionToInvoiceRequest) (*AddTransactionToInvoiceResponse, error)
+	// GetTransactionByIDs получить список транзакций по их идентификаторам.
+	//
+	// Errors:
+	//   - Common errors
 	GetTransactionByIDs(context.Context, *GetTransactionByIDsRequest) (*GetTransactionByIDsResponse, error)
+	// AuthInvoice авторизировать счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	AuthInvoice(context.Context, *AuthInvoiceRequest) (*AuthInvoiceResponse, error)
+	// AcceptInvoice подтвердить счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	AcceptInvoice(context.Context, *AcceptInvoiceRequest) (*AcceptInvoiceResponse, error)
+	// RejectInvoice отменить счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Invoice is not found."
 	RejectInvoice(context.Context, *RejectInvoiceRequest) (*RejectInvoiceResponse, error)
+	// AuthTx авторизировать транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	AuthTx(context.Context, *AuthTxRequest) (*AuthTxResponse, error)
+	// AcceptTx подтвердить транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	AcceptTx(context.Context, *AcceptTxRequest) (*AcceptTxResponse, error)
+	// RejectTx отменить транзакцию.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 5 (NotFound) "Transaction is not found."
 	RejectTx(context.Context, *RejectTxRequest) (*RejectTxResponse, error)
 }
 

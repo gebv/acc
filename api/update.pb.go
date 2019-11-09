@@ -373,7 +373,12 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type UpdatesClient interface {
-	// Подписка на уведомления.
+	// GetUpdate подписка на уведомления.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 10 (Aborted) "Transport is closing."
+	//   - 10 (Aborted) "Stream is done or header sent (not exact wording)."
 	GetUpdate(ctx context.Context, in *GetUpdateRequest, opts ...grpc.CallOption) (Updates_GetUpdateClient, error)
 }
 
@@ -419,7 +424,12 @@ func (x *updatesGetUpdateClient) Recv() (*Update, error) {
 
 // UpdatesServer is the server API for Updates service.
 type UpdatesServer interface {
-	// Подписка на уведомления.
+	// GetUpdate подписка на уведомления.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 10 (Aborted) "Transport is closing."
+	//   - 10 (Aborted) "Stream is done or header sent (not exact wording)."
 	GetUpdate(*GetUpdateRequest, Updates_GetUpdateServer) error
 }
 

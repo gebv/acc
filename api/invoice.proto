@@ -14,33 +14,84 @@ option (gogoproto.enumdecl_all) = true;
 
 service Invoices {
 
+    // NewInvoice создает счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Meta is not validate."
+    //   - 5 (NotFound) "Strategy is not found."
     rpc NewInvoice (NewInvoiceRequest) returns (NewInvoiceResponse) {
     }
 
+    // GetInvoiceByIDs получить список счетов по его идентификаторами.
+    //
+    // Errors:
+    //   - Common errors
     rpc GetInvoiceByIDs (GetInvoiceByIDsRequest) returns (GetInvoiceByIDsResponse) {
     }
 
+    // AddTransactionToInvoice добавить транзакцию в счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 3 (InvalidArgument) "Meta is not validate."
+    //   - 5 (NotFound) "Invoice is not found."
+    //   - 5 (NotFound) "Strategy is not found."
     rpc AddTransactionToInvoice (AddTransactionToInvoiceRequest) returns (AddTransactionToInvoiceResponse) {
     }
 
+    // GetTransactionByIDs получить список транзакций по их идентификаторам.
+    //
+    // Errors:
+    //   - Common errors
     rpc GetTransactionByIDs (GetTransactionByIDsRequest) returns (GetTransactionByIDsResponse) {
     }
 
+    // AuthInvoice авторизировать счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Invoice is not found."
     rpc AuthInvoice (AuthInvoiceRequest) returns (AuthInvoiceResponse) {
     }
 
+    // AcceptInvoice подтвердить счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Invoice is not found."
     rpc AcceptInvoice (AcceptInvoiceRequest) returns (AcceptInvoiceResponse) {
     }
 
+    // RejectInvoice отменить счет.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Invoice is not found."
     rpc RejectInvoice (RejectInvoiceRequest) returns (RejectInvoiceResponse) {
     }
 
+    // AuthTx авторизировать транзакцию.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Transaction is not found."
     rpc AuthTx (AuthTxRequest) returns (AuthTxResponse) {
     }
 
+    // AcceptTx подтвердить транзакцию.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Transaction is not found."
     rpc AcceptTx (AcceptTxRequest) returns (AcceptTxResponse) {
     }
 
+    // RejectTx отменить транзакцию.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 5 (NotFound) "Transaction is not found."
     rpc RejectTx (RejectTxRequest) returns (RejectTxResponse) {
     }
 }
