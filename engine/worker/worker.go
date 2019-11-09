@@ -7,7 +7,6 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"go.opencensus.io/trace"
-	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 
 	"github.com/gebv/acca/engine/strategies"
