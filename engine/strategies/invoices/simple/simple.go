@@ -42,7 +42,7 @@ func (s *Strategy) MetaValidation(meta *[]byte) error {
 }
 
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
-	ctx, span := trace.StartSpan(ctx, "Dispatch")
+	ctx, span := trace.StartSpan(ctx, "Dispatch."+s.Name().String())
 	defer span.End()
 	invID, ok := payload.(int64)
 	if !ok {
@@ -82,12 +82,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.DRAFT_I)),
-					trace.StringAttribute("dst", string(engine.AUTH_I)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_I)),
+					trace.StringAttribute("dst_status", string(engine.AUTH_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -150,12 +150,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.DRAFT_I)),
-					trace.StringAttribute("dst", string(engine.ACCEPTED_I)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_I)),
+					trace.StringAttribute("dst_status", string(engine.ACCEPTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -211,12 +211,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.DRAFT_I)),
-					trace.StringAttribute("dst", string(engine.WAIT_I)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_I)),
+					trace.StringAttribute("dst_status", string(engine.WAIT_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -272,12 +272,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.DRAFT_I)),
-					trace.StringAttribute("dst", string(engine.REJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_I)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -333,12 +333,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.AUTH_I)),
-					trace.StringAttribute("dst", string(engine.WAIT_I)),
+					trace.StringAttribute("src_status", string(engine.AUTH_I)),
+					trace.StringAttribute("dst_status", string(engine.WAIT_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -394,12 +394,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.AUTH_I)),
-					trace.StringAttribute("dst", string(engine.ACCEPTED_I)),
+					trace.StringAttribute("src_status", string(engine.AUTH_I)),
+					trace.StringAttribute("dst_status", string(engine.ACCEPTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -455,12 +455,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.AUTH_I)),
-					trace.StringAttribute("dst", string(engine.REJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.AUTH_I)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -516,12 +516,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.WAIT_I)),
-					trace.StringAttribute("dst", string(engine.ACCEPTED_I)),
+					trace.StringAttribute("src_status", string(engine.WAIT_I)),
+					trace.StringAttribute("dst_status", string(engine.ACCEPTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -577,12 +577,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.WAIT_I)),
-					trace.StringAttribute("dst", string(engine.REJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.WAIT_I)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -638,12 +638,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.DRAFT_I)),
-					trace.StringAttribute("dst", string(engine.MREJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_I)),
+					trace.StringAttribute("dst_status", string(engine.MREJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -702,12 +702,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.AUTH_I)),
-					trace.StringAttribute("dst", string(engine.MACCEPTED_I)),
+					trace.StringAttribute("src_status", string(engine.AUTH_I)),
+					trace.StringAttribute("dst_status", string(engine.MACCEPTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -765,12 +765,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.AUTH_I)),
-					trace.StringAttribute("dst", string(engine.MREJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.AUTH_I)),
+					trace.StringAttribute("dst_status", string(engine.MREJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -828,12 +828,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.WAIT_I)),
-					trace.StringAttribute("dst", string(engine.MACCEPTED_I)),
+					trace.StringAttribute("src_status", string(engine.WAIT_I)),
+					trace.StringAttribute("dst_status", string(engine.MACCEPTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -891,12 +891,12 @@ func (s *Strategy) load() {
 					log.Println("Invoice bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("invoice_id", invID),
-					trace.StringAttribute("src", string(engine.WAIT_I)),
-					trace.StringAttribute("dst", string(engine.MREJECTED_I)),
+					trace.StringAttribute("src_status", string(engine.WAIT_I)),
+					trace.StringAttribute("dst_status", string(engine.MREJECTED_I)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {

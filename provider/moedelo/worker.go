@@ -33,7 +33,7 @@ type MessageToMoedelo struct {
 
 func (p *Provider) NatsHandler() func(m *MessageToMoedelo) {
 	return func(m *MessageToMoedelo) {
-		_, span := trace.StartSpan(context.Background(), "ProviderMoedelo")
+		_, span := trace.StartSpan(context.Background(), "async.fromQueue.ProviderMoedelo")
 		defer span.End()
 		var clientID int64
 		if m.ClientID != nil {

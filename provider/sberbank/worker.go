@@ -30,7 +30,7 @@ type MessageToSberbank struct {
 
 func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 	return func(m *MessageToSberbank) {
-		_, span := trace.StartSpan(context.Background(), "ProviderSberbank")
+		_, span := trace.StartSpan(context.Background(), "async.fromQueue.ProviderSberbank")
 		defer span.End()
 		var clientID int64
 		if m.ClientID != nil {

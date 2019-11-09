@@ -25,7 +25,7 @@ func SubToNATS(
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		ctx, span := trace.StartSpan(ctx, "UpdateInvoice")
+		ctx, span := trace.StartSpan(ctx, "async.fromQueue.UpdateInvoice")
 		defer span.End()
 		var clientID int64
 		if m.ClientID != nil {
@@ -77,7 +77,7 @@ func SubToNATS(
 	nc.QueueSubscribe(strategies.UPDATE_TRANSACTION_SUBJECT, "queue", func(m *strategies.MessageUpdateTransaction) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
-		ctx, span := trace.StartSpan(ctx, "UpdateTransaction")
+		ctx, span := trace.StartSpan(ctx, "async.fromQueue.UpdateTransaction")
 		defer span.End()
 		var clientID int64
 		if m.ClientID != nil {

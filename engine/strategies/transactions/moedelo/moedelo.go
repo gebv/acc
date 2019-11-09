@@ -50,7 +50,7 @@ func (s *Strategy) MetaValidation(meta *[]byte) error {
 }
 
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
-	ctx, span := trace.StartSpan(ctx, "Dispatch")
+	ctx, span := trace.StartSpan(ctx, "Dispatch."+s.Name().String())
 	defer span.End()
 	txID, ok := payload.(int64)
 	if !ok {
@@ -90,12 +90,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.DRAFT_TX)),
-					trace.StringAttribute("dst", string(engine.AUTH_TX)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_TX)),
+					trace.StringAttribute("dst_status", string(engine.AUTH_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -145,12 +145,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.WAUTH_TX)),
-					trace.StringAttribute("dst", string(engine.AUTH_TX)),
+					trace.StringAttribute("src_status", string(engine.WAUTH_TX)),
+					trace.StringAttribute("dst_status", string(engine.AUTH_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -184,12 +184,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.AUTH_TX)),
-					trace.StringAttribute("dst", string(engine.HOLD_TX)),
+					trace.StringAttribute("src_status", string(engine.AUTH_TX)),
+					trace.StringAttribute("dst_status", string(engine.HOLD_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -267,12 +267,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.DRAFT_TX)),
-					trace.StringAttribute("dst", string(engine.REJECTED_TX)),
+					trace.StringAttribute("src_status", string(engine.DRAFT_TX)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -324,12 +324,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.HOLD_TX)),
-					trace.StringAttribute("dst", string(engine.REJECTED_TX)),
+					trace.StringAttribute("src_status", string(engine.HOLD_TX)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -380,12 +380,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.WREJECTED_TX)),
-					trace.StringAttribute("dst", string(engine.REJECTED_TX)),
+					trace.StringAttribute("src_status", string(engine.WREJECTED_TX)),
+					trace.StringAttribute("dst_status", string(engine.REJECTED_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -451,12 +451,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.AUTH_TX)),
-					trace.StringAttribute("dst", string(engine.ACCEPTED_TX)),
+					trace.StringAttribute("src_status", string(engine.AUTH_TX)),
+					trace.StringAttribute("dst_status", string(engine.ACCEPTED_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
@@ -534,12 +534,12 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState")
+				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
 				defer span.End()
 				span.AddAttributes(
 					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src", string(engine.HOLD_TX)),
-					trace.StringAttribute("dst", string(engine.ACCEPTED_TX)),
+					trace.StringAttribute("src_status", string(engine.HOLD_TX)),
+					trace.StringAttribute("dst_status", string(engine.ACCEPTED_TX)),
 				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
