@@ -11,15 +11,9 @@ func Test_WaitString(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
-	if err != nil {
-		t.Error("context with timeout err: ", err)
-	}
+	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, err := context.WithTimeout(context.Background(), d)
-		if err != nil {
-			t.Error("context with timeout err: ", err)
-		}
+		ctx, _ := context.WithTimeout(context.Background(), d)
 		return ctx
 	}
 
@@ -117,15 +111,9 @@ func Test_WaitStruct(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
-	if err != nil {
-		t.Error("context with timeout err: ", err)
-	}
+	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, err := context.WithTimeout(context.Background(), d)
-		if err != nil {
-			t.Error("context with timeout err: ", err)
-		}
+		ctx, _ := context.WithTimeout(context.Background(), d)
 		return ctx
 	}
 
@@ -223,15 +211,9 @@ func Test_WaitInterface(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, err := context.WithDeadline(context.Background(), time.Now())
-	if err != nil {
-		t.Error("context with timeout err: ", err)
-	}
+	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, err := context.WithTimeout(context.Background(), d)
-		if err != nil {
-			t.Error("context with timeout err: ", err)
-		}
+		ctx, _ := context.WithTimeout(context.Background(), d)
 		return ctx
 	}
 

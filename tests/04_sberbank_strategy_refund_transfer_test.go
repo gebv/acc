@@ -6,9 +6,10 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/provider/sberbank"
-	"github.com/stretchr/testify/require"
 )
 
 func Test04_01SberbankStrategy(t *testing.T) {
