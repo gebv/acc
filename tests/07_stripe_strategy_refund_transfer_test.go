@@ -18,9 +18,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))
 
-	t.Run("CreateAccount", h.CreateAccount("acc4.1.1", "curr1"))
+	t.Run("CreateAccount", h.CreateAccount("acc7.1.1", "curr1"))
 
-	t.Run("CreateAccount", h.CreateAccount("acc4.1.2", "curr1"))
+	t.Run("CreateAccount", h.CreateAccount("acc7.1.2", "curr1"))
 
 	t.Run("RechargeFromInvoice", func(t *testing.T) {
 
@@ -42,8 +42,8 @@ func Test07_01StripeStrategy(t *testing.T) {
 			&meta,
 			[]*api.AddTransactionToInvoiceRequest_Oper{
 				h.CreateOperation(
-					"acc4.1.1",
-					"acc4.1.2",
+					"acc7.1.1",
+					"acc7.1.2",
 					"",
 					false,
 					api.OperStrategy_RECHARGE_OPS,
@@ -58,9 +58,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 		t.Run("WaitTransaction", h.WaitTransaction("tx1", api.TxStatus_AUTH_TX))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", string(pkgStripe.PaymentIntentStatusRequiresPaymentMethod), api.TxStatus_AUTH_TX))
 
@@ -68,14 +68,14 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 		t.Run("WaitInvoice", h.WaitInvoice("inv1", api.InvoiceStatus_ACCEPTED_I))
 
-		h.BalanceInc("acc4.1.1", 1000)
-		h.AcceptedBalanceInc("acc4.1.1", 1000)
-		h.BalanceInc("acc4.1.2", 1000)
-		h.AcceptedBalanceInc("acc4.1.2", 1000)
+		h.BalanceInc("acc7.1.1", 1000)
+		h.AcceptedBalanceInc("acc7.1.1", 1000)
+		h.BalanceInc("acc7.1.2", 1000)
+		h.AcceptedBalanceInc("acc7.1.2", 1000)
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 		t.Run("CheckTransactionWithProvider", h.CheckTransactionWithProvider("tx1", string(pkgStripe.PaymentIntentStatusSucceeded), api.TxStatus_ACCEPTED_TX))
 
@@ -125,8 +125,8 @@ func Test07_01StripeStrategy(t *testing.T) {
 			&metaTr,
 			[]*api.AddTransactionToInvoiceRequest_Oper{
 				h.CreateOperation(
-					"acc4.1.1",
-					"acc4.1.2",
+					"acc7.1.1",
+					"acc7.1.2",
 					"",
 					false,
 					api.OperStrategy_WITHDRAW_OPS,
@@ -141,9 +141,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_REJECTED_TX))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 	})
 
@@ -179,8 +179,8 @@ func Test07_01StripeStrategy(t *testing.T) {
 			&metaTr,
 			[]*api.AddTransactionToInvoiceRequest_Oper{
 				h.CreateOperation(
-					"acc4.1.1",
-					"acc4.1.2",
+					"acc7.1.1",
+					"acc7.1.2",
 					"",
 					false,
 					api.OperStrategy_WITHDRAW_OPS,
@@ -189,10 +189,10 @@ func Test07_01StripeStrategy(t *testing.T) {
 			},
 		))
 
-		h.BalanceDec("acc4.1.1", 600)
-		h.AcceptedBalanceDec("acc4.1.1", 600)
-		h.BalanceDec("acc4.1.2", 600)
-		h.AcceptedBalanceDec("acc4.1.2", 600)
+		h.BalanceDec("acc7.1.1", 600)
+		h.AcceptedBalanceDec("acc7.1.1", 600)
+		h.BalanceDec("acc7.1.2", 600)
+		h.AcceptedBalanceDec("acc7.1.2", 600)
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv2"))
 
@@ -200,9 +200,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_ACCEPTED_TX))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 	})
 
@@ -247,8 +247,8 @@ func Test07_01StripeStrategy(t *testing.T) {
 			&metaTr,
 			[]*api.AddTransactionToInvoiceRequest_Oper{
 				h.CreateOperation(
-					"acc4.1.1",
-					"acc4.1.2",
+					"acc7.1.1",
+					"acc7.1.2",
 					"",
 					false,
 					api.OperStrategy_WITHDRAW_OPS,
@@ -263,9 +263,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_DRAFT_TX))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 	})
 
@@ -310,8 +310,8 @@ func Test07_01StripeStrategy(t *testing.T) {
 			&metaTr,
 			[]*api.AddTransactionToInvoiceRequest_Oper{
 				h.CreateOperation(
-					"acc4.1.1",
-					"acc4.1.2",
+					"acc7.1.1",
+					"acc7.1.2",
 					"",
 					false,
 					api.OperStrategy_WITHDRAW_OPS,
@@ -320,10 +320,10 @@ func Test07_01StripeStrategy(t *testing.T) {
 			},
 		))
 
-		h.BalanceDec("acc4.1.1", 400)
-		h.AcceptedBalanceDec("acc4.1.1", 400)
-		h.BalanceDec("acc4.1.2", 400)
-		h.AcceptedBalanceDec("acc4.1.2", 400)
+		h.BalanceDec("acc7.1.1", 400)
+		h.AcceptedBalanceDec("acc7.1.1", 400)
+		h.BalanceDec("acc7.1.2", 400)
+		h.AcceptedBalanceDec("acc7.1.2", 400)
 
 		t.Run("AuthInvoice", h.AuthInvoice("inv2"))
 
@@ -331,9 +331,9 @@ func Test07_01StripeStrategy(t *testing.T) {
 
 		t.Run("CheckTransaction", h.CheckTransaction("tx2", api.TxStatus_ACCEPTED_TX))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.1", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.1", "curr1"))
 
-		t.Run("CheckBalances", h.CheckBalances("acc4.1.2", "curr1"))
+		t.Run("CheckBalances", h.CheckBalances("acc7.1.2", "curr1"))
 
 	})
 

@@ -284,7 +284,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		serverWebhookSberbank(ctx, sberProvider, stripeProvider)
+		serverWebhook(ctx, sberProvider, stripeProvider)
 	}()
 
 	wg.Wait()
@@ -409,7 +409,7 @@ func setupPostgres(conn string, maxLifetime time.Duration, maxOpen, maxIdle int)
 	return sqlDB
 }
 
-func serverWebhookSberbank(ctx context.Context, providerSber *sberbank.Provider, providerStripe *stripe.Provider) {
+func serverWebhook(ctx context.Context, providerSber *sberbank.Provider, providerStripe *stripe.Provider) {
 
 	e := echo.New()
 
@@ -430,9 +430,10 @@ func serverWebhookSberbank(ctx context.Context, providerSber *sberbank.Provider,
 	e.Use(echo_middleware.Recover())
 
 	e.Use(echo_middleware.Logger())
+	e.Use(echo_middleware.BodyLimit("64K"))
 
-	e.GET("/webhook/sberbank", providerSber.SberbankWebhookHandler())
-	e.POST("/webhook/stripe", providerStripe.StripeWebhookHandler())
+	e.GET("/webhook/sberbank", providerSber.WebhookHandler())
+	e.POST("/webhook/stripe", providerStripe.WebhookHandler())
 
 	var wg sync.WaitGroup
 	wg.Add(1)

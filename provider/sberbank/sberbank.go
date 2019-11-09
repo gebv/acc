@@ -12,11 +12,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gebv/acca/provider"
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
+
+	"github.com/gebv/acca/provider"
 )
 
 func NewProvider(db *reform.DB, cfg Config, nc *nats.EncodedConn) *Provider {

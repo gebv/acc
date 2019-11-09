@@ -3,15 +3,16 @@ package sberbank
 import (
 	"net/http"
 
-	"github.com/gebv/acca/engine"
-	"github.com/gebv/acca/engine/strategies"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
+
+	"github.com/gebv/acca/engine"
+	"github.com/gebv/acca/engine/strategies"
 )
 
-// SberbankWebhookHandler обработчик вебхука от сбербанк.
-func (p *Provider) SberbankWebhookHandler() echo.HandlerFunc {
+// WebhookHandler обработчик вебхука от сбербанк.
+func (p *Provider) WebhookHandler() echo.HandlerFunc {
 	return func(c echo.Context) error {
 		callback := c.QueryParam("callback")
 		if p == nil {

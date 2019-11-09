@@ -24,8 +24,6 @@ func (c Channel) Send(msg AbstractMessageOfChannel) (failed bool) {
 
 	select {
 	case c <- msg:
-	default:
-		return false
 	}
 
 	return true

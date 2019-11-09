@@ -1,6 +1,8 @@
 package stripe
 
 import (
+	"os"
+
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -17,7 +19,11 @@ import (
 )
 
 func NewProvider(db *reform.DB, nc *nats.EncodedConn) *Provider {
-	stripe.Key = "sk_test_70xlY8mQwBcRn68OyfM5s3VR00BxaUcrf4"
+	stripe.Key = os.Getenv("STRIPE_KEY")
+	endpointSecret = os.Getenv("STRIPE_ENDPOINT_SECRET")
+	if os.Getenv("STRIPE_KEY") == "" || endpointSecret == "" {
+		panic("Stripe env is empty.")
+	}
 	return &Provider{
 		db: db,
 		nc: nc,
@@ -39,7 +45,7 @@ const (
 	STRIPE provider.Provider = "stripe"
 )
 
-// Создает клиента
+// Создает клиента в stripe и возвращает customerID
 func (p *Provider) CreateCustomer(email, name, pmID *string) (string, error) {
 	cs, err := customer.New(&stripe.CustomerParams{
 		Email:         email,
@@ -59,9 +65,26 @@ func (p *Provider) CreateCustomer(email, name, pmID *string) (string, error) {
 	return cs.ID, nil
 }
 
-// Сохранение карты без платежа.
-func (p *Provider) SetupIntent() (string, string, error) {
-	intent, err := setupintent.New(&stripe.SetupIntentParams{}) // TODO проверить с nil
+// Сохранение карты без платежа, создает клиентский секрет,
+//при использовании которого можно добавить к пользователю карту на стороне клиента.
+// Если не указаны все параметры, то нужно на стороне клиента использовать клиентский секрет (2 параметр)
+// и подтвердить данные карты, а далее использовав метода AttachPaymentMethodToCustomer добавить полученный
+// платежный метод. Если указать все параметры и выставить флаг confirm в true, то платежный метод
+// будет сразу добавлен пользователю.
+func (p *Provider) SetupIntent(customerID, pmID string, confirm bool) (string, string, error) {
+	var ptrCustomerID *string
+	if customerID != "" {
+		ptrCustomerID = &customerID
+	}
+	var ptrPmID *string
+	if pmID != "" {
+		ptrPmID = &pmID
+	}
+	intent, err := setupintent.New(&stripe.SetupIntentParams{
+		Customer:      ptrCustomerID,
+		PaymentMethod: ptrPmID,
+		Confirm:       stripe.Bool(confirm),
+	})
 	if err != nil {
 		p.l.Warn(
 			"Failed setup intent",
@@ -72,7 +95,8 @@ func (p *Provider) SetupIntent() (string, string, error) {
 	return intent.ID, intent.ClientSecret, nil
 }
 
-// Добавляем метод платежа (карты) к пользователю
+// Добавляем платежного метода (карты) к пользователю. id берести при подтверждении клиентом выставленного счетоа
+// по клиентскому секрету.
 func (p *Provider) AttachPaymentMethodToCustomer(pmID, customerID string) error {
 	_, err := paymentmethod.Attach(pmID, &stripe.PaymentMethodAttachParams{
 		Customer: &customerID,
@@ -93,27 +117,35 @@ func (p *Provider) AttachPaymentMethodToCustomer(pmID, customerID string) error 
 func (p *Provider) PaymentIntent(
 	amount int64,
 	currency stripe.Currency,
-	customerID *string,
-	pmID *string,
-	confirm *bool,
+	customerID string,
+	pmID string,
+	confirm bool,
 ) (*stripe.PaymentIntent, error) {
+	var ptrCustomerID *string
+	if customerID != "" {
+		ptrCustomerID = &customerID
+	}
+	var ptrPmID *string
+	if pmID != "" {
+		ptrPmID = &pmID
+	}
 	paymentIntent, err := paymentintent.New(&stripe.PaymentIntentParams{
 		Amount:   stripe.Int64(amount),
 		Currency: stripe.String(string(currency)),
 		PaymentMethodTypes: []*string{
 			stripe.String("card"),
 		},
-		Customer:      customerID,
-		PaymentMethod: pmID,
-		Confirm:       confirm, // Если карта обязательно подтверждение 3D secure, то будет ошибка.
+		Customer:      ptrCustomerID,
+		PaymentMethod: ptrPmID,
+		Confirm:       stripe.Bool(confirm), // Если карта обязательно подтверждение 3D secure, то будет ошибка.
 		// OffSession:    stripe.Bool(true), // Баз Confirm не указывать, ошибка.
 		//SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)), // С последующим использованием карты. может быть указан на клиенте
 	})
 	if err != nil {
 		p.l.Warn(
 			"Failed payment intent",
-			zap.String("customer_id", stripe.StringValue(customerID)),
-			zap.String("payment_method", stripe.StringValue(pmID)),
+			zap.String("customer_id", customerID),
+			zap.String("payment_method", pmID),
 			zap.Error(err),
 		)
 		return nil, errors.Wrap(err, "Failed payment intent")
@@ -129,28 +161,36 @@ func (p *Provider) PaymentIntent(
 func (p *Provider) PaymentIntentWithHold(
 	amount int64,
 	currency stripe.Currency,
-	customerID *string,
-	pmID *string,
-	confirm *bool,
+	customerID string,
+	pmID string,
+	confirm bool,
 ) (*stripe.PaymentIntent, error) {
+	var ptrCustomerID *string
+	if customerID != "" {
+		ptrCustomerID = &customerID
+	}
+	var ptrPmID *string
+	if pmID != "" {
+		ptrPmID = &pmID
+	}
 	pi, err := paymentintent.New(&stripe.PaymentIntentParams{
 		Amount:   stripe.Int64(amount),
 		Currency: stripe.String(string(currency)),
 		PaymentMethodTypes: []*string{
 			stripe.String("card"),
 		},
-		Customer:      customerID,
-		PaymentMethod: pmID,
+		Customer:      ptrCustomerID,
+		PaymentMethod: ptrPmID,
 		CaptureMethod: stripe.String("manual"), // TODO проверить, если будет указано Confirm может нужно убрать manual
-		Confirm:       confirm,                 // Если карта обязательно подтверждение 3D secure, то будет ошибка.
+		Confirm:       stripe.Bool(confirm),    // Если карта обязательно подтверждение 3D secure, то будет ошибка.
 		// OffSession:    stripe.Bool(true), // Баз Confirm не указывать, ошибка.
 		//SetupFutureUsage: stripe.String(string(stripe.PaymentIntentSetupFutureUsageOffSession)), // С последующим использованием карты. может быть указана на клиенту.
 	})
 	if err != nil {
 		p.l.Warn(
 			"Failed payment intent",
-			zap.String("customer_id", stripe.StringValue(customerID)),
-			zap.String("payment_method", stripe.StringValue(pmID)),
+			zap.String("customer_id", customerID),
+			zap.String("payment_method", pmID),
 			zap.Error(err),
 		)
 		return nil, errors.Wrap(err, "Failed payment intent")
@@ -162,11 +202,11 @@ func (p *Provider) PaymentIntentWithHold(
 	return pi, nil
 }
 
-func (p *Provider) Confirm(paymentIntentID string, pmID *string) error {
+func (p *Provider) Confirm(paymentIntentID string, pmID string) error {
 	var paymentIntent *stripe.PaymentIntentConfirmParams
-	if pmID != nil {
+	if pmID != "" {
 		paymentIntent = &stripe.PaymentIntentConfirmParams{
-			PaymentMethod: pmID,
+			PaymentMethod: stripe.String(pmID),
 			// OffSession:    stripe.Bool(true), // Если для карты обязательно 3D secure будет ошибка
 		}
 	}
@@ -178,7 +218,7 @@ func (p *Provider) Confirm(paymentIntentID string, pmID *string) error {
 		p.l.Warn(
 			"Failed confirm payment intent",
 			zap.String("payment_intent_id", paymentIntentID),
-			zap.String("payment_method", stripe.StringValue(pmID)),
+			zap.String("payment_method", pmID),
 			zap.Error(err),
 		)
 		return errors.Wrap(err, "Failed confirm payment intent")
@@ -275,6 +315,7 @@ func (p *Provider) Refund(chargeID string, amount *int64) error {
 	return nil
 }
 
+// Get возвращает структуру выставленной платежки(счета).
 func (p *Provider) GetPaymentIntent(
 	piID string,
 ) (*stripe.PaymentIntent, error) {

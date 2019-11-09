@@ -6,12 +6,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
 	"github.com/gebv/acca/provider/moedelo"
-	"github.com/pkg/errors"
 )
 
 const nameStrategy strategies.TrStrategyName = "transaction_moedelo_strategy"
@@ -27,7 +28,6 @@ func init() {
 type Strategy struct {
 	s        ffsm.Stack
 	syncOnce sync.Once
-	config   moedelo.Config
 }
 
 func (s *Strategy) Name() strategies.TrStrategyName {

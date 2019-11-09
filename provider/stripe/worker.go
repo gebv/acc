@@ -76,32 +76,22 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 				}
 				return
 			}
-			var customerID *string
-			if meta["customer_id"] != "" {
-				v := meta["customer_id"]
-				customerID = &v
-			}
-			var pmID *string
-			if meta["pm_id"] != "" {
-				v := meta["pm_id"]
-				pmID = &v
-			}
 			var paymentIntent *stripe.PaymentIntent
 			if hold {
 				paymentIntent, err = p.PaymentIntentWithHold(
 					tr.Amount,
 					stripe.CurrencyUSD,
-					customerID,
-					pmID,
-					nil,
+					meta["customer_id"],
+					meta["pm_id"],
+					false,
 				)
 			} else {
 				paymentIntent, err = p.PaymentIntent(
 					tr.Amount,
 					stripe.CurrencyUSD,
-					customerID,
-					pmID,
-					nil,
+					meta["customer_id"],
+					meta["pm_id"],
+					false,
 				)
 			}
 			if err != nil {

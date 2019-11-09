@@ -180,9 +180,9 @@ func Test_Simple2(t *testing.T) {
 			wf:       wfSleep10min,
 			name:     "TimeoutCtx",
 			ctx: func() context.Context {
-				ctx, err := context.WithTimeout(context.Background(), time.Millisecond*100)
-				if err != nil {
-					t.Error("context with timeout err: ", err)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+				if cancel == nil {
+					t.Error("context with timeout is nil")
 				}
 				return ctx
 			}(),

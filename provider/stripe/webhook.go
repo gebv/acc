@@ -17,13 +17,17 @@ import (
 // If you are testing your webhook locally with the Stripe CLI you
 // can find the endpoint's secret by running `stripe trigger`
 // Otherwise, find your endpoint's secret in your webhook settings in the Developer Dashboard
-var endpointSecret = "whsec_IDoODms1QL7LRHhEpmwRuwAmp3lejhKi"
+var endpointSecret string
 
-// StripeWebhookHandler обработчик вебхука от stripe.
-func (p *Provider) StripeWebhookHandler() echo.HandlerFunc {
+const (
+	PaymentIntentSucceeded               = "payment_intent.succeeded"
+	PaymentIntentAmountCapturableUpdated = "payment_intent.amount_capturable_updated"
+	PaymentIntentPaymentFailed           = "payment_intent.payment_failed"
+)
+
+// WebhookHandler обработчик вебхука от stripe.
+func (p *Provider) WebhookHandler() echo.HandlerFunc {
 	return func(c echo.Context) error {
-		const MaxBodyBytes = int64(65536)
-		c.Request().Body = http.MaxBytesReader(c.Response(), c.Request().Body, MaxBodyBytes)
 		payload, err := ioutil.ReadAll(c.Request().Body)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading request body: %v\n", err)
@@ -37,14 +41,14 @@ func (p *Provider) StripeWebhookHandler() echo.HandlerFunc {
 			endpointSecret)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error verifying webhook signature: %v\n", err)
+			p.l.Error("Failed verifying webhook signature", zap.Error(err))
 			c.Response().WriteHeader(http.StatusBadRequest) // Return a 400 error on a bad signature
 			return nil
 		}
 
 		// Unmarshal the event data into an appropriate struct depending on its Type
 		switch event.Type {
-		case "payment_intent.succeeded":
+		case PaymentIntentSucceeded:
 			var tr engine.Transaction
 			err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", STRIPE, event.GetObjectValue("id"))
 			if err != nil {
@@ -102,7 +106,7 @@ func (p *Provider) StripeWebhookHandler() echo.HandlerFunc {
 				return nil
 			}
 
-		case "payment_intent.amount_capturable_updated":
+		case PaymentIntentAmountCapturableUpdated:
 			var tr engine.Transaction
 			err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", STRIPE, event.GetObjectValue("id"))
 			if err != nil {
@@ -158,7 +162,7 @@ func (p *Provider) StripeWebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-		case "payment_intent.payment_failed":
+		case PaymentIntentPaymentFailed:
 			var tr engine.Transaction
 			err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", STRIPE, event.GetObjectValue("id"))
 			if err != nil {

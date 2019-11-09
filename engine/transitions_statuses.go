@@ -1,9 +1,9 @@
 package engine
 
-var operationStatusTransitionChart = OperationStatusTransitionChart{
-	DRAFT_OP: {HOLD_OP, ACCEPTED_OP, REJECTED_OP},
-	HOLD_OP:  {ACCEPTED_OP, REJECTED_OP},
-}
+//var operationStatusTransitionChart = OperationStatusTransitionChart{
+//	DRAFT_OP: {HOLD_OP, ACCEPTED_OP, REJECTED_OP},
+//	HOLD_OP:  {ACCEPTED_OP, REJECTED_OP},
+//}
 
 var transactionStatusTransitionChart = TransactionStatusTransitionChart{
 	DRAFT_TX: {AUTH_TX},
