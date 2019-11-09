@@ -9,7 +9,12 @@ option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.marshaler_all) = true;
 
 service Updates {
-    // Подписка на уведомления.
+    // GetUpdate подписка на уведомления.
+    //
+    // Errors:
+    //   - Common errors
+    //   - 10 (Aborted) "Transport is closing."
+    //   - 10 (Aborted) "Stream is done or header sent (not exact wording)."
     rpc GetUpdate (GetUpdateRequest) returns (stream Update) {
     }
 }

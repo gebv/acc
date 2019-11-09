@@ -602,10 +602,39 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type AccountsClient interface {
+	// CreateCurrency создание валюты.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
+	//   - 6 (AlreadyExists) "Already exists."
 	CreateCurrency(ctx context.Context, in *CreateCurrencyRequest, opts ...grpc.CallOption) (*CreateCurrencyResponse, error)
+	// GetCurrency получить валюты.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
 	GetCurrency(ctx context.Context, in *GetCurrencyRequest, opts ...grpc.CallOption) (*GetCurrencyResponse, error)
+	// CreateAccount создать балансный счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
 	CreateAccount(ctx context.Context, in *CreateAccountRequest, opts ...grpc.CallOption) (*CreateAccountResponse, error)
+	// GetAccountByKey получить балансный счет по ключу и валюте.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
+	//   - 5 (NotFound) "account not found"
 	GetAccountByKey(ctx context.Context, in *GetAccountByKeyRequest, opts ...grpc.CallOption) (*GetAccountByKeyResponse, error)
+	// BalanceChanges получить список изменений балансного счета по его id.
+	//
+	// Errors:
+	//   - Common errors
 	BalanceChanges(ctx context.Context, in *BalanceChangesRequest, opts ...grpc.CallOption) (*BalanceChangesResponse, error)
 }
 
@@ -664,10 +693,39 @@ func (c *accountsClient) BalanceChanges(ctx context.Context, in *BalanceChangesR
 
 // AccountsServer is the server API for Accounts service.
 type AccountsServer interface {
+	// CreateCurrency создание валюты.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
+	//   - 6 (AlreadyExists) "Already exists."
 	CreateCurrency(context.Context, *CreateCurrencyRequest) (*CreateCurrencyResponse, error)
+	// GetCurrency получить валюты.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
 	GetCurrency(context.Context, *GetCurrencyRequest) (*GetCurrencyResponse, error)
+	// CreateAccount создать балансный счет.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
 	CreateAccount(context.Context, *CreateAccountRequest) (*CreateAccountResponse, error)
+	// GetAccountByKey получить балансный счет по ключу и валюте.
+	//
+	// Errors:
+	//   - Common errors
+	//   - 3 (InvalidArgument) "Invalid key."
+	//   - 5 (NotFound) "currency not found"
+	//   - 5 (NotFound) "account not found"
 	GetAccountByKey(context.Context, *GetAccountByKeyRequest) (*GetAccountByKeyResponse, error)
+	// BalanceChanges получить список изменений балансного счета по его id.
+	//
+	// Errors:
+	//   - Common errors
 	BalanceChanges(context.Context, *BalanceChangesRequest) (*BalanceChangesResponse, error)
 }
 

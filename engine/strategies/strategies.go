@@ -4,11 +4,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/nats-io/nats.go"
+	"gopkg.in/reform.v1"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
-	"github.com/nats-io/nats.go"
-	"gopkg.in/reform.v1"
 )
 
 type TrStrategyName string

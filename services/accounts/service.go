@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	"go.opencensus.io/trace"
+	"google.golang.org/grpc/codes"
+	"gopkg.in/reform.v1"
+
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/services"
 	"github.com/gebv/acca/services/invoices"
-	"google.golang.org/grpc/codes"
-	"gopkg.in/reform.v1"
 
 	"github.com/pkg/errors"
 )
@@ -24,7 +26,13 @@ type Server struct {
 
 func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountRequest) (*api.CreateAccountResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("key", req.GetKey()),
+		trace.StringAttribute("currency_key", req.GetCurrencyKey()),
+	)
 	m := engine.NewAccountManager(s.db)
 
 	curr, err := m.GetCurrency(clientID, req.GetCurrencyKey())
@@ -53,6 +61,12 @@ func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountReques
 
 func (s *Server) GetCurrency(ctx context.Context, req *api.GetCurrencyRequest) (*api.GetCurrencyResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("key", req.GetKey()),
+	)
 	curr, err := engine.NewAccountManager(s.db).GetCurrency(clientID, req.GetKey())
 	if err != nil {
 		if err == engine.ErrCurrencyNotExists {
@@ -74,6 +88,12 @@ func (s *Server) GetCurrency(ctx context.Context, req *api.GetCurrencyRequest) (
 
 func (s *Server) CreateCurrency(ctx context.Context, req *api.CreateCurrencyRequest) (*api.CreateCurrencyResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("key", req.GetKey()),
+	)
 	err := engine.NewAccountManager(s.db).UpsertCurrency(clientID, req.GetKey(), req.GetMeta())
 	if err != nil {
 		if err == engine.ErrInvalidCurrencyKey {
@@ -86,7 +106,13 @@ func (s *Server) CreateCurrency(ctx context.Context, req *api.CreateCurrencyRequ
 
 func (s *Server) GetAccountByKey(ctx context.Context, req *api.GetAccountByKeyRequest) (*api.GetAccountByKeyResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.StringAttribute("key", req.GetKey()),
+		trace.StringAttribute("currency_key", req.GetCurrKey()),
+	)
 	m := engine.NewAccountManager(s.db)
 
 	curr, err := m.GetCurrency(clientID, req.GetCurrKey())
@@ -121,7 +147,16 @@ func (s *Server) GetAccountByKey(ctx context.Context, req *api.GetAccountByKeyRe
 
 func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequest) (*api.BalanceChangesResponse, error) {
 	clientID := services.GetClient(ctx).ClientID
-
+	var accID int64
+	if req.GetAccId() != nil {
+		accID = *req.GetAccId()
+	}
+	ctx, span := trace.StartSpan(ctx, "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+		trace.Int64Attribute("account_id", accID),
+	)
 	var tail string
 	args := make([]interface{}, 0, 4)
 	if req.GetAccId() != nil {

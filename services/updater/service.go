@@ -6,6 +6,7 @@ import (
 
 	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -30,6 +31,11 @@ func NewServer(nc *nats.EncodedConn) *Server {
 
 func (s *Server) GetUpdate(req *api.GetUpdateRequest, stream api.Updates_GetUpdateServer) error {
 	clientID := services.GetClient(stream.Context()).ClientID
+	_, span := trace.StartSpan(stream.Context(), "ProcessingRequest")
+	defer span.End()
+	span.AddAttributes(
+		trace.Int64Attribute("client_id", clientID),
+	)
 
 	var chErr = make(chan error)
 	s.l.Info("Subscribed.", zap.Int64("client_id", clientID))

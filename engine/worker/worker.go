@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"go.opencensus.io/trace"
+	"github.com/nats-io/nats.go"
 	"gopkg.in/reform.v1"
 
 	"github.com/gebv/acca/engine/strategies"
@@ -24,13 +26,25 @@ func SubToNATS(
 	providerStripe *stripe.Provider,
 ) {
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		ctx, span := trace.StartSpan(ctx, "async.fromQueue.UpdateInvoice")
+		defer span.End()
+		var clientID int64
+		if m.ClientID != nil {
+			clientID = *m.ClientID
+		}
+		span.AddAttributes(
+			trace.Int64Attribute("client_id", clientID),
+			trace.Int64Attribute("invoice_id", m.InvoiceID),
+			trace.StringAttribute("strategy", m.Strategy),
+			trace.StringAttribute("status", string(m.Status)),
+		)
 		tx, err := db.Begin()
 		if err != nil {
 			log.Println("Failed begin transaction DB.")
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 		ctx = strategies.SetNatsToContext(ctx, nc)
 		ctx = strategies.SetTXContext(ctx, tx)
 		if name := strategies.ExistInvName(m.Strategy); name != strategies.UNDEFINED_INV {
@@ -64,13 +78,25 @@ func SubToNATS(
 		}
 	})
 	nc.QueueSubscribe(strategies.UPDATE_TRANSACTION_SUBJECT, "queue", func(m *strategies.MessageUpdateTransaction) {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		ctx, span := trace.StartSpan(ctx, "async.fromQueue.UpdateTransaction")
+		defer span.End()
+		var clientID int64
+		if m.ClientID != nil {
+			clientID = *m.ClientID
+		}
+		span.AddAttributes(
+			trace.Int64Attribute("client_id", clientID),
+			trace.Int64Attribute("transaction_id", m.TransactionID),
+			trace.StringAttribute("strategy", m.Strategy),
+			trace.StringAttribute("status", string(m.Status)),
+		)
 		tx, err := db.Begin()
 		if err != nil {
 			log.Println("Failed begin transaction DB.")
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
 		ctx = strategies.SetNatsToContext(ctx, nc)
 		ctx = strategies.SetTXContext(ctx, tx)
 		if name := strategies.ExistTrName(m.Strategy); name != strategies.UNDEFINED_TR {

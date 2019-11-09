@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gebv/acca/api"
 	"github.com/stretchr/testify/require"
+
+	"github.com/gebv/acca/api"
 )
 
 func Test02_01SberbankStrategy(t *testing.T) {

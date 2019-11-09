@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/bigquery"
+	"contrib.go.opencensus.io/exporter/stackdriver"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/labstack/echo"
@@ -21,9 +23,15 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
+	_ "github.com/solcates/go-sql-bigquery"
+
+	"go.opencensus.io/plugin/ocgrpc"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"golang.org/x/sys/unix"
+	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 	"gopkg.in/nats-io/gnatsd.v2/server"
@@ -77,6 +85,31 @@ func main() {
 	defer syncLogger()
 	handleTerm(cancel)
 
+	// Configure Stackdriver Tracing for gRPC
+	// stackdriver
+	exporter, err := stackdriver.NewExporter(stackdriver.Options{
+		ProjectID:               os.Getenv("GCLOUD_PROJECT"),
+		MetricPrefix:            "acca-api",
+		MonitoringClientOptions: []option.ClientOption{},
+		TraceClientOptions:      []option.ClientOption{},
+	})
+	if err != nil {
+		zap.L().Panic("Failed configure Stackdriver", zap.Error(err))
+	}
+	defer exporter.Flush()
+	trace.RegisterExporter(exporter)
+	if err := exporter.StartMetricsExporter(); err != nil {
+		zap.L().Panic("Failed start metrics exporter", zap.Error(err))
+	}
+	defer exporter.StopMetricsExporter()
+
+	zap.L().Info("Stackdriver Tracing - configured!")
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+
+	if err := view.Register(ocgrpc.DefaultServerViews...); err != nil {
+		zap.L().Panic("Failed register ocgrpc views", zap.Error(err))
+	}
+
 	//vaultClient, tmpErr := vault.NewClient(&vault.Config{
 	//	Address: "http://0.0.0.0:8200",
 	//})
@@ -115,7 +148,7 @@ func main() {
 	//return
 	sqlDB := setupPostgres(*pgConnF, 0, 5, 5)
 	db := reform.NewDB(sqlDB, postgresql.Dialect, reform.NewPrintfLogger(zap.L().Sugar().Debugf))
-	_, err := db.Exec("SELECT version();")
+	_, err = db.Exec("SELECT version();")
 	if err != nil {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
 	}
@@ -177,6 +210,11 @@ func main() {
 		log.Fatal(err)
 	}
 
+	bqCl, err := bigquery.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
+	if err != nil {
+		zap.L().Panic("Failed new client bigquery.", zap.Error(err))
+	}
+
 	sUpdater := updater.NewServer(nc)
 
 	sberProvider := sberbank.NewProvider(
@@ -212,13 +250,14 @@ func main() {
 	}
 
 	// аудитор http запросов (сохраняет в БД все реквесты и респонсы)
-	httpAuditor := auditor.NewHttpAuditor(sqlDB)
+	httpAuditor := auditor.NewHttpAuditor(bqCl)
 	defer httpAuditor.Stop()
 	prometheus.MustRegister(httpAuditor)
 
 	serv := services.NewService(db)
 
 	s := grpc.NewServer(
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 		grpc.UnaryInterceptor(middleware.ChainUnaryServer(
 			grpc_prometheus.UnaryServerInterceptor,
 			settingsInterceptor.Unary(VERSION),

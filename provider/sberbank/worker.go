@@ -1,11 +1,14 @@
 package sberbank
 
 import (
+	"context"
 	"encoding/json"
+
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
-	"go.uber.org/zap"
 )
 
 type Command string
@@ -27,6 +30,19 @@ type MessageToSberbank struct {
 
 func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 	return func(m *MessageToSberbank) {
+		_, span := trace.StartSpan(context.Background(), "async.fromQueue.ProviderSberbank")
+		defer span.End()
+		var clientID int64
+		if m.ClientID != nil {
+			clientID = *m.ClientID
+		}
+		span.AddAttributes(
+			trace.Int64Attribute("client_id", clientID),
+			trace.Int64Attribute("transaction_id", m.TransactionID),
+			trace.StringAttribute("strategy", m.Strategy),
+			trace.StringAttribute("status", string(m.Status)),
+			trace.StringAttribute("command", string(m.Command)),
+		)
 		tx, err := p.db.Begin()
 		if err != nil {
 			p.l.Error("Failed begin transaction DB.", zap.Error(err))
