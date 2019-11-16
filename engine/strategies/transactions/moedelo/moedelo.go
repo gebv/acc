@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+
 	"go.opencensus.io/trace"
 
 	"github.com/gebv/acca/engine"
@@ -29,7 +30,6 @@ func init() {
 type Strategy struct {
 	s        ffsm.Stack
 	syncOnce sync.Once
-	config   moedelo.Config
 }
 
 func (s *Strategy) Name() strategies.TrStrategyName {

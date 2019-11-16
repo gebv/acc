@@ -1,4 +1,4 @@
-package sberbank_refund
+package stripe_refund
 
 import (
 	"context"
@@ -9,16 +9,17 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+
+	pkgStripe "github.com/stripe/stripe-go"
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
-	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/provider/stripe"
 )
 
-const nameStrategy strategies.TrStrategyName = "transaction_sberbank_refund_strategy"
+const nameStrategy strategies.TrStrategyName = "transaction_stripe_refund_strategy"
 
 func init() {
 	s := &Strategy{
@@ -31,7 +32,6 @@ func init() {
 type Strategy struct {
 	s        ffsm.Stack
 	syncOnce sync.Once
-	config   sberbank.Config
 }
 
 func (s *Strategy) Name() strategies.TrStrategyName {
@@ -39,7 +39,7 @@ func (s *Strategy) Name() strategies.TrStrategyName {
 }
 
 func (s *Strategy) Provider() provider.Provider {
-	return sberbank.SBERBANK
+	return stripe.STRIPE
 }
 
 func (s *Strategy) MetaValidation(meta *[]byte) error {
@@ -52,16 +52,10 @@ func (s *Strategy) MetaValidation(meta *[]byte) error {
 }
 
 func (s *Strategy) Dispatch(ctx context.Context, state ffsm.State, payload ffsm.Payload) error {
-	ctx, span := trace.StartSpan(ctx, "Dispatch."+s.Name().String())
-	defer span.End()
 	txID, ok := payload.(int64)
 	if !ok {
 		return errors.New("bad_payload")
 	}
-	span.AddAttributes(
-		trace.Int64Attribute("tx_id", txID),
-		trace.StringAttribute("state", state.String()),
-	)
 	tx := strategies.GetTXContext(ctx)
 	if tx == nil {
 		return errors.New("Not reform tx.")
@@ -92,13 +86,6 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
-				defer span.End()
-				span.AddAttributes(
-					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src_status", string(engine.DRAFT_TX)),
-					trace.StringAttribute("dst_status", string(engine.AUTH_TX)),
-				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -108,7 +95,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
 				}
 				if tr.Strategy != nameStrategy.String() {
-					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
+					return ctx, errors.New("Transaction strategy not TrStripeStrategy.")
 				}
 				if tr.Status != engine.DRAFT_TX {
 					return ctx, errors.New("Transaction status not draft.")
@@ -136,7 +123,7 @@ func (s *Strategy) load() {
 					return ctx, errors.New("Transaction status not accepted.")
 				}
 				if refTx.ProviderOperID == nil {
-					return ctx, errors.New("External order ID in sberbank is nil.")
+					return ctx, errors.New("External order ID in stripe is nil.")
 				}
 				list, err := tx.SelectAllFrom(
 					engine.TransactionTable,
@@ -156,8 +143,8 @@ func (s *Strategy) load() {
 				if refTx.Amount < (refundAmount + tr.Amount) {
 					return ctx, errors.New("No funds to refund.")
 				}
-				if refTx.ProviderOperStatus == nil || *refTx.ProviderOperStatus != sberbank.DEPOSITED {
-					return ctx, errors.New("Bad status transaction in refund, need DEPOSITED.")
+				if refTx.ProviderOperStatus == nil || *refTx.ProviderOperStatus != string(pkgStripe.PaymentIntentStatusSucceeded) {
+					return ctx, errors.New("Bad status transaction in refund, need succeeded.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_TX
@@ -168,8 +155,8 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(sberbank.SUBJECT, &sberbank.MessageToSberbank{
-					Command:       sberbank.Refund,
+				err = nc.Publish(stripe.SUBJECT, &stripe.MessageToStripe{
+					Command:       stripe.Refund,
 					ClientID:      tr.ClientID,
 					TransactionID: tr.TransactionID,
 					Strategy:      tr.Strategy,
@@ -191,13 +178,6 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
-				defer span.End()
-				span.AddAttributes(
-					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src_status", string(engine.WAUTH_TX)),
-					trace.StringAttribute("dst_status", string(engine.AUTH_TX)),
-				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -207,7 +187,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
 				}
 				if tr.Strategy != nameStrategy.String() {
-					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
+					return ctx, errors.New("Transaction strategy not TrStripeStrategy.")
 				}
 				if tr.Status != engine.WAUTH_TX {
 					return ctx, errors.New("Transaction status not auth_wait.")
@@ -241,10 +221,6 @@ func (s *Strategy) load() {
 				}
 				invStatus := engine.ACCEPTED_I
 				tr.Status = engine.ACCEPTED_TX
-				if isHold {
-					tr.Status = engine.HOLD_TX
-					invStatus = engine.WAIT_I
-				}
 				tr.NextStatus = nil
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
@@ -271,13 +247,6 @@ func (s *Strategy) load() {
 					log.Println("Transaction bad Payload: ", payload)
 					return
 				}
-				ctx, span := trace.StartSpan(ctx, "ChangeState."+s.Name().String())
-				defer span.End()
-				span.AddAttributes(
-					trace.Int64Attribute("tx_id", trID),
-					trace.StringAttribute("src_status", string(engine.DRAFT_TX)),
-					trace.StringAttribute("dst_status", string(engine.REJECTED_TX)),
-				)
 				tx := strategies.GetTXContext(ctx)
 				if tx == nil {
 					return ctx, errors.New("Not reform tx in context.")
@@ -287,7 +256,7 @@ func (s *Strategy) load() {
 					return ctx, errors.Wrap(err, "Failed reload transaction by ID.")
 				}
 				if tr.Strategy != nameStrategy.String() {
-					return ctx, errors.New("Transaction strategy not TrSberbankStrategy.")
+					return ctx, errors.New("Transaction strategy not TrStripeStrategy.")
 				}
 				if tr.Status != engine.DRAFT_TX {
 					return ctx, errors.New("Transaction status not draft.")

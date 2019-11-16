@@ -29,7 +29,6 @@ func init() {
 type Strategy struct {
 	s        ffsm.Stack
 	syncOnce sync.Once
-	config   sberbank.Config
 }
 
 func (s *Strategy) Name() strategies.TrStrategyName {

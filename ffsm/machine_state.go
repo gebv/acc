@@ -183,8 +183,7 @@ func (m *MachineState) Dispatch(ctx context.Context, nextState State, payload Pa
 					close(actionDoneCh)
 				}()
 
-				actionCtx := setMachineAndStates(ctx, fm, currState, nextState)
-				if actionCtx, err = act.Func(actionCtx, payload); err != nil {
+				if _, err = act.Func(setMachineAndStates(ctx, fm, currState, nextState), payload); err != nil {
 					actionDoneCh <- DispatchError{
 						ActionName: act.Name,
 						SrcState:   currState,

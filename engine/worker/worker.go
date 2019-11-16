@@ -13,6 +13,7 @@ import (
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider/moedelo"
 	"github.com/gebv/acca/provider/sberbank"
+	"github.com/gebv/acca/provider/stripe"
 	"github.com/gebv/acca/services/updater"
 )
 
@@ -21,6 +22,7 @@ func SubToNATS(
 	db *reform.DB,
 	providerSber *sberbank.Provider,
 	providerMoeDelo *moedelo.Provider,
+	providerStripe *stripe.Provider,
 ) {
 	nc.QueueSubscribe(strategies.UPDATE_INVOICE_SUBJECT, "queue", func(m *strategies.MessageUpdateInvoice) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -127,5 +129,6 @@ func SubToNATS(
 		}
 	})
 	nc.QueueSubscribe(sberbank.SUBJECT, "queue", providerSber.NatsHandler())
+	nc.QueueSubscribe(stripe.SUBJECT, "queue", providerStripe.NatsHandler())
 	nc.QueueSubscribe(moedelo.SUBJECT, "queue", providerMoeDelo.NatsHandler())
 }

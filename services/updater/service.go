@@ -86,8 +86,6 @@ func (s *Server) GetUpdate(req *api.GetUpdateRequest, stream api.Updates_GetUpda
 		s.l.Warn("stream.Send: ", zap.Error(err), zap.Int64("client_id", clientID))
 		return errors.Wrap(err, "Failed to send update.")
 	}
-
-	return nil
 }
 
 func SubjectFromInvoice(clientID *int64, invoiceID int64) string {

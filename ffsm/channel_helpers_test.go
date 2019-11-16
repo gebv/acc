@@ -11,9 +11,11 @@ func Test_WaitString(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
+	expiredCtx, _cancel := context.WithDeadline(context.Background(), time.Now())
+	_ = _cancel
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, _cancel := context.WithTimeout(context.Background(), d)
+		_ = _cancel
 		return ctx
 	}
 
@@ -111,9 +113,11 @@ func Test_WaitStruct(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
+	expiredCtx, _cancel := context.WithDeadline(context.Background(), time.Now())
+	_ = _cancel
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, _cancel := context.WithTimeout(context.Background(), d)
+		_ = _cancel
 		return ctx
 	}
 
@@ -211,9 +215,11 @@ func Test_WaitInterface(t *testing.T) {
 	canceledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	expiredCtx, _ := context.WithDeadline(context.Background(), time.Now())
+	expiredCtx, _cancel := context.WithDeadline(context.Background(), time.Now())
+	_ = _cancel
 	timeoutCtxFn := func(d time.Duration) context.Context {
-		ctx, _ := context.WithTimeout(context.Background(), d)
+		ctx, _cancel := context.WithTimeout(context.Background(), d)
+		_ = _cancel
 		return ctx
 	}
 

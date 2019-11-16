@@ -180,7 +180,10 @@ func Test_Simple2(t *testing.T) {
 			wf:       wfSleep10min,
 			name:     "TimeoutCtx",
 			ctx: func() context.Context {
-				ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*100)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*100)
+				if cancel == nil {
+					t.Error("context with timeout is nil")
+				}
 				return ctx
 			}(),
 			err:         ErrCtxCanceled,
@@ -254,6 +257,8 @@ func Test_Simple2(t *testing.T) {
 			err:         errors.New("Access denied"),
 			initState:   OpenDoor,
 			finiteState: CloseDoor,
+			hasFeedback: true,
+			feedback:    nil,
 		},
 	}
 	for _, tt := range tests {
@@ -272,6 +277,8 @@ func Test_Simple2(t *testing.T) {
 				}
 				assert.Equal(t, tt.feedback, gotMsg)
 			}()
+
+			time.Sleep(time.Millisecond * 10)
 
 			err := m.Dispatch(tt.ctx, tt.initState, tt.payload)
 

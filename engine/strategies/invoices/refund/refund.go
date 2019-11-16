@@ -15,7 +15,7 @@ import (
 	"github.com/gebv/acca/ffsm"
 )
 
-const nameStrategy strategies.InvStrategyName = "invoice_recharge_strategy"
+const nameStrategy strategies.InvStrategyName = "invoice_refund_strategy"
 
 func init() {
 	s := &Strategy{

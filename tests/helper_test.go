@@ -4,10 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/gebv/acca/api"
 	"github.com/gebv/acca/engine/strategies/invoices/refund"
@@ -16,8 +21,8 @@ import (
 	"github.com/gebv/acca/engine/strategies/transactions/sberbank"
 	"github.com/gebv/acca/engine/strategies/transactions/sberbank_refund"
 	tsimple "github.com/gebv/acca/engine/strategies/transactions/simple"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
+	"github.com/gebv/acca/engine/strategies/transactions/stripe"
+	"github.com/gebv/acca/engine/strategies/transactions/stripe_refund"
 )
 
 type helperData struct {
@@ -66,6 +71,8 @@ func NewHelperData(t *testing.T) *helperData {
 			"sberbank":        new(sberbank.Strategy).Name().String(),
 			"sberbank_refund": new(sberbank_refund.Strategy).Name().String(),
 			"moedelo":         new(moedelo.Strategy).Name().String(),
+			"stripe":          new(stripe.Strategy).Name().String(),
+			"stripe_refund":   new(stripe_refund.Strategy).Name().String(),
 		},
 	}
 	res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
@@ -459,4 +466,136 @@ func (h *helperData) getSberbankWebhook(t *testing.T, URL string) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 	})
+}
+
+func (h *helperData) SendCardDataInStripe(txKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+		paymentIntentID := h.txProviderIDs[txKey]
+		clientSecret := h.txProviderUrls[txKey]
+		c := http.Client{
+			Transport: http.DefaultTransport,
+			Timeout:   10 * time.Second,
+		}
+		reqBody := strings.NewReader(`payment_method_data[type]=card&payment_method_data[card][number]=4242424242424242&payment_method_data[card][cvc]=242&payment_method_data[card][exp_month]=04&payment_method_data[card][exp_year]=24&payment_method_data[billing_details][address][postal_code]=42442&payment_method_data[guid]=9eda6b0a-59a2-4229-9e5e-98d39e75b16a&payment_method_data[muid]=22f2306d-8ae1-49d3-8d74-1bcf5fe6bfa0&payment_method_data[sid]=66e15d10-c341-4a01-b3db-4482563a46e6&payment_method_data[payment_user_agent]=stripe.js%2Fffcf9782%3B+stripe-js-v3%2Fffcf9782&payment_method_data[referrer]=http%3A%2F%2Flocalhost%3A8080%2Fstatic%2Ftest2.html&expected_payment_method_type=card&use_stripe_sdk=true&key=pk_test_Ij2QA1jVfWPxLHWl6WoZL91Y00XKOGIOoy&client_secret=` + clientSecret)
+		req, err := http.NewRequest("POST", "https://api.stripe.com/v1/payment_intents/"+paymentIntentID+"/confirm", reqBody)
+		if err != nil {
+			// handle err
+		}
+		req.Host = "api.stripe.com"
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "https://js.stripe.com")
+		req.Header.Set("Content-Length", "794")
+		req.Header.Set("Accept-Language", "ru")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.2 Safari/605.1.15")
+		req.Header.Set("Referer", "https://js.stripe.com/")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.Header.Set("Connection", "keep-alive")
+
+		resp, err := c.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		log.Println("BODY: ", string(body))
+
+		// BODY
+		// {
+		//  "id": "pi_1FayQ8Bz5RLqjsMcT8NCHfZP",
+		//  "object": "payment_intent",
+		//  "amount": 2214,
+		//  "canceled_at": null,
+		//  "cancellation_reason": null,
+		//  "capture_method": "automatic",
+		//  "client_secret": "pi_1FayQ8Bz5RLqjsMcT8NCHfZP_secret_GEY1IFAGtTYvSRMl4DxE6dz7a",
+		//  "confirmation_method": "automatic",
+		//  "created": 1572846488,
+		//  "currency": "usd",
+		//  "description": null,
+		//  "last_payment_error": null,
+		//  "livemode": false,
+		//  "next_action": null,
+		//  "payment_method": "pm_1FayRDBz5RLqjsMc92YaLRg3",
+		//  "payment_method_types": [
+		//    "card"
+		//  ],
+		//  "receipt_email": null,
+		//  "setup_future_usage": null,
+		//  "shipping": null,
+		//  "source": null,
+		//  "status": "succeeded"
+		//}
+		//err = json.Unmarshal(body, errCode)
+		//require.NoError(t, err)
+		//require.EqualValues(t, 0, errCode.ErrorCode)
+
+	}
+}
+
+func (h *helperData) SendConfirmWithPaymentMethodInStripe(txKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+		paymentIntentID := h.txProviderIDs[txKey]
+		clientSecret := h.txProviderUrls[txKey]
+		c := http.Client{
+			Transport: http.DefaultTransport,
+			Timeout:   10 * time.Second,
+		}
+		reqBody := strings.NewReader(`payment_method=pm_1FbHHfBz5RLqjsMcdqPUfpaE&expected_payment_method_type=card&use_stripe_sdk=true&key=pk_test_Ij2QA1jVfWPxLHWl6WoZL91Y00XKOGIOoy&client_secret=` + clientSecret)
+		req, err := http.NewRequest("POST", "https://api.stripe.com/v1/payment_intents/"+paymentIntentID+"/confirm", reqBody)
+		if err != nil {
+			// handle err
+		}
+		req.Host = "api.stripe.com"
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "https://js.stripe.com")
+		req.Header.Set("Content-Length", "794")
+		req.Header.Set("Accept-Language", "ru")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.2 Safari/605.1.15")
+		req.Header.Set("Referer", "https://js.stripe.com/")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.Header.Set("Connection", "keep-alive")
+
+		resp, err := c.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		log.Println("BODY: ", string(body))
+
+	}
+}
+
+func (h *helperData) SendConfirmPaymentInStripe(txKey string) func(t *testing.T) {
+	return func(t *testing.T) {
+		paymentIntentID := h.txProviderIDs[txKey]
+		clientSecret := h.txProviderUrls[txKey]
+		c := http.Client{
+			Transport: http.DefaultTransport,
+			Timeout:   10 * time.Second,
+		}
+		reqBody := strings.NewReader(`key=pk_test_Ij2QA1jVfWPxLHWl6WoZL91Y00XKOGIOoy&client_secret=` + clientSecret)
+		req, err := http.NewRequest("POST", "https://api.stripe.com/v1/payment_intents/"+paymentIntentID+"/confirm", reqBody)
+		if err != nil {
+			// handle err
+		}
+		req.Host = "api.stripe.com"
+		req.Header.Set("Accept", "application/json")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		req.Header.Set("Origin", "https://js.stripe.com")
+		req.Header.Set("Content-Length", "794")
+		req.Header.Set("Accept-Language", "ru")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.2 Safari/605.1.15")
+		req.Header.Set("Referer", "https://js.stripe.com/")
+		req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+		req.Header.Set("Connection", "keep-alive")
+
+		resp, err := c.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		require.NoError(t, err)
+		log.Println("BODY: ", string(body))
+
+	}
 }

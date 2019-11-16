@@ -459,6 +459,23 @@
   version = "v1.3.0"
 
 [[projects]]
+  digest = "1:72091eba7831269b9dac86486bc5fb0b7c936d3dbc0b057fc2c4aa61aad57597"
+  name = "github.com/stripe/stripe-go"
+  packages = [
+    ".",
+    "customer",
+    "form",
+    "paymentintent",
+    "paymentmethod",
+    "refund",
+    "setupintent",
+    "webhook",
+  ]
+  pruneopts = "UT"
+  revision = "d1d103ec32297246e5b086c867f3c18a166bf8bd"
+  version = "v66.1.1"
+
+[[projects]]
   digest = "1:c468422f334a6b46a19448ad59aaffdfc0a36b08fdcc1c749a0b29b6453d7e59"
   name = "github.com/valyala/bytebufferpool"
   packages = ["."]
@@ -883,6 +900,13 @@
     "github.com/solcates/go-sql-bigquery",
     "github.com/stretchr/testify/assert",
     "github.com/stretchr/testify/require",
+    "github.com/stripe/stripe-go",
+    "github.com/stripe/stripe-go/customer",
+    "github.com/stripe/stripe-go/paymentintent",
+    "github.com/stripe/stripe-go/paymentmethod",
+    "github.com/stripe/stripe-go/refund",
+    "github.com/stripe/stripe-go/setupintent",
+    "github.com/stripe/stripe-go/webhook",
     "go.opencensus.io/plugin/ocgrpc",
     "go.opencensus.io/stats/view",
     "go.opencensus.io/trace",

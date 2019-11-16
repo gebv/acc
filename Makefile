@@ -35,7 +35,7 @@ test-short: install
 
 test: install
 	#export $(sed 's/=.*\l\r//' .env)
-	# go test -v -count 1 -race -short ./...
+	go test -v -count 1 -race -short ./...
 	go test -v -count 1 -race -timeout 30m ./tests
 
 up:
