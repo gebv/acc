@@ -1,7 +1,14 @@
+GITHASH=`git log -1 --pretty=format:"%h" || echo "???"`
+CURDATE=`date -u +%Y%m%d%H%M%S`
+
+APPVERSION=${GITHASH}_${CURDATE}
 
 build-race:
 	#export $(sed 's/=.*\l\r//' .env)
 	go build -v -race -o ./bin/acca-race ./cmd/acca/main.go
+
+build-linux:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-X main.VERSION=${APPVERSION}" -o ./bin/acca ./cmd/acca/main.go
 
 run: build-race
 	GORACE="halt_on_error=1" ./bin/acca-race
