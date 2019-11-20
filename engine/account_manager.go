@@ -145,5 +145,5 @@ func (m *AccountManager) FindAccountByKey(clientID, currencyID int64, accKey str
 }
 
 func formatKey(currencyName string) string {
-	return strings.TrimSpace(strings.ToLower(currencyName))
+	return strings.ReplaceAll(strings.TrimSpace(strings.ToLower(currencyName)), "-", "__")
 }
