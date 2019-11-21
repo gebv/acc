@@ -66,6 +66,7 @@ var (
 	VERSION         = "dev"
 	pgConnF         = flag.String("pg-conn", "postgres://acca:acca@127.0.0.1:5433/acca?sslmode=disable", "PostgreSQL connection string.")
 	grpcAddrsF      = flag.String("grpc-addrs", "127.0.0.1:10011", "gRPC listen address.")
+	webhookAddrsF   = flag.String("webhook-addrs", "127.0.0.1:10003", "HTTP webhooks listen address.")
 	grpcReflectionF = flag.Bool("grpc-reflection", false, "Enable gRPC reflection.")
 	genAccessTokenF = flag.Bool("gen-access-token", false, "access_token generation.")
 	currencyF       = flag.String("currency", "rub", "currency from acccess_token generation.")
@@ -217,30 +218,39 @@ func main() {
 
 	sUpdater := updater.NewServer(nc)
 
-	sberProvider := sberbank.NewProvider(
-		db,
-		sberbank.Config{
-			EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
-			Token:         os.Getenv("SBERBANK_TOKEN"),
-			Password:      os.Getenv("SBERBANK_PASSWORD"),
-			UserName:      os.Getenv("SBERBANK_USER_NAME"),
-		},
-		nc,
-	)
+	var sberProvider *sberbank.Provider
+	if os.Getenv("SBERBANK_ENTRYPOINT_URL") != "" {
+		sberProvider = sberbank.NewProvider(
+			db,
+			sberbank.Config{
+				EntrypointURL: os.Getenv("SBERBANK_ENTRYPOINT_URL"),
+				Token:         os.Getenv("SBERBANK_TOKEN"),
+				Password:      os.Getenv("SBERBANK_PASSWORD"),
+				UserName:      os.Getenv("SBERBANK_USER_NAME"),
+			},
+			nc,
+		)
+	}
 
-	moeDeloProvider := moedelo.NewProvider(
-		db,
-		moedelo.Config{
-			EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
-			Token:         os.Getenv("MOEDELO_TOKEN"),
-		},
-		nc,
-	)
+	var moeDeloProvider *moedelo.Provider
+	if os.Getenv("MOEDELO_ENTRYPOINT_URL") != "" {
+		moeDeloProvider = moedelo.NewProvider(
+			db,
+			moedelo.Config{
+				EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
+				Token:         os.Getenv("MOEDELO_TOKEN"),
+			},
+			nc,
+		)
+	}
 
-	stripeProvider := stripe.NewProvider(
-		db,
-		nc,
-	)
+	var stripeProvider *stripe.Provider
+	if os.Getenv("STRIPE_KEY") != "" {
+		stripeProvider = stripe.NewProvider(
+			db,
+			nc,
+		)
+	}
 
 	worker.SubToNATS(nc, db, sberProvider, moeDeloProvider, stripeProvider)
 
@@ -305,11 +315,13 @@ func main() {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		moeDeloProvider.RunCheckStatusListener(ctx)
-	}()
+	if moeDeloProvider != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			moeDeloProvider.RunCheckStatusListener(ctx)
+		}()
+	}
 
 	zap.L().Info("gRPC server listen address.", zap.String("address", lis.Addr().String()))
 	wg.Add(1)
@@ -477,9 +489,14 @@ func serverWebhook(ctx context.Context, providerSber *sberbank.Provider, provide
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		zap.L().Info("start server sberbank webhook ", zap.String("address", "/webhook/sberbank"))
-		zap.L().Info("start server stripe webhook ", zap.String("address", "/webhook/stripe"))
-		if err := e.Start(":10003"); err != nil {
+		zap.L().Info("start server sberbank webhook ",
+			zap.String("address", *webhookAddrsF),
+			zap.Strings("paths", []string{
+				"/webhook/sberbank",
+				"/webhook/stripe",
+			}),
+		)
+		if err := e.Start(*webhookAddrsF); err != nil {
 			zap.L().Error("failed run server webhooks", zap.Error(err))
 		}
 		wg.Done()
