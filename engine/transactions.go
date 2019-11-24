@@ -93,45 +93,45 @@ const (
 //reform:acca.v_transactions
 type ViewTransaction struct {
 	// TransactionID внутренний идентификатор транзакции.
-	TransactionID int64 `reform:"tx_id,pk"`
+	TransactionID int64 `reform:"tx_id,pk" json:"tx_id"`
 
-	ClientID *int64 `reform:"client_id"`
+	ClientID *int64 `reform:"client_id" json:"client_id"`
 
 	// InvoiceID связанный с транзакцией инвойс.
-	InvoiceID int64 `reform:"invoice_id"`
+	InvoiceID int64 `reform:"invoice_id" json:"invoice_id"`
 
 	// Key Уникальный внешний идентификатор транзакции (опционально).
-	Key *string `reform:"key"`
+	Key *string `reform:"key" json:"key"`
 
-	Amount int64 `reform:"amount"`
+	Amount int64 `reform:"amount" json:"amount"`
 
 	// Strategy стратегия работы с инвойсом.
-	Strategy string `reform:"strategy"`
+	Strategy string `reform:"strategy" json:"strategy"`
 
 	// Provider Тип провайдера обслуживающий транзакцию.
-	Provider provider.Provider `reform:"provider"`
+	Provider provider.Provider `reform:"provider" json:"provider"`
 
 	// ProviderOperID Идентификатор связанной с транзакцией операции во внешней системе.
-	ProviderOperID *string `reform:"provider_oper_id"`
+	ProviderOperID *string `reform:"provider_oper_id" json:"provider_oper_id"`
 
 	// ProviderOperStatus Статус связанной с транзакцией операции во внешней системе.
-	ProviderOperStatus *string `reform:"provider_oper_status"`
+	ProviderOperStatus *string `reform:"provider_oper_status" json:"provider_oper_status"`
 
 	// ProviderOperStatus Статус связанной с транзакцией операции во внешней системе.
-	ProviderOperUrl *string `reform:"provider_oper_url"`
+	ProviderOperUrl *string `reform:"provider_oper_url" json:"provider_oper_url"`
 
 	// Meta мета информация связанная с транзакцией (учавствующая в логике).
-	Meta *[]byte `reform:"meta"`
+	Meta *json.RawMessage `reform:"meta" json:"meta"`
 
 	// Status статус транзакции.
-	Status TransactionStatus `reform:"status"`
+	Status TransactionStatus `reform:"status" json:"status"`
 
 	// Status статус транзакции куда происходит переход.
-	NextStatus *TransactionStatus `reform:"next_status"`
+	NextStatus *TransactionStatus `reform:"next_status" json:"next_status"`
 
-	UpdatedAt  time.Time `reform:"updated_at"`
-	CreatedAt  time.Time `reform:"created_at"`
-	Operations Opers     `reform:"operations"`
+	UpdatedAt  time.Time `reform:"updated_at" json:"updated_at"`
+	CreatedAt  time.Time `reform:"created_at" json:"created_at"`
+	Operations Opers     `reform:"operations" json:"operations"`
 }
 
 type Opers []Operation
