@@ -127,6 +127,11 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 						UpdatedAt: &op.UpdatedAt,
 					})
 				}
+				var meta *[]byte
+				if tr.Meta != nil {
+					b := []byte(*tr.Meta)
+					meta = &b
+				}
 				transactions = append(transactions, &api.Tx{
 					TxId:               tr.TransactionID,
 					InvoiceId:          tr.InvoiceID,
@@ -137,7 +142,7 @@ func (s Server) GetInvoiceByIDs(ctx context.Context, req *api.GetInvoiceByIDsReq
 					ProviderOperId:     tr.ProviderOperID,
 					ProviderOperStatus: tr.ProviderOperStatus,
 					ProviderOperUrl:    tr.ProviderOperUrl,
-					Meta:               tr.Meta,
+					Meta:               meta,
 					Status:             MapTrStatusToApiTrStatus[tr.Status],
 					NextStatus:         nextStatusTr,
 					CreatedAt:          &tr.CreatedAt,
@@ -322,6 +327,11 @@ func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransaction
 				UpdatedAt: &op.UpdatedAt,
 			})
 		}
+		var meta *[]byte
+		if tr.Meta != nil {
+			b := []byte(*tr.Meta)
+			meta = &b
+		}
 		transactions = append(transactions, &api.Tx{
 			TxId:               tr.TransactionID,
 			InvoiceId:          tr.InvoiceID,
@@ -332,7 +342,7 @@ func (s Server) GetTransactionByIDs(ctx context.Context, req *api.GetTransaction
 			ProviderOperId:     tr.ProviderOperID,
 			ProviderOperStatus: tr.ProviderOperStatus,
 			ProviderOperUrl:    tr.ProviderOperUrl,
-			Meta:               tr.Meta,
+			Meta:               meta,
 			Status:             MapTrStatusToApiTrStatus[tr.Status],
 			NextStatus:         nextStatusTr,
 			CreatedAt:          &tr.CreatedAt,

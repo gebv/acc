@@ -45,39 +45,39 @@ const (
 //reform:acca.operations
 type Operation struct {
 	// OperationID внутренний идентификатор операции.
-	OperationID int64 `reform:"oper_id,pk"`
+	OperationID int64 `reform:"oper_id,pk" json:"oper_id"`
 
 	// TransactionID связь с транзакцией.
-	TransactionID int64 `reform:"tx_id"`
+	TransactionID int64 `reform:"tx_id" json:"tx_id"`
 
 	// InvoiceID связь с инвойсом (денормализация).
-	InvoiceID int64 `reform:"invoice_id"`
+	InvoiceID int64 `reform:"invoice_id" json:"invoice_id"`
 
-	SrcAccID int64 `reform:"src_acc_id"`
-	DstAccID int64 `reform:"dst_acc_id"`
+	SrcAccID int64 `reform:"src_acc_id" json:"src_acc_id"`
+	DstAccID int64 `reform:"dst_acc_id" json:"dst_acc_id"`
 
 	// Hold признак определяющий требуется ли холдировать средства (2-х факторная операция).
-	Hold bool `reform:"hold"`
+	Hold bool `reform:"hold" json:"hold"`
 
 	// HoldAccID идентификатор счета в котором отражается сумма заходированных средств.
-	HoldAccID *int64 `reform:"hold_acc_id"`
+	HoldAccID *int64 `reform:"hold_acc_id" json:"hold_acc_id"`
 
 	// Strategy стратегия обработки операции.
-	Strategy OperationStrategy `reform:"strategy"`
+	Strategy OperationStrategy `reform:"strategy" json:"strategy"`
 
 	// Amount сумма операции.
-	Amount int64 `reform:"amount"`
+	Amount int64 `reform:"amount" json:"amount"`
 
 	// Key Уникальный идентификатор операции (опционально).
-	Key *string `reform:"key"`
+	Key *string `reform:"key" json:"key"`
 
 	// Meta Мета-информация связанная с операцией (учавствующая в логике).
-	Meta *[]byte `reform:"meta"`
+	Meta *[]byte `reform:"meta" json:"meta"`
 
 	// Status Статус операции.
-	Status    OperationStatus `reform:"status"`
-	UpdatedAt time.Time       `reform:"updated_at"`
-	CreatedAt time.Time       `reform:"created_at"`
+	Status    OperationStatus `reform:"status" json:"status"`
+	UpdatedAt time.Time       `reform:"updated_at" json:"updated_at"`
+	CreatedAt time.Time       `reform:"created_at" json:"created_at"`
 }
 
 func (o *Operation) BeforeInsert() error {
