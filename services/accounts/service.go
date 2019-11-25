@@ -43,7 +43,7 @@ func (s *Server) CreateAccount(ctx context.Context, req *api.CreateAccountReques
 		if err == engine.ErrInvalidCurrencyKey {
 			return nil, api.MakeError(codes.InvalidArgument, "Invalid key.")
 		}
-		return nil, errors.Wrapf(err, "Failed get currency %q.", req.GetKey())
+		return nil, errors.Wrapf(err, "Failed get currency %q.", req.GetCurrencyKey())
 	}
 
 	accID, err := m.CreateAccount(clientID, curr.CurrencyID, req.GetKey(), req.GetMeta())
@@ -190,6 +190,21 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 				})
 			}
 		}
+		var invoiceMeta *[]byte
+		if vbc.Invoice.Meta != nil {
+			b := []byte(*vbc.Invoice.Meta)
+			invoiceMeta = &b
+		}
+		var trMeta *[]byte
+		if vbc.Transaction.Meta != nil {
+			b := []byte(*vbc.Transaction.Meta)
+			trMeta = &b
+		}
+		var actualTrMeta *[]byte
+		if vbc.ActualTransaction.Meta != nil {
+			b := []byte(*vbc.ActualTransaction.Meta)
+			actualTrMeta = &b
+		}
 		balanceChanges = append(balanceChanges, &api.BalanceChanges{
 			ChId:            vbc.ChID,
 			TxId:            vbc.TxID,
@@ -201,14 +216,14 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 			Invoice: &api.BalanceChanges_Invoice{
 				InvoiceId: vbc.Invoice.InvoiceID,
 				Key:       vbc.Invoice.Key,
-				Meta:      vbc.Invoice.Meta,
+				Meta:      invoiceMeta,
 				Strategy:  vbc.Invoice.Strategy,
 				Status:    invoices.MapInvStatusToApiInvStatus[vbc.Invoice.Status],
 			},
 			Transaction: &api.BalanceChanges_Transaction{
 				TxId:               vbc.Transaction.TxID,
 				Key:                vbc.Transaction.Key,
-				Meta:               vbc.Transaction.Meta,
+				Meta:               trMeta,
 				Strategy:           vbc.Transaction.Strategy,
 				Status:             invoices.MapTrStatusToApiTrStatus[vbc.Transaction.Status],
 				Provider:           invoices.MapTrProviderToApiTrProvider[vbc.Transaction.Provider],
@@ -226,7 +241,7 @@ func (s *Server) BalanceChanges(ctx context.Context, req *api.BalanceChangesRequ
 			ActualTransaction: &api.BalanceChanges_Transaction{
 				TxId:               vbc.ActualTransaction.TxID,
 				Key:                vbc.ActualTransaction.Key,
-				Meta:               vbc.ActualTransaction.Meta,
+				Meta:               actualTrMeta,
 				Strategy:           vbc.ActualTransaction.Strategy,
 				Status:             invoices.MapTrStatusToApiTrStatus[vbc.Transaction.Status],
 				Provider:           invoices.MapTrProviderToApiTrProvider[vbc.Transaction.Provider],

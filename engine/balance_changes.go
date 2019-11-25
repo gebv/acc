@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gebv/acca/provider"
 	"github.com/pkg/errors"
+
+	"github.com/gebv/acca/provider"
 )
 
 //go:generate reform
@@ -51,11 +52,11 @@ func (a *AccountFromBalanceChanges) Scan(in interface{}) error {
 }
 
 type InvoiceFromBalanceChanges struct {
-	InvoiceID int64         `json:"invoice_id"`
-	Key       string        `json:"key"`
-	Meta      *[]byte       `json:"meta"`
-	Strategy  string        `json:"strategy"`
-	Status    InvoiceStatus `json:"status"`
+	InvoiceID int64            `json:"invoice_id"`
+	Key       string           `json:"key"`
+	Meta      *json.RawMessage `json:"meta"`
+	Strategy  string           `json:"strategy"`
+	Status    InvoiceStatus    `json:"status"`
 }
 
 func (i *InvoiceFromBalanceChanges) Scan(in interface{}) error {
@@ -76,7 +77,7 @@ func (i *InvoiceFromBalanceChanges) Scan(in interface{}) error {
 type TransactionFromBalanceChanges struct {
 	TxID               int64             `json:"tx_id"`
 	Key                *string           `json:"key"`
-	Meta               *[]byte           `json:"meta"`
+	Meta               *json.RawMessage  `json:"meta"`
 	Strategy           string            `json:"strategy"`
 	Status             TransactionStatus `json:"status"`
 	Provider           provider.Provider `json:"provider"`
@@ -109,7 +110,7 @@ type OperationFromBalanceChanges struct {
 	Amount    int64             `json:"amount"`
 	Strategy  OperationStrategy `json:"strategy"`
 	Key       *string           `json:"key"`
-	Meta      *[]byte           `json:"meta"`
+	Meta      *json.RawMessage  `json:"meta"`
 	Hold      bool              `json:"hold"`
 	HoldAccID *int64            `json:"hold_acc_id"`
 	Status    OperationStatus   `json:"status"`
