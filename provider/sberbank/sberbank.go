@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/nats-io/nats.go"
+	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
@@ -20,11 +20,11 @@ import (
 	"github.com/gebv/acca/provider"
 )
 
-func NewProvider(db *reform.DB, cfg Config, nc *nats.EncodedConn) *Provider {
+func NewProvider(db *reform.DB, cfg Config, pb *pubsub.Client) *Provider {
 	return &Provider{
 		cfg: cfg,
 		db:  db,
-		nc:  nc,
+		pb:  pb,
 		s: &provider.Store{
 			DB: db,
 		},
@@ -35,7 +35,7 @@ func NewProvider(db *reform.DB, cfg Config, nc *nats.EncodedConn) *Provider {
 type Provider struct {
 	cfg Config
 	db  *reform.DB
-	nc  *nats.EncodedConn
+	pb  *pubsub.Client
 	s   *provider.Store
 	l   *zap.Logger
 }

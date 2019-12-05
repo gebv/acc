@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nats-io/nats.go"
+	"cloud.google.com/go/pubsub"
 	"gopkg.in/reform.v1"
 
 	"github.com/gebv/acca/engine"
@@ -24,7 +24,7 @@ const (
 	UNDEFINED_TR       TrStrategyName  = ""
 	UNDEFINED_INV      InvStrategyName = ""
 	contextReformKeyTX                 = "reform_key_tx"
-	contextNatsKey                     = "nats_key"
+	contextPubSubKey                   = "pubsub_key"
 
 	UPDATE_INVOICE_SUBJECT     = "update_invoice_subject"
 	UPDATE_TRANSACTION_SUBJECT = "update_transaction_subject"
@@ -103,12 +103,12 @@ func GetTXContext(ctx context.Context) *reform.TX {
 	return ctx.Value(contextReformKeyTX).(*reform.TX)
 }
 
-func SetNatsToContext(ctx context.Context, nc *nats.EncodedConn) context.Context {
-	return context.WithValue(ctx, contextNatsKey, nc)
+func SetPubSubToContext(ctx context.Context, pb *pubsub.Client) context.Context {
+	return context.WithValue(ctx, contextPubSubKey, pb)
 }
 
-func GetNatsFromContext(ctx context.Context) *nats.EncodedConn {
-	return ctx.Value(contextNatsKey).(*nats.EncodedConn)
+func GetPubSubFromContext(ctx context.Context) *pubsub.Client {
+	return ctx.Value(contextPubSubKey).(*pubsub.Client)
 }
 
 type MessageUpdateTransaction struct {

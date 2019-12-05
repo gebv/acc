@@ -1,11 +1,14 @@
 package stripe
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/labstack/echo"
 	"github.com/stripe/stripe-go/webhook"
 	"go.uber.org/zap"
@@ -89,14 +92,28 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				return nil
 			}
 			// Отправляем сообщение на переход транзакции в ACCEPTED
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.ACCEPTED_TX,
-			}); err != nil {
+			})
+			if err != nil {
 				p.l.Error(
-					"failed send accept transaction",
+					"failed json marshal struct for publish accept transaction",
+					zap.Int64("tx_id", tr.TransactionID),
+					zap.String("extOrderID", event.GetObjectValue("id")),
+					zap.String("status", status),
+					zap.Error(err),
+				)
+				c.Response().WriteHeader(http.StatusOK)
+				return nil
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
+				p.l.Error(
+					"failed publish accept transaction",
 					zap.Int64("tx_id", tr.TransactionID),
 					zap.String("extOrderID", event.GetObjectValue("id")),
 					zap.String("status", status),
@@ -146,14 +163,28 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.HOLD_TX,
-			}); err != nil {
+			})
+			if err != nil {
 				p.l.Error(
-					"Failed publish received funds by order",
+					"Failed json marshal struct for publish hold transaction",
+					zap.Int64("tx_id", tr.TransactionID),
+					zap.String("extOrderID", event.GetObjectValue("id")),
+					zap.String("status", status),
+					zap.Error(err),
+				)
+				c.Response().WriteHeader(http.StatusOK)
+				return nil
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
+				p.l.Error(
+					"Failed publish hold transaction",
 					zap.Int64("tx_id", tr.TransactionID),
 					zap.String("extOrderID", event.GetObjectValue("id")),
 					zap.String("status", status),
@@ -193,14 +224,27 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.REJECTED_TX,
-			}); err != nil {
+			})
+			if err != nil {
 				p.l.Error(
-					"failed accept invoice",
+					"failed json marshal for publish reject transaction",
+					zap.String("provider_intent_id", event.GetObjectValue("id")),
+					zap.String("status", status),
+					zap.Error(err),
+				)
+				c.Response().WriteHeader(http.StatusOK)
+				return nil
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
+				p.l.Error(
+					"failed publish reject transaction",
 					zap.String("provider_intent_id", event.GetObjectValue("id")),
 					zap.String("status", status),
 					zap.Error(err),

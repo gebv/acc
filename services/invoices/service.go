@@ -2,12 +2,13 @@ package invoices
 
 import (
 	"context"
+	"encoding/json"
 	"strconv"
 	"strings"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/lib/pq"
-	"github.com/nats-io/nats.go"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 	"google.golang.org/grpc/codes"
@@ -21,16 +22,16 @@ import (
 	"github.com/gebv/acca/services"
 )
 
-func NewServer(db *reform.DB, nc *nats.EncodedConn) *Server {
+func NewServer(db *reform.DB, pb *pubsub.Client) *Server {
 	return &Server{
 		db: db,
-		nc: nc,
+		pb: pb,
 	}
 }
 
 type Server struct {
 	db *reform.DB
-	nc *nats.EncodedConn
+	pb *pubsub.Client
 }
 
 func (s Server) NewInvoice(ctx context.Context, req *api.NewInvoiceRequest) (*api.NewInvoiceResponse, error) {
@@ -373,13 +374,18 @@ func (s Server) AuthInvoice(ctx context.Context, req *api.AuthInvoiceRequest) (*
 	if !invoice.Status.Match(engine.DRAFT_I) {
 		return nil, errors.New("not transition to auth (invoice is not draft)")
 	}
-	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+	b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.AUTH_I,
 	})
 	if err != nil {
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status invoice")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
 		return nil, errors.Wrap(err, "Failed publish update status invoice")
 	}
 	return &api.AuthInvoiceResponse{}, nil
@@ -400,13 +406,18 @@ func (s Server) AcceptInvoice(ctx context.Context, req *api.AcceptInvoiceRequest
 	if invoice.ClientID == nil || *invoice.ClientID != clientID {
 		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
-	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+	b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.MACCEPTED_I,
 	})
 	if err != nil {
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status invoice")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
 		return nil, errors.Wrap(err, "Failed publish update status invoice")
 	}
 	return &api.AcceptInvoiceResponse{}, nil
@@ -427,13 +438,18 @@ func (s Server) RejectInvoice(ctx context.Context, req *api.RejectInvoiceRequest
 	if invoice.ClientID == nil || *invoice.ClientID != clientID {
 		return nil, api.MakeError(codes.NotFound, "Invoice is not found.")
 	}
-	err := s.nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, strategies.MessageUpdateInvoice{
+	b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 		ClientID:  invoice.ClientID,
 		InvoiceID: invoice.InvoiceID,
 		Strategy:  invoice.Strategy,
 		Status:    engine.MREJECTED_I,
 	})
 	if err != nil {
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status invoice")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
 		return nil, errors.Wrap(err, "Failed publish update status invoice")
 	}
 	return &api.RejectInvoiceResponse{}, nil
@@ -457,14 +473,19 @@ func (s Server) AuthTx(ctx context.Context, req *api.AuthTxRequest) (*api.AuthTx
 	if !tx.Status.Match(engine.DRAFT_TX) {
 		return nil, errors.New("not transition to auth (transaction is not draft)")
 	}
-	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+	b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.AUTH_TX,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed publish update status invoice")
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status transaction")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
+		return nil, errors.Wrap(err, "Failed publish update status transaction")
 	}
 	return &api.AuthTxResponse{}, nil
 }
@@ -484,14 +505,19 @@ func (s Server) AcceptTx(ctx context.Context, req *api.AcceptTxRequest) (*api.Ac
 	if tx.ClientID == nil || *tx.ClientID != clientID {
 		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
-	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+	b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.ACCEPTED_TX,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed publish update status invoice")
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status transaction")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
+		return nil, errors.Wrap(err, "Failed publish update status transaction")
 	}
 	return &api.AcceptTxResponse{}, nil
 }
@@ -511,14 +537,19 @@ func (s Server) RejectTx(ctx context.Context, req *api.RejectTxRequest) (*api.Re
 	if tx.ClientID == nil || *tx.ClientID != clientID {
 		return nil, api.MakeError(codes.NotFound, "Transaction is not found.")
 	}
-	err := s.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+	b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 		ClientID:      tx.ClientID,
 		TransactionID: tx.TransactionID,
 		Strategy:      tx.Strategy,
 		Status:        engine.REJECTED_TX,
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "Failed publish update status invoice")
+		return nil, errors.Wrap(err, "Failed json marshal for publish update status transaction")
+	}
+	if _, err := s.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
+		Data: b,
+	}).Get(ctx); err != nil {
+		return nil, errors.Wrap(err, "Failed publish update status transaction")
 	}
 	return &api.RejectTxResponse{}, nil
 }

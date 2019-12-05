@@ -1,8 +1,10 @@
 package stripe
 
 import (
+	"context"
 	"encoding/json"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/stripe/stripe-go"
 	"go.uber.org/zap"
 
@@ -28,8 +30,25 @@ type MessageToStripe struct {
 	Status        engine.TransactionStatus
 }
 
-func (p *Provider) NatsHandler() func(m *MessageToStripe) {
-	return func(m *MessageToStripe) {
+func (p *Provider) PubSubHandler() func(ctx context.Context, pbMsg *pubsub.Message) {
+	return func(ctx context.Context, pbMsg *pubsub.Message) {
+		var m MessageToStripe
+		var nack bool
+		okAck := &nack
+		defer func() {
+			if okAck == nil {
+				return
+			}
+			if *okAck {
+				pbMsg.Ack()
+			} else {
+				pbMsg.Nack()
+			}
+		}()
+		if err := json.Unmarshal(pbMsg.Data, &m); err != nil {
+			p.l.Error("Failed unmarshal pubsub message.", zap.Error(err))
+			return
+		}
 		tx, err := p.db.Begin()
 		if err != nil {
 			p.l.Error("Failed begin transaction DB.", zap.Error(err))
@@ -51,6 +70,10 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				okAck = nil
 				return
 			}
 			if tr.Meta == nil {
@@ -58,6 +81,9 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 					"Transaction not set meta.",
 					zap.Int64("tr_id", tr.TransactionID),
 				)
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
 				return
 			}
 			meta := make(map[string]string)
@@ -116,14 +142,22 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		case ReverseForHold:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
 			if err := tx.Reload(&tr); err != nil {
@@ -139,6 +173,10 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				okAck = nil
 				return
 			}
 			if tr.ProviderOperID == nil {
@@ -188,14 +226,22 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		case Capture:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
 			if err := tx.Reload(&tr); err != nil {
@@ -211,6 +257,10 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				okAck = nil
 				return
 			}
 			if tr.ProviderOperID == nil {
@@ -261,14 +311,22 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		case Refund:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
 			if err := tx.Reload(&tr); err != nil {
@@ -284,6 +342,10 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				if err := tx.Rollback(); err != nil {
+					p.l.Error("Failed tx rollback. ", zap.Error(err))
+				}
+				okAck = nil
 				return
 			}
 			if tr.ProviderOperID == nil {
@@ -361,16 +423,27 @@ func (p *Provider) NatsHandler() func(m *MessageToStripe) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		default:
 			p.l.Warn("Not processed command in message of stripe in nats.")
+			if err := tx.Rollback(); err != nil {
+				p.l.Error("Failed tx rollback. ", zap.Error(err))
+			}
 		}
 	}
 }

@@ -2,10 +2,12 @@ package simple
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"sync"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -137,18 +139,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetPubSubFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    invStatus,
 				})
 				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				}
+				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+					Data: b,
+				}).Get(ctx); err != nil {
+					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
 				}
 				return ctx, nil
 			},
@@ -208,18 +215,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetPubSubFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.ACCEPTED_I,
 				})
 				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				}
+				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+					Data: b,
+				}).Get(ctx); err != nil {
+					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
 				}
 				return ctx, nil
 			},
@@ -279,18 +291,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetPubSubFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,
 				})
 				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				}
+				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+					Data: b,
+				}).Get(ctx); err != nil {
+					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
 				}
 				return ctx, nil
 			},
@@ -336,18 +353,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetPubSubFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
+				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
 					ClientID:  inv.ClientID,
 					InvoiceID: inv.InvoiceID,
 					Strategy:  inv.Strategy,
 					Status:    engine.REJECTED_I,
 				})
 				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				}
+				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+					Data: b,
+				}).Get(ctx); err != nil {
+					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
 				}
 				return ctx, nil
 			},
