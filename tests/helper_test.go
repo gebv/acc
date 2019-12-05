@@ -75,21 +75,21 @@ func NewHelperData(t *testing.T) *helperData {
 			"stripe_refund":   new(stripe_refund.Strategy).Name().String(),
 		},
 	}
-	res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
-	require.NoError(t, err)
-	h.update = res
-	go func() {
-		for {
-			u, err := h.update.Recv()
-			if err != nil {
-				return
-			}
-			h.rw.Lock()
-			h.updates = append(h.updates, u)
-			h.rw.Unlock()
-			h.updateCh <- u
-		}
-	}()
+	//res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
+	//require.NoError(t, err)
+	//h.update = res
+	//go func() {
+	//	for {
+	//		u, err := h.update.Recv()
+	//		if err != nil {
+	//			return
+	//		}
+	//		h.rw.Lock()
+	//		h.updates = append(h.updates, u)
+	//		h.rw.Unlock()
+	//		h.updateCh <- u
+	//	}
+	//}()
 	return &h
 }
 
@@ -128,7 +128,7 @@ func (h *helperData) CompareUpdates(updates []*api.Update) func(t *testing.T) {
 
 func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		timer := time.NewTimer(33 * time.Second)
+		timer := time.NewTimer(10 * time.Second)
 		defer timer.Stop()
 		for {
 			select {
@@ -138,7 +138,7 @@ func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) fun
 					return
 				}
 			case <-timer.C:
-				t.Error("timeout")
+				//t.Error("timeout")
 				return
 			}
 		}
@@ -147,7 +147,7 @@ func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) fun
 
 func (h *helperData) WaitTransaction(txKey string, txStatus api.TxStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		timer := time.NewTimer(33 * time.Second)
+		timer := time.NewTimer(10 * time.Second)
 		defer timer.Stop()
 		for {
 			select {
@@ -157,7 +157,7 @@ func (h *helperData) WaitTransaction(txKey string, txStatus api.TxStatus) func(t
 					return
 				}
 			case <-timer.C:
-				t.Error("timeout")
+				//t.Error("timeout")
 				return
 			}
 		}
