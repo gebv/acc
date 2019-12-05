@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:3165331ed06888a00d6041c921232561484f00890fdfc0c68da3ee860e6adb45"
+  digest = "1:ec17062e5fc42058c7447eb8632fb682321bc9d8db786d4180a8dd8d1265e740"
   name = "cloud.google.com/go"
   packages = [
     ".",
@@ -10,12 +10,16 @@
     "civil",
     "compute/metadata",
     "container/apiv1",
+    "iam",
     "internal",
     "internal/fields",
     "internal/optional",
     "internal/trace",
     "internal/version",
     "monitoring/apiv3",
+    "pubsub",
+    "pubsub/apiv1",
+    "pubsub/internal/distribution",
     "trace/apiv2",
   ]
   pruneopts = "UT"
@@ -210,6 +214,14 @@
   version = "v2.0.5"
 
 [[projects]]
+  digest = "1:e62657cca9badaa308d86e7716083e4c5933bb78e30a17743fc67f50be26f6f4"
+  name = "github.com/gorilla/websocket"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c3e18be99d19e6b3e8f1559eea2c161a665c4b6b"
+  version = "v1.4.1"
+
+[[projects]]
   digest = "1:1168584a5881d371e96cb0e66ef6db71d7cef0856cc7f311490bc856627f8328"
   name = "github.com/grpc-ecosystem/go-grpc-middleware"
   packages = ["."]
@@ -224,6 +236,14 @@
   pruneopts = "UT"
   revision = "c225b8c3b01faf2899099b768856a9e916e5087b"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:6e07f9eebe60f30e1d40703c970de1e12157be3edbe64adcf5a6a1e7f25d1ded"
+  name = "github.com/improbable-eng/grpc-web"
+  packages = ["go/grpcweb"]
+  pruneopts = "UT"
+  revision = "a71405f8738b65ecdf54c210557ccbf9c2ee9a31"
+  version = "v0.11.0"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -325,54 +345,6 @@
   revision = "1f388280e944c97cc59c75d8c84a704097d1f1d6"
 
 [[projects]]
-  digest = "1:a69a45dc2496e9601abc3a90d2889319e90311f2ae9ed932000a1d9ad02f9872"
-  name = "github.com/nats-io/jwt"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "a0b714b7c0d173cfa841645539fb055f38bf7fc9"
-  version = "v0.2.10"
-
-[[projects]]
-  digest = "1:3cd995ba51100416e90d974f4a8ae6002796f4dd7ca7bfaec2983d77404192c5"
-  name = "github.com/nats-io/nats-server"
-  packages = [
-    "conf",
-    "logger",
-    "server/pse",
-  ]
-  pruneopts = "UT"
-  revision = "6a40503f972e032881e43e1a1bcf30f2efe0e2e4"
-  version = "v2.0.2"
-
-[[projects]]
-  digest = "1:8de5a74ac9ff41ba07e18c5053ab631549b46bb3064ddba30027e774af1ff31f"
-  name = "github.com/nats-io/nats.go"
-  packages = [
-    ".",
-    "encoders/builtin",
-    "util",
-  ]
-  pruneopts = "UT"
-  revision = "e2837a2879e82886f6e21715e3a0217fdc46d370"
-  version = "v1.8.1"
-
-[[projects]]
-  digest = "1:237d85e4f5e91ac6cfc13bad508627570ff29efa28f523d41aac2d39ca15950f"
-  name = "github.com/nats-io/nkeys"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "0073b400419be3ffb022ef46b675805e92534a34"
-  version = "v0.1.0"
-
-[[projects]]
-  digest = "1:599f3202ce0a754144ddc4be4c6df9c6ab27b1d722a63ede6b2e0c3a2cc338a8"
-  name = "github.com/nats-io/nuid"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "4b96681fa6d28dd0ab5fe79bac63b3a493d9ee94"
-  version = "v1.0.1"
-
-[[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -430,6 +402,14 @@
   pruneopts = "UT"
   revision = "3f98efb27840a48a7a2898ec80be07674d19f9c8"
   version = "v0.0.3"
+
+[[projects]]
+  digest = "1:c5dfe46811af7e2eff7c11fc84b6c841520338613c056f659f262d5a4fb42fa8"
+  name = "github.com/rs/cors"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "db0fe48135e83b5812a5a31be0eea66984b1b521"
+  version = "v1.7.0"
 
 [[projects]]
   digest = "1:04457f9f6f3ffc5fea48e71d62f2ca256637dee0a04d710288e27e05c8b41976"
@@ -552,15 +532,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d594d0262ca8f56144caf02b4b91660740ee4be7344d9077f366700789077f7d"
+  digest = "1:cb823a5f7777276059b25eaadda6a12892f3beb6d0deee01df0d8f8692ffcc82"
   name = "golang.org/x/crypto"
   packages = [
     "acme",
     "acme/autocert",
-    "bcrypt",
-    "blowfish",
-    "ed25519",
-    "ed25519/internal/edwards25519",
   ]
   pruneopts = "UT"
   revision = "4def268fd1a49955bfb3dda92fe3db4f924f2285"
@@ -620,24 +596,22 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:382bb5a7fb4034db3b6a2d19e5a4a6bcf52f4750530603c01ca18a172fa3089b"
+  digest = "1:a2fc247e64b5dafd3251f12d396ec85f163d5bb38763c4997856addddf6e78d8"
   name = "golang.org/x/sync"
-  packages = ["semaphore"]
+  packages = [
+    "errgroup",
+    "semaphore",
+  ]
   pruneopts = "UT"
   revision = "cd5d95a43a6e21273425c7ae415d3df9ea832eeb"
 
 [[projects]]
   branch = "master"
-  digest = "1:421536f2be889f185189765573d53f3725c2e5b955bd1c44f180041512a2e275"
+  digest = "1:e456eadc3fc18795bdaf836c3a8f25d678cfdd52a5164cf1d3a64ffe23b8df1a"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
-    "windows/registry",
-    "windows/svc",
-    "windows/svc/debug",
-    "windows/svc/eventlog",
-    "windows/svc/mgr",
   ]
   pruneopts = "UT"
   revision = "4c4f7f33c9ed00de01c4c741d2177abfcfe19307"
@@ -739,7 +713,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2fe1a4742aa9c27c84925baf4cb219f3253366c6d509a2c0dad45855f3c0bd45"
+  digest = "1:99db4f5a5311034a437c0389b008096a442ce3bef30fea6a40c62aa0dc5e47d2"
   name = "google.golang.org/genproto"
   packages = [
     "googleapis/api",
@@ -750,9 +724,12 @@
     "googleapis/api/monitoredres",
     "googleapis/container/v1",
     "googleapis/devtools/cloudtrace/v2",
+    "googleapis/iam/v1",
     "googleapis/monitoring/v3",
+    "googleapis/pubsub/v1",
     "googleapis/rpc/code",
     "googleapis/rpc/status",
+    "googleapis/type/expr",
     "protobuf/field_mask",
   ]
   pruneopts = "UT"
@@ -813,14 +790,6 @@
   version = "v1.21.0"
 
 [[projects]]
-  digest = "1:c5ccad165dbc2489ac031fbc2e5ed22b0071acac62c495593ddabc366f725e44"
-  name = "gopkg.in/nats-io/gnatsd.v2"
-  packages = ["server"]
-  pruneopts = "UT"
-  revision = "d779a0bd38a5302e4cefe2c36fa784c2f2cdb8b3"
-  version = "v2.0.0-RC14"
-
-[[projects]]
   digest = "1:983ee542fd90363daa402830d3436db4a5aa154aea59f1282d25cf520f70d3fa"
   name = "gopkg.in/reform.v1"
   packages = [
@@ -878,6 +847,7 @@
   analyzer-version = 1
   input-imports = [
     "cloud.google.com/go/bigquery",
+    "cloud.google.com/go/pubsub",
     "contrib.go.opencensus.io/exporter/stackdriver",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
@@ -888,12 +858,12 @@
     "github.com/golang/protobuf/ptypes/wrappers",
     "github.com/grpc-ecosystem/go-grpc-middleware",
     "github.com/grpc-ecosystem/go-grpc-prometheus",
+    "github.com/improbable-eng/grpc-web/go/grpcweb",
     "github.com/labstack/echo",
     "github.com/labstack/echo/middleware",
     "github.com/lib/pq",
     "github.com/mwitkow/go-proto-validators",
     "github.com/mwitkow/go-proto-validators/protoc-gen-govalidators",
-    "github.com/nats-io/nats.go",
     "github.com/pkg/errors",
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
@@ -920,7 +890,6 @@
     "google.golang.org/grpc/peer",
     "google.golang.org/grpc/reflection",
     "google.golang.org/grpc/status",
-    "gopkg.in/nats-io/gnatsd.v2/server",
     "gopkg.in/reform.v1",
     "gopkg.in/reform.v1/dialects/postgresql",
     "gopkg.in/reform.v1/parse",
