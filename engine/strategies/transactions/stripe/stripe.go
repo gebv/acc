@@ -2,12 +2,9 @@ package stripe
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
-
-	"cloud.google.com/go/pubsub"
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
@@ -99,9 +96,13 @@ func (s *Strategy) load() {
 				if tr.Status != engine.DRAFT_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_TX
@@ -110,20 +111,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&stripe.MessageToStripe{
-					Command:       stripe.AuthTransfer,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.AUTH_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(stripe.SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.AuthTransfer,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.AUTH_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -156,7 +161,7 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
+				pb := strategies.GetFirestoreTxFromContext(ctx)
 				if pb == nil {
 					return ctx, errors.New("Not pubsub client in context.")
 				}
@@ -197,9 +202,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
@@ -230,19 +239,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -275,9 +288,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.REJECTED_TX
@@ -285,19 +302,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -326,9 +347,13 @@ func (s *Strategy) load() {
 				if tr.Status != engine.HOLD_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -337,20 +362,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&stripe.MessageToStripe{
-					Command:       stripe.ReverseForHold,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.REJECTED_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(stripe.SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.ReverseForHold,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.REJECTED_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -383,9 +412,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -407,19 +440,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -452,9 +489,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.ACCEPTED_TX
@@ -482,19 +523,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -527,9 +572,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
@@ -538,20 +587,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&stripe.MessageToStripe{
-					Command:       stripe.Capture,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.ACCEPTED_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(stripe.SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.Capture,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.ACCEPTED_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -584,9 +637,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
@@ -608,19 +665,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.ACCEPTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
-				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.ACCEPTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},

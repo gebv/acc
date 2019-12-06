@@ -11,8 +11,10 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	firebase "firebase.google.com/go"
 	"github.com/labstack/echo"
 	echo_middleware "github.com/labstack/echo/middleware"
+	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/stats/view"
@@ -22,9 +24,6 @@ import (
 	"google.golang.org/api/option"
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
-
-	"cloud.google.com/go/pubsub"
-	_ "github.com/lib/pq"
 
 	_ "github.com/gebv/acca/engine/strategies/invoices/refund"
 	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
@@ -104,12 +103,6 @@ func main() {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
 	}
 
-	pb, err := pubsub.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
-	if err != nil {
-		zap.L().Panic("Failed get pubsub client", zap.Error(err))
-	}
-	zap.L().Info("PubSub - configured!")
-
 	bqCl, err := bigquery.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
 	if err != nil {
 		zap.L().Panic("Failed new client bigquery.", zap.Error(err))
@@ -119,6 +112,18 @@ func main() {
 	httpAuditor := auditor.NewHttpAuditor(bqCl)
 	defer httpAuditor.Stop()
 	prometheus.MustRegister(httpAuditor)
+
+	firebaseApp, err := firebase.NewApp(ctx, nil)
+	if err != nil {
+		zap.L().Panic("Failed get firebase client", zap.Error(err))
+	}
+	zap.L().Info("Firebase - configured!")
+
+	fs, err := firebaseApp.Firestore(ctx)
+	if err != nil {
+		zap.L().Panic("Failed firebase app to firestore.", zap.Error(err))
+	}
+	defer fs.Close()
 
 	var sberProvider *sberbank.Provider
 	if os.Getenv("SBERBANK_ENTRYPOINT_URL") != "" {
@@ -130,7 +135,7 @@ func main() {
 				Password:      os.Getenv("SBERBANK_PASSWORD"),
 				UserName:      os.Getenv("SBERBANK_USER_NAME"),
 			},
-			pb,
+			nil,
 		)
 	}
 
@@ -138,7 +143,7 @@ func main() {
 	if os.Getenv("STRIPE_KEY") != "" {
 		stripeProvider = stripe.NewProvider(
 			db,
-			pb,
+			fs,
 		)
 	}
 

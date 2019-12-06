@@ -6,8 +6,8 @@ import (
 	"log"
 	"strconv"
 	"sync"
+	"time"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
@@ -135,29 +135,33 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(&strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.AUTH_TX,
-					})
-					if err != nil {
-						zap.L().Error("Failed json marshal for publish to pubsub.",
-							zap.Int64("InvoiceID", invID),
-							zap.Int64("TransactionID", tr.TransactionID),
-							zap.Error(err))
-						continue
-					}
-					if _, err := pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
-						Data: b,
-					}).Get(ctx); err != nil {
-						zap.L().Error("Failed publish to pubsub.",
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.AUTH_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
 							zap.Int64("InvoiceID", invID),
 							zap.Int64("TransactionID", tr.TransactionID),
 							zap.Error(err))
@@ -335,29 +339,33 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(&strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.REJECTED_TX,
-					})
-					if err != nil {
-						zap.L().Error("Failed json marshal for publish to pubsub.",
-							zap.Int64("InvoiceID", invID),
-							zap.Int64("TransactionID", tr.TransactionID),
-							zap.Error(err))
-						continue
-					}
-					if _, err := pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
-						Data: b,
-					}).Get(ctx); err != nil {
-						zap.L().Error("Failed publish to pubsub.",
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.REJECTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
 							zap.Int64("InvoiceID", invID),
 							zap.Int64("TransactionID", tr.TransactionID),
 							zap.Error(err))
@@ -469,29 +477,33 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(&strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.ACCEPTED_TX,
-					})
-					if err != nil {
-						zap.L().Error("Failed json marshal for publish to pubsub.",
-							zap.Int64("InvoiceID", invID),
-							zap.Int64("TransactionID", tr.TransactionID),
-							zap.Error(err))
-						continue
-					}
-					if _, err := pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
-						Data: b,
-					}).Get(ctx); err != nil {
-						zap.L().Error("Failed publish to pubsub.",
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.ACCEPTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
 							zap.Int64("InvoiceID", invID),
 							zap.Int64("TransactionID", tr.TransactionID),
 							zap.Error(err))
@@ -542,29 +554,33 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					b, err := json.Marshal(&strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.REJECTED_TX,
-					})
-					if err != nil {
-						zap.L().Error("Failed json marshal for publish to pubsub.",
-							zap.Int64("InvoiceID", invID),
-							zap.Int64("TransactionID", tr.TransactionID),
-							zap.Error(err))
-						continue
-					}
-					if _, err := pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(ctx, &pubsub.Message{
-						Data: b,
-					}).Get(ctx); err != nil {
-						zap.L().Error("Failed publish to pubsub.",
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.REJECTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
 							zap.Int64("InvoiceID", invID),
 							zap.Int64("TransactionID", tr.TransactionID),
 							zap.Error(err))

@@ -2,12 +2,10 @@ package simple
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -139,23 +137,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -215,23 +221,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.ACCEPTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.ACCEPTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -291,23 +305,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -353,23 +375,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				pb := strategies.GetPubSubFromContext(ctx)
-				if pb == nil {
-					return ctx, errors.New("Not pubsub client in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				b, err := json.Marshal(&strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
-				if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
-					Data: b,
-				}).Get(ctx); err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},

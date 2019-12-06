@@ -13,8 +13,10 @@ import (
 
 	"cloud.google.com/go/bigquery"
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	firebase "firebase.google.com/go"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
+	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/stats/view"
@@ -27,18 +29,7 @@ import (
 	"gopkg.in/reform.v1"
 	"gopkg.in/reform.v1/dialects/postgresql"
 
-	"cloud.google.com/go/pubsub"
-	_ "github.com/lib/pq"
-
 	"github.com/gebv/acca/api"
-	"github.com/gebv/acca/httputils"
-	"github.com/gebv/acca/interceptors/auth"
-	"github.com/gebv/acca/services"
-	"github.com/gebv/acca/services/accounts"
-	"github.com/gebv/acca/services/auditor"
-	"github.com/gebv/acca/services/invoices"
-	"github.com/gebv/acca/services/updater"
-
 	_ "github.com/gebv/acca/engine/strategies/invoices/refund"
 	_ "github.com/gebv/acca/engine/strategies/invoices/simple"
 	_ "github.com/gebv/acca/engine/strategies/transactions/moedelo"
@@ -47,8 +38,15 @@ import (
 	_ "github.com/gebv/acca/engine/strategies/transactions/simple"
 	_ "github.com/gebv/acca/engine/strategies/transactions/stripe"
 	_ "github.com/gebv/acca/engine/strategies/transactions/stripe_refund"
+	"github.com/gebv/acca/httputils"
+	"github.com/gebv/acca/interceptors/auth"
 	"github.com/gebv/acca/interceptors/recover"
 	settingsInterceptor "github.com/gebv/acca/interceptors/settings"
+	"github.com/gebv/acca/services"
+	"github.com/gebv/acca/services/accounts"
+	"github.com/gebv/acca/services/auditor"
+	"github.com/gebv/acca/services/invoices"
+	"github.com/gebv/acca/services/updater"
 )
 
 var (
@@ -117,18 +115,24 @@ func main() {
 		zap.L().Panic("Failed to check version to PostgreSQL.", zap.Error(err))
 	}
 
-	pb, err := pubsub.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
-	if err != nil {
-		zap.L().Panic("Failed get pubsub client", zap.Error(err))
-	}
-	zap.L().Info("PubSub - configured!")
-
 	bqCl, err := bigquery.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
 	if err != nil {
 		zap.L().Panic("Failed new client bigquery.", zap.Error(err))
 	}
 
-	sUpdater := updater.NewServer(pb)
+	firebaseApp, err := firebase.NewApp(ctx, nil)
+	if err != nil {
+		zap.L().Panic("Failed get firebase client", zap.Error(err))
+	}
+	zap.L().Info("Firebase - configured!")
+
+	fs, err := firebaseApp.Firestore(ctx)
+	if err != nil {
+		zap.L().Panic("Failed firebase app to firestore.", zap.Error(err))
+	}
+	defer fs.Close()
+
+	sUpdater := updater.NewServer(nil)
 
 	// аудитор http запросов (сохраняет в БД все реквесты и респонсы)
 	httpAuditor := auditor.NewHttpAuditor(bqCl)
@@ -154,7 +158,7 @@ func main() {
 	)
 
 	accServ := accounts.NewServer(db)
-	invServ := invoices.NewServer(db, pb)
+	invServ := invoices.NewServer(db, fs)
 
 	api.RegisterAccountsServer(grpcServer, accServ)
 	api.RegisterInvoicesServer(grpcServer, invServ)

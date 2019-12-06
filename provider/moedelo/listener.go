@@ -122,7 +122,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				ctx = strategies.SetPubSubToContext(ctx, p.pb)
+				//ctx = strategies.SetFirestoreTxToContext(ctx, p.fs) TODO раскоментировать после правок в провайдере
 				ctx = strategies.SetTXContext(ctx, tx)
 				if name := strategies.ExistTrName(tr.Strategy); name != strategies.UNDEFINED_TR {
 					if str := strategies.GetTransactionStrategy(name); str != nil {

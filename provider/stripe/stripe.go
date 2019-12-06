@@ -3,7 +3,7 @@ package stripe
 import (
 	"os"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/firestore"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
@@ -18,7 +18,7 @@ import (
 	"github.com/gebv/acca/provider"
 )
 
-func NewProvider(db *reform.DB, pb *pubsub.Client) *Provider {
+func NewProvider(db *reform.DB, fs *firestore.Client) *Provider {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	endpointSecret = os.Getenv("STRIPE_ENDPOINT_SECRET")
 	if os.Getenv("STRIPE_KEY") == "" || endpointSecret == "" {
@@ -26,7 +26,7 @@ func NewProvider(db *reform.DB, pb *pubsub.Client) *Provider {
 	}
 	return &Provider{
 		db: db,
-		pb: pb,
+		fs: fs,
 		s: &provider.Store{
 			DB: db,
 		},
@@ -35,8 +35,8 @@ func NewProvider(db *reform.DB, pb *pubsub.Client) *Provider {
 }
 
 type Provider struct {
+	fs *firestore.Client
 	db *reform.DB
-	pb *pubsub.Client
 	s  *provider.Store
 	l  *zap.Logger
 }

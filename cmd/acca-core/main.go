@@ -11,11 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/pubsub"
 	"contrib.go.opencensus.io/exporter/stackdriver"
+	firebase "firebase.google.com/go"
 	_ "github.com/lib/pq"
 	_ "github.com/solcates/go-sql-bigquery"
-
 	"go.opencensus.io/plugin/ocgrpc"
 	"go.opencensus.io/stats/view"
 	"go.opencensus.io/trace"
@@ -127,11 +126,23 @@ func main() {
 		return
 	}
 
-	pb, err := pubsub.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
+	//pb, err := pubsub.NewClient(ctx, os.Getenv("GCLOUD_PROJECT"))
+	//if err != nil {
+	//	zap.L().Panic("Failed get pubsub client", zap.Error(err))
+	//}
+	//zap.L().Info("PubSub - configured!")
+
+	firebaseApp, err := firebase.NewApp(ctx, nil)
 	if err != nil {
-		zap.L().Panic("Failed get pubsub client", zap.Error(err))
+		zap.L().Panic("Failed get firebase client", zap.Error(err))
 	}
-	zap.L().Info("PubSub - configured!")
+	zap.L().Info("Firebase - configured!")
+
+	fs, err := firebaseApp.Firestore(ctx)
+	if err != nil {
+		zap.L().Panic("Failed firebase app to firestore.", zap.Error(err))
+	}
+	defer fs.Close()
 
 	var sberProvider *sberbank.Provider
 	if os.Getenv("SBERBANK_ENTRYPOINT_URL") != "" {
@@ -143,7 +154,7 @@ func main() {
 				Password:      os.Getenv("SBERBANK_PASSWORD"),
 				UserName:      os.Getenv("SBERBANK_USER_NAME"),
 			},
-			pb,
+			nil,
 		)
 	}
 
@@ -155,7 +166,7 @@ func main() {
 				EntrypointURL: os.Getenv("MOEDELO_ENTRYPOINT_URL"),
 				Token:         os.Getenv("MOEDELO_TOKEN"),
 			},
-			pb,
+			nil,
 		)
 	}
 
@@ -163,11 +174,14 @@ func main() {
 	if os.Getenv("STRIPE_KEY") != "" {
 		stripeProvider = stripe.NewProvider(
 			db,
-			pb,
+			fs,
 		)
 	}
 
-	worker.SubToPB(pb, db, sberProvider, moeDeloProvider, stripeProvider)
+	//worker.Run(fs, db, sberProvider, moeDeloProvider, stripeProvider) TODO использовать после правок в провыйдерах сбера и моедело
+	_ = sberProvider
+	_ = moeDeloProvider
+	worker.Run(ctx, fs, db, nil, nil, stripeProvider)
 
 	var wg sync.WaitGroup
 
@@ -175,21 +189,24 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			moeDeloProvider.RunCheckStatusListener(ctx)
+			// TODO раскомментировать после провок
+			//moeDeloProvider.RunCheckStatusListener(ctx)
 		}()
 	}
 
+	wg.Add(1)
+	go func() {
+		<-ctx.Done()
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+		defer cancel()
+		go func() {
+			defer wg.Done()
+			<-ctx.Done()
+		}()
+	}()
+
 	wg.Wait()
-
-	// - внутренний grpc АПИ
-	// - хандлер для платежек
-
-	/*
-		Входящая операция падает в общую очередь
-		Колторая обрабатывается в горутине
-		Все состояния персистятся в PG
-		В случае падения процесса очередь воссоздается из БД (то есть сохранять состояния команд?)
-	*/
+	zap.L().Info("Done")
 }
 
 // Configure configure zap logger.
