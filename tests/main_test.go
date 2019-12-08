@@ -75,11 +75,11 @@ func runPostgresMigrations() {
 	}
 }
 
-func runGo(bin string, args ...string) {
+func runGo(bin string, envs []string, args ...string) {
 	cmd := exec.Command(filepath.Join("..", "bin", bin), args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Env = append(os.Environ(), `GORACE="halt_on_error=1"`)
+	cmd.Env = append(os.Environ(), append(envs, `GORACE="halt_on_error=1"`)...)
 	log.Print(strings.Join(cmd.Args, " "))
 	if err := cmd.Start(); err != nil {
 		panic(err)
@@ -96,7 +96,7 @@ func runGo(bin string, args ...string) {
 }
 
 func createAccessToken() string {
-	out, err := exec.Command(filepath.Join("..", "bin", "acca-race"), "--gen-access-token").Output()
+	out, err := exec.Command(filepath.Join("..", "bin", "acca-core-race"), "--gen-access-token").Output()
 	if err != nil {
 		panic(err)
 	}
@@ -119,7 +119,6 @@ var DockerHostF = flag.String("docker-host-address", "127.0.0.1", "Docker addres
 func TestMain(m *testing.M) {
 	onlySetupF := flag.Bool("only-setup", false, "Only setup: put settings to Consul, migrate database and exit.")
 	skipSetupF := flag.Bool("skip-setup", false, "Skip setup: run tests and exit.")
-	grpcAddrF := flag.String("grpc-addr", "127.0.0.1:10011", "gRPC client API address")
 
 	log.SetPrefix("testmain: ")
 	log.SetFlags(0)
@@ -178,14 +177,14 @@ func TestMain(m *testing.M) {
 
 		AccessToken = createAccessToken()
 
-		go runGo(
-			"acca-race",
-			"--grpc-reflection=true",
-		)
+		go runGo("acca-core-race", []string{})
+		go runGo("acca-api-race", []string{"GRPC_PORT=50001", "GRPCWEB_PORT=40001"}, "--grpc-reflection=true")
+		go runGo("acca-webhook-race", []string{"WEB_PORT=10003"})
+		time.Sleep(time.Second)
 	}
 
 	var err error
-	Conn, err = grpc.Dial(*grpcAddrF, grpc.WithInsecure(), grpc.WithBlock())
+	Conn, err = grpc.Dial("127.0.0.1:50001", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Panic(err)
 	}

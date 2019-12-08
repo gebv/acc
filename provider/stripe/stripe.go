@@ -3,7 +3,7 @@ package stripe
 import (
 	"os"
 
-	"github.com/nats-io/nats.go"
+	"cloud.google.com/go/firestore"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
@@ -18,7 +18,7 @@ import (
 	"github.com/gebv/acca/provider"
 )
 
-func NewProvider(db *reform.DB, nc *nats.EncodedConn) *Provider {
+func NewProvider(db *reform.DB, fs *firestore.Client) *Provider {
 	stripe.Key = os.Getenv("STRIPE_KEY")
 	endpointSecret = os.Getenv("STRIPE_ENDPOINT_SECRET")
 	if os.Getenv("STRIPE_KEY") == "" || endpointSecret == "" {
@@ -26,7 +26,7 @@ func NewProvider(db *reform.DB, nc *nats.EncodedConn) *Provider {
 	}
 	return &Provider{
 		db: db,
-		nc: nc,
+		fs: fs,
 		s: &provider.Store{
 			DB: db,
 		},
@@ -35,8 +35,8 @@ func NewProvider(db *reform.DB, nc *nats.EncodedConn) *Provider {
 }
 
 type Provider struct {
+	fs *firestore.Client
 	db *reform.DB
-	nc *nats.EncodedConn
 	s  *provider.Store
 	l  *zap.Logger
 }

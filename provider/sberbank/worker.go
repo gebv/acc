@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"cloud.google.com/go/pubsub"
 	"go.opencensus.io/trace"
 	"go.uber.org/zap"
 
@@ -28,8 +29,25 @@ type MessageToSberbank struct {
 	Status        engine.TransactionStatus
 }
 
-func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
-	return func(m *MessageToSberbank) {
+func (p *Provider) PubSubHandler() func(ctx context.Context, pbMsg *pubsub.Message) {
+	return func(ctx context.Context, pbMsg *pubsub.Message) {
+		var m MessageToSberbank
+		var nack bool
+		okAck := &nack
+		defer func() {
+			if okAck == nil {
+				return
+			}
+			if *okAck {
+				pbMsg.Ack()
+			} else {
+				pbMsg.Nack()
+			}
+		}()
+		if err := json.Unmarshal(pbMsg.Data, &m); err != nil {
+			p.l.Error("Failed unmarshal pubsub message.", zap.Error(err))
+			return
+		}
 		_, span := trace.StartSpan(context.Background(), "async.fromQueue.ProviderSberbank")
 		defer span.End()
 		var clientID int64
@@ -64,6 +82,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				okAck = nil
 				return
 			}
 			if tr.Meta == nil {
@@ -122,14 +141,22 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		case ReverseForHold:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
 			if err := tx.Reload(&tr); err != nil {
@@ -145,6 +172,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				okAck = nil
 				return
 			}
 			if tr.ProviderOperID == nil {
@@ -195,14 +223,22 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		case Refund:
 			tr := engine.Transaction{TransactionID: m.TransactionID}
 			if err := tx.Reload(&tr); err != nil {
@@ -218,6 +254,7 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 					zap.Int64("tr_id", tr.TransactionID),
 					zap.String("status", string(tr.Status)),
 				)
+				okAck = nil
 				return
 			}
 			if tr.ProviderOperID == nil {
@@ -267,14 +304,22 @@ func (p *Provider) NatsHandler() func(m *MessageToSberbank) {
 				p.l.Error("Failed tx commit. ", zap.Error(err))
 				return
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      m.ClientID,
 				TransactionID: m.TransactionID,
 				Strategy:      m.Strategy,
 				Status:        m.Status,
-			}); err != nil {
+			})
+			if err != nil {
+				p.l.Error("Failed json marshal for publish update transaction.", zap.Error(err))
+				return
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				p.l.Error("Failed publish update transaction.", zap.Error(err))
 			}
+			*okAck = true
 		default:
 			p.l.Warn("Not processed command in message of sberbank in nats.")
 		}

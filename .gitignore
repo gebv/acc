@@ -4,3 +4,5 @@ bin/*
 .env
 test.http
 acca.json
+cmd/acca-api/app.yaml
+cmd/acca-webhook/app.yaml

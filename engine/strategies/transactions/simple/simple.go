@@ -137,18 +137,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
+				}
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -208,18 +221,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.ACCEPTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
+				}
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.ACCEPTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -279,18 +305,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
+				}
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -336,18 +375,31 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
+				}
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},

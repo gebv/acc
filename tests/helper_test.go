@@ -75,21 +75,21 @@ func NewHelperData(t *testing.T) *helperData {
 			"stripe_refund":   new(stripe_refund.Strategy).Name().String(),
 		},
 	}
-	res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
-	require.NoError(t, err)
-	h.update = res
-	go func() {
-		for {
-			u, err := h.update.Recv()
-			if err != nil {
-				return
-			}
-			h.rw.Lock()
-			h.updates = append(h.updates, u)
-			h.rw.Unlock()
-			h.updateCh <- u
-		}
-	}()
+	//res, err := h.accU.GetUpdate(h.authCtx, &api.GetUpdateRequest{})
+	//require.NoError(t, err)
+	//h.update = res
+	//go func() {
+	//	for {
+	//		u, err := h.update.Recv()
+	//		if err != nil {
+	//			return
+	//		}
+	//		h.rw.Lock()
+	//		h.updates = append(h.updates, u)
+	//		h.rw.Unlock()
+	//		h.updateCh <- u
+	//	}
+	//}()
 	return &h
 }
 
@@ -128,16 +128,33 @@ func (h *helperData) CompareUpdates(updates []*api.Update) func(t *testing.T) {
 
 func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		timer := time.NewTimer(33 * time.Second)
+		tm := time.Now()
+		timer := time.NewTimer(15 * time.Second)
 		defer timer.Stop()
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			select {
-			case u := <-h.updateCh:
-				if u.GetUpdatedInvoice().GetInvoiceId() == h.invoiceIDs[invKey] &&
-					u.GetUpdatedInvoice().GetStatus() == invStatus {
+			case <-ticker.C:
+				res, err := h.invC.GetInvoiceByIDs(h.authCtx, &api.GetInvoiceByIDsRequest{
+					InvoiceIds: []int64{h.invoiceIDs[invKey]},
+					WithTx:     false,
+				})
+				require.NoError(t, err)
+				if len(res.GetInvoices()) > 0 && res.GetInvoices()[0].GetStatus() == invStatus {
+					log.Println("!!! WaitInvoice: ", time.Now().Sub(tm))
 					return
 				}
 			case <-timer.C:
+				res, err := h.invC.GetInvoiceByIDs(h.authCtx, &api.GetInvoiceByIDsRequest{
+					InvoiceIds: []int64{h.invoiceIDs[invKey]},
+					WithTx:     false,
+				})
+				log.Println("!!! WaitInvoice ERR: ", err)
+				log.Println("!!! WaitInvoice LEN: ", len(res.GetInvoices()))
+				if len(res.GetInvoices()) > 0 {
+					log.Println("!!! WaitInvoice STATUS: ", res.GetInvoices()[0].GetStatus())
+				}
 				t.Error("timeout")
 				return
 			}
@@ -147,16 +164,35 @@ func (h *helperData) WaitInvoice(invKey string, invStatus api.InvoiceStatus) fun
 
 func (h *helperData) WaitTransaction(txKey string, txStatus api.TxStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		timer := time.NewTimer(33 * time.Second)
+		tm := time.Now()
+		timer := time.NewTimer(15 * time.Second)
 		defer timer.Stop()
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
 		for {
 			select {
-			case u := <-h.updateCh:
-				if u.GetUpdatedTransaction().GetTransactionId() == h.transactionIDs[txKey] &&
-					u.GetUpdatedTransaction().GetStatus() == txStatus {
+			case <-ticker.C:
+				res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+					TxIds: []int64{h.transactionIDs[txKey]},
+				})
+				require.NoError(t, err)
+				if len(res.GetTransactions()) > 0 && res.GetTransactions()[0].GetStatus() == txStatus {
+					log.Println("!!! WaitTransaction: ", time.Now().Sub(tm))
 					return
 				}
 			case <-timer.C:
+				res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+					TxIds: []int64{h.transactionIDs[txKey]},
+				})
+				log.Println("!!! WaitTransaction ERR: ", err)
+				log.Println("!!! WaitTransaction LEN: ", len(res.GetTransactions()))
+				if len(res.GetTransactions()) > 0 {
+					log.Println("!!! WaitTransaction STATUS: ", res.GetTransactions()[0].GetStatus().String())
+					log.Println("!!! WaitTransaction STATUS: ", *res.GetTransactions()[0].GetProviderOperUrl())
+					log.Println("!!! WaitTransaction STATUS: ", *res.GetTransactions()[0].GetProviderOperId())
+					log.Println("!!! WaitTransaction STATUS: ", *res.GetTransactions()[0].GetProviderOperStatus())
+					log.Println("!!! WaitTransaction STATUS: ", res.GetTransactions()[0].GetProvider().String())
+				}
 				t.Error("timeout")
 				return
 			}
@@ -349,18 +385,34 @@ func (h *helperData) CheckBalances(accKey, currKey string) func(t *testing.T) {
 
 func (h *helperData) CheckTransactionWithProvider(txKey, providerStatus string, txStatus api.TxStatus) func(t *testing.T) {
 	return func(t *testing.T) {
-		res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
-			TxIds: []int64{h.transactionIDs[txKey]},
-		})
-		require.NoError(t, err)
-		require.NotEmpty(t, res.GetTransactions())
-		require.EqualValues(t, txStatus, res.GetTransactions()[0].GetStatus())
-		require.NotNil(t, res.GetTransactions()[0].GetProviderOperStatus())
-		require.EqualValues(t, providerStatus, *res.GetTransactions()[0].GetProviderOperStatus())
-		require.NotNil(t, res.GetTransactions()[0].GetProviderOperUrl())
-		h.txProviderUrls[txKey] = *res.GetTransactions()[0].GetProviderOperUrl()
-		require.NotNil(t, res.GetTransactions()[0].GetProviderOperId())
-		h.txProviderIDs[txKey] = *res.GetTransactions()[0].GetProviderOperId()
+		timer := time.NewTimer(5 * time.Second)
+		defer timer.Stop()
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				res, err := h.invC.GetTransactionByIDs(h.authCtx, &api.GetTransactionByIDsRequest{
+					TxIds: []int64{h.transactionIDs[txKey]},
+				})
+				require.NoError(t, err)
+				require.NotEmpty(t, res.GetTransactions())
+				if res.GetTransactions()[0].GetProviderOperStatus() == nil {
+					continue
+				}
+				require.EqualValues(t, txStatus, res.GetTransactions()[0].GetStatus())
+				require.NotNil(t, res.GetTransactions()[0].GetProviderOperStatus()) // TODO поправить, при нужном статусе тут может быть nil
+				require.EqualValues(t, providerStatus, *res.GetTransactions()[0].GetProviderOperStatus())
+				require.NotNil(t, res.GetTransactions()[0].GetProviderOperUrl())
+				h.txProviderUrls[txKey] = *res.GetTransactions()[0].GetProviderOperUrl()
+				require.NotNil(t, res.GetTransactions()[0].GetProviderOperId())
+				h.txProviderIDs[txKey] = *res.GetTransactions()[0].GetProviderOperId()
+				return
+			case <-timer.C:
+				t.Error("timeout")
+				return
+			}
+		}
 	}
 }
 

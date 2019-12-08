@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+	"gopkg.in/reform.v1"
+
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
 	"github.com/gebv/acca/ffsm"
 	"github.com/gebv/acca/provider"
-	"github.com/gebv/acca/services/updater"
-	"go.uber.org/zap"
-	"gopkg.in/reform.v1"
 )
 
 func (p *Provider) RunCheckStatusListener(ctx context.Context) {
@@ -122,7 +122,7 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 				}
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 				defer cancel()
-				ctx = strategies.SetNatsToContext(ctx, p.nc)
+				//ctx = strategies.SetFirestoreTxToContext(ctx, p.fs) TODO раскоментировать после правок в провайдере
 				ctx = strategies.SetTXContext(ctx, tx)
 				if name := strategies.ExistTrName(tr.Strategy); name != strategies.UNDEFINED_TR {
 					if str := strategies.GetTransactionStrategy(name); str != nil {
@@ -143,15 +143,16 @@ func (p *Provider) RunCheckStatusListener(ctx context.Context) {
 						if err := store.SetStatus(orderID, MOEDELO, strconv.Itoa(int(bill.Status))); err != nil {
 							_l.Error("Failed set status to external transaction. ", zap.Error(err))
 						}
-						if err := p.nc.Publish(updater.SubjectFromTransaction(tr.ClientID, tr.TransactionID), &updater.Update{
-							UpdatedTransaction: &updater.UpdatedTransaction{
-								TransactionID: tr.TransactionID,
-								Status:        engine.TransactionStatus(status),
-							},
-						}); err != nil {
-							_l.Error("Failed publish transaction. ", zap.Error(err))
-							continue
-						}
+						// TODO поправить отправку сообщения для GetUpdates
+						//if err := p.nc.Publish(updater.SubjectFromTransaction(tr.ClientID, tr.TransactionID), &updater.Update{
+						//	UpdatedTransaction: &updater.UpdatedTransaction{
+						//		TransactionID: tr.TransactionID,
+						//		Status:        engine.TransactionStatus(status),
+						//	},
+						//}); err != nil {
+						//	_l.Error("Failed publish transaction. ", zap.Error(err))
+						//	continue
+						//}
 						continue
 					}
 				}

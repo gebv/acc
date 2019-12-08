@@ -4,7 +4,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/nats-io/nats.go"
+	"cloud.google.com/go/firestore"
 	"gopkg.in/reform.v1"
 
 	"github.com/gebv/acca/engine"
@@ -21,10 +21,11 @@ type InvStrategyName string
 func (s InvStrategyName) String() string { return string(s) }
 
 const (
-	UNDEFINED_TR       TrStrategyName  = ""
-	UNDEFINED_INV      InvStrategyName = ""
-	contextReformKeyTX                 = "reform_key_tx"
-	contextNatsKey                     = "nats_key"
+	UNDEFINED_TR              TrStrategyName  = ""
+	UNDEFINED_INV             InvStrategyName = ""
+	contextReformKeyTX                        = "reform_key_tx"
+	contextFirestoreTxKey                     = "firestore_tx_key"
+	contextFirestoreClientKey                 = "firestore_client_key"
 
 	UPDATE_INVOICE_SUBJECT     = "update_invoice_subject"
 	UPDATE_TRANSACTION_SUBJECT = "update_transaction_subject"
@@ -103,12 +104,20 @@ func GetTXContext(ctx context.Context) *reform.TX {
 	return ctx.Value(contextReformKeyTX).(*reform.TX)
 }
 
-func SetNatsToContext(ctx context.Context, nc *nats.EncodedConn) context.Context {
-	return context.WithValue(ctx, contextNatsKey, nc)
+func SetFirestoreTxToContext(ctx context.Context, tx *firestore.Transaction) context.Context {
+	return context.WithValue(ctx, contextFirestoreTxKey, tx)
 }
 
-func GetNatsFromContext(ctx context.Context) *nats.EncodedConn {
-	return ctx.Value(contextNatsKey).(*nats.EncodedConn)
+func GetFirestoreTxFromContext(ctx context.Context) *firestore.Transaction {
+	return ctx.Value(contextFirestoreTxKey).(*firestore.Transaction)
+}
+
+func SetFirestoreClientToContext(ctx context.Context, fs *firestore.Client) context.Context {
+	return context.WithValue(ctx, contextFirestoreClientKey, fs)
+}
+
+func GetFirestoreClientFromContext(ctx context.Context) *firestore.Client {
+	return ctx.Value(contextFirestoreClientKey).(*firestore.Client)
 }
 
 type MessageUpdateTransaction struct {

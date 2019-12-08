@@ -7,6 +7,7 @@ import (
 )
 
 func Test05_01GetUpdates(t *testing.T) {
+	t.Skip("WIP GetUpdates")
 	h := NewHelperData(t)
 
 	t.Run("CreateCurrency", h.CreateCurrency("curr1"))

@@ -5,11 +5,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gebv/acca/provider"
-	"github.com/nats-io/nats.go"
+	"cloud.google.com/go/pubsub"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"gopkg.in/reform.v1"
+
+	"github.com/gebv/acca/provider"
 )
 
 const (
@@ -22,14 +23,14 @@ var (
 
 const TimeFormat = "2006-01-02T15:04:05-07:00"
 
-func NewProvider(db *reform.DB, cfg Config, nc *nats.EncodedConn) *Provider {
+func NewProvider(db *reform.DB, cfg Config, pb *pubsub.Client) *Provider {
 	var c *client
 	if cfg.Token != "" {
 		c = newClient(cfg.Token)
 	}
 	return &Provider{
 		db:  db,
-		nc:  nc,
+		pb:  pb,
 		cfg: cfg,
 		c:   c,
 		l:   zap.L().Named("moedelo_provider"),
@@ -39,7 +40,7 @@ func NewProvider(db *reform.DB, cfg Config, nc *nats.EncodedConn) *Provider {
 type Provider struct {
 	cfg Config
 	db  *reform.DB
-	nc  *nats.EncodedConn
+	pb  *pubsub.Client
 	c   *client
 	l   *zap.Logger
 }

@@ -5,13 +5,12 @@ APPVERSION=${GITHASH}_${CURDATE}
 
 build-race:
 	#export $(sed 's/=.*\l\r//' .env)
-	go build -v -race -o ./bin/acca-race ./cmd/acca/main.go
+	go build -v -race -o ./bin/acca-core-race ./cmd/acca-core/main.go
+	go build -v -race -o ./bin/acca-webhook-race ./cmd/acca-webhook/main.go
+	go build -v -race -o ./bin/acca-api-race ./cmd/acca-api/main.go
 
 build-linux:
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-X main.VERSION=${APPVERSION}" -o ./bin/acca ./cmd/acca/main.go
-
-run: build-race
-	GORACE="halt_on_error=1" ./bin/acca-race
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -ldflags "-X main.VERSION=${APPVERSION}" -o ./bin/acca ./cmd/acca-core/main.go
 
 init:
 	go install -v ./vendor/github.com/gogo/protobuf/protoc-gen-gogofast

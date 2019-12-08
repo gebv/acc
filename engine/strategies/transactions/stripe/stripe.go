@@ -96,9 +96,13 @@ func (s *Strategy) load() {
 				if tr.Status != engine.DRAFT_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_TX
@@ -107,15 +111,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(stripe.SUBJECT, &stripe.MessageToStripe{
-					Command:       stripe.AuthTransfer,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.AUTH_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.AuthTransfer,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.AUTH_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -148,9 +161,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
@@ -189,9 +202,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
@@ -222,14 +239,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -262,9 +288,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.REJECTED_TX
@@ -272,14 +302,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -308,9 +347,13 @@ func (s *Strategy) load() {
 				if tr.Status != engine.HOLD_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -319,15 +362,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(stripe.SUBJECT, &stripe.MessageToStripe{
-					Command:       stripe.ReverseForHold,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.REJECTED_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.ReverseForHold,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.REJECTED_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -360,9 +412,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -384,14 +440,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.REJECTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -424,9 +489,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.ACCEPTED_TX
@@ -454,14 +523,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    invStatus,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -494,9 +572,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
@@ -505,15 +587,24 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(stripe.SUBJECT, &stripe.MessageToStripe{
-					Command:       stripe.Capture,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.ACCEPTED_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					stripe.MessageToStripe
+				}{
+					Type:      stripe.SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageToStripe: stripe.MessageToStripe{
+						Command:       stripe.Capture,
+						ClientID:      tr.ClientID,
+						TransactionID: tr.TransactionID,
+						Strategy:      tr.Strategy,
+						Status:        engine.ACCEPTED_TX,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},
@@ -546,9 +637,13 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
@@ -570,14 +665,23 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.ACCEPTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
+				if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+					Type      string `firestore:"type"`
+					StatusMsg string `firestore:"status_msg"`
+					CreatedAt int64  `firestore:"created_at"`
+					strategies.MessageUpdateInvoice
+				}{
+					Type:      strategies.UPDATE_INVOICE_SUBJECT,
+					StatusMsg: "new",
+					CreatedAt: time.Now().UnixNano(),
+					MessageUpdateInvoice: strategies.MessageUpdateInvoice{
+						ClientID:  inv.ClientID,
+						InvoiceID: inv.InvoiceID,
+						Strategy:  inv.Strategy,
+						Status:    engine.ACCEPTED_I,
+					},
+				}); err != nil {
+					return ctx, errors.Wrap(err, "Failed create message.")
 				}
 				return ctx, nil
 			},

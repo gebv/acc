@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
+	"go.uber.org/zap"
 
 	"github.com/gebv/acca/engine"
 	"github.com/gebv/acca/engine/strategies"
@@ -113,22 +115,42 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.AUTH_TX,
-					})
 					if err != nil {
 						log.Println("Failed publish to nats. InvoiceID: ", invID,
 							", TransactionID: ", tr.TransactionID,
 							", err: ", err)
+						continue
+					}
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.AUTH_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}
@@ -669,23 +691,37 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
 
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.REJECTED_TX,
-					})
-					if err != nil {
-						log.Println("Failed publish to nats. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.REJECTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}
@@ -733,22 +769,36 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.ACCEPTED_TX,
-					})
-					if err != nil {
-						log.Println("Failed publish to nats. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.ACCEPTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}
@@ -796,22 +846,36 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.REJECTED_TX,
-					})
-					if err != nil {
-						log.Println("Failed publish to nats. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.REJECTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}
@@ -859,22 +923,36 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.ACCEPTED_TX,
-					})
-					if err != nil {
-						log.Println("Failed publish to nats. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.ACCEPTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}
@@ -922,22 +1000,36 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "Failed list transaction by invoice ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				fsTx := strategies.GetFirestoreTxFromContext(ctx)
+				if fsTx == nil {
+					return ctx, errors.New("Not fs transaction in context.")
+				}
+				fs := strategies.GetFirestoreClientFromContext(ctx)
+				if fs == nil {
+					return ctx, errors.New("Not fs client in context.")
 				}
 				for _, v := range list {
 					tr := v.(*engine.Transaction)
-					err = nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, &strategies.MessageUpdateTransaction{
-						ClientID:      tr.ClientID,
-						TransactionID: tr.TransactionID,
-						Strategy:      tr.Strategy,
-						Status:        engine.REJECTED_TX,
-					})
-					if err != nil {
-						log.Println("Failed publish to nats. InvoiceID: ", invID,
-							", TransactionID: ", tr.TransactionID,
-							", err: ", err)
+					if err := fsTx.Create(fs.Collection("messages").NewDoc(), struct {
+						Type      string `firestore:"type"`
+						StatusMsg string `firestore:"status_msg"`
+						CreatedAt int64  `firestore:"created_at"`
+						strategies.MessageUpdateTransaction
+					}{
+						Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+						StatusMsg: "new",
+						CreatedAt: time.Now().UnixNano(),
+						MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+							ClientID:      tr.ClientID,
+							TransactionID: tr.TransactionID,
+							Strategy:      tr.Strategy,
+							Status:        engine.REJECTED_TX,
+						},
+					}); err != nil {
+						zap.L().Error("Failed create message.",
+							zap.Int64("InvoiceID", invID),
+							zap.Int64("TransactionID", tr.TransactionID),
+							zap.Error(err))
 						continue
 					}
 				}

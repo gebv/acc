@@ -1,8 +1,11 @@
 package sberbank
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/labstack/echo"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
@@ -102,15 +105,23 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 				return err
 			}
 			// Отправляем сообщение на переход транзакции в ACCEPTED
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.ACCEPTED_TX,
-			}); err != nil {
+			})
+			if err != nil {
 				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
-				return errors.Wrap(err, "failed send accept transaction")
+				return errors.Wrap(err, "failed json marshal for publish accept transaction")
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
+				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
+				c.Response().WriteHeader(http.StatusTemporaryRedirect)
+				return errors.Wrap(err, "failed publish accept transaction")
 			}
 		case APPROVED: // Статус подтверждает холдирования средств
 			if tr.Status != engine.AUTH_TX {
@@ -131,12 +142,20 @@ func (p *Provider) successSberbankWebhookHandler(c echo.Context) error {
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
 				return err
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.HOLD_TX,
-			}); err != nil {
+			})
+			if err != nil {
+				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
+				c.Response().WriteHeader(http.StatusTemporaryRedirect)
+				return errors.Wrap(err, "Failed json marshal for publish received funds by order")
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
 				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
 				return errors.Wrap(err, "Failed publish received funds by order")
@@ -202,15 +221,23 @@ func (p *Provider) failSberbankWebhookHandler(c echo.Context) error {
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
 				return err
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
+			b, err := json.Marshal(&strategies.MessageUpdateTransaction{
 				ClientID:      tr.ClientID,
 				TransactionID: tr.TransactionID,
 				Strategy:      tr.Strategy,
 				Status:        engine.REJECTED_TX,
-			}); err != nil {
+			})
+			if err != nil {
 				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
 				c.Response().WriteHeader(http.StatusTemporaryRedirect)
-				return errors.Wrap(err, "failed accept invoice")
+				return errors.Wrap(err, "Failed json marshal for accept invoice")
+			}
+			if _, err := p.pb.Topic(strategies.UPDATE_TRANSACTION_SUBJECT).Publish(context.Background(), &pubsub.Message{
+				Data: b,
+			}).Get(context.Background()); err != nil {
+				c.Response().Header().Set("Location", callback+"?payment_state=internal_fail")
+				c.Response().WriteHeader(http.StatusTemporaryRedirect)
+				return errors.Wrap(err, "Failed accept invoice")
 			}
 		default:
 			p.l.Warn(

@@ -110,9 +110,9 @@ func (s *Strategy) load() {
 				if tr.Status != engine.DRAFT_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.AUTH_TX
@@ -121,16 +121,21 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(sberbank.SUBJECT, &sberbank.MessageToSberbank{
-					Command:       sberbank.AuthTransfer,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.AUTH_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&sberbank.MessageToSberbank{
+				//	Command:       sberbank.AuthTransfer,
+				//	ClientID:      tr.ClientID,
+				//	TransactionID: tr.TransactionID,
+				//	Strategy:      tr.Strategy,
+				//	Status:        engine.AUTH_TX,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(sberbank.SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"draft>auth",
@@ -168,10 +173,6 @@ func (s *Strategy) load() {
 				inv := engine.Invoice{InvoiceID: tr.InvoiceID}
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
-				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
@@ -217,9 +218,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.AUTH_TX
@@ -240,25 +241,30 @@ func (s *Strategy) load() {
 				if !isHold {
 					return ctx, errors.Wrap(err, "Support only hold operation.")
 				}
-				invStatus := engine.ACCEPTED_I
+				//invStatus := engine.ACCEPTED_I
 				tr.Status = engine.ACCEPTED_TX
 				if isHold {
 					tr.Status = engine.HOLD_TX
-					invStatus = engine.WAIT_I
+					//invStatus = engine.WAIT_I
 				}
 				tr.NextStatus = nil
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&strategies.MessageUpdateInvoice{
+				//	ClientID:  inv.ClientID,
+				//	InvoiceID: inv.InvoiceID,
+				//	Strategy:  inv.Strategy,
+				//	Status:    invStatus,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"auth>hold",
@@ -297,9 +303,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.REJECTED_TX
@@ -307,15 +313,20 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&strategies.MessageUpdateInvoice{
+				//	ClientID:  inv.ClientID,
+				//	InvoiceID: inv.InvoiceID,
+				//	Strategy:  inv.Strategy,
+				//	Status:    engine.REJECTED_I,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"draft>rejected",
@@ -350,9 +361,9 @@ func (s *Strategy) load() {
 				if tr.Status != engine.HOLD_TX {
 					return ctx, errors.New("Transaction status not draft.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -361,16 +372,21 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err := nc.Publish(sberbank.SUBJECT, &sberbank.MessageToSberbank{
-					Command:       sberbank.ReverseForHold,
-					ClientID:      tr.ClientID,
-					TransactionID: tr.TransactionID,
-					Strategy:      tr.Strategy,
-					Status:        engine.REJECTED_TX,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&sberbank.MessageToSberbank{
+				//	Command:       sberbank.ReverseForHold,
+				//	ClientID:      tr.ClientID,
+				//	TransactionID: tr.TransactionID,
+				//	Strategy:      tr.Strategy,
+				//	Status:        engine.REJECTED_TX,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(sberbank.SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"hold>rejected",
@@ -409,9 +425,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.REJECTED_TX
@@ -433,15 +449,20 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.REJECTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&strategies.MessageUpdateInvoice{
+				//	ClientID:  inv.ClientID,
+				//	InvoiceID: inv.InvoiceID,
+				//	Strategy:  inv.Strategy,
+				//	Status:    engine.REJECTED_I,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"rejected_wait>rejected",
@@ -480,9 +501,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				tr.Status = engine.ACCEPTED_TX
@@ -500,25 +521,30 @@ func (s *Strategy) load() {
 				if err != nil {
 					return ctx, errors.Wrap(err, "failed operation process")
 				}
-				invStatus := engine.ACCEPTED_I
+				//invStatus := engine.ACCEPTED_I
 				tr.Status = engine.ACCEPTED_TX
 				if isHold {
 					tr.Status = engine.HOLD_TX
-					invStatus = engine.WAIT_I
+					//invStatus = engine.WAIT_I
 				}
 				tr.NextStatus = nil
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    invStatus,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&strategies.MessageUpdateInvoice{
+				//	ClientID:  inv.ClientID,
+				//	InvoiceID: inv.InvoiceID,
+				//	Strategy:  inv.Strategy,
+				//	Status:    invStatus,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"auth>accepted",
@@ -557,9 +583,9 @@ func (s *Strategy) load() {
 				if err := tx.Reload(&inv); err != nil {
 					return ctx, errors.Wrap(err, "Failed reload invoice by ID.")
 				}
-				nc := strategies.GetNatsFromContext(ctx)
-				if nc == nil {
-					return ctx, errors.New("Not nats connection in context.")
+				pb := strategies.GetFirestoreTxFromContext(ctx)
+				if pb == nil {
+					return ctx, errors.New("Not pubsub client in context.")
 				}
 				// Установить статус куда происходит переход
 				ns := engine.ACCEPTED_TX
@@ -581,15 +607,20 @@ func (s *Strategy) load() {
 				if err := tx.Save(&tr); err != nil {
 					return ctx, errors.Wrap(err, "Failed save transaction by ID.")
 				}
-				err = nc.Publish(strategies.UPDATE_INVOICE_SUBJECT, &strategies.MessageUpdateInvoice{
-					ClientID:  inv.ClientID,
-					InvoiceID: inv.InvoiceID,
-					Strategy:  inv.Strategy,
-					Status:    engine.ACCEPTED_I,
-				})
-				if err != nil {
-					return ctx, errors.Wrap(err, "Failed publish to nats.")
-				}
+				//b, err := json.Marshal(&strategies.MessageUpdateInvoice{
+				//	ClientID:  inv.ClientID,
+				//	InvoiceID: inv.InvoiceID,
+				//	Strategy:  inv.Strategy,
+				//	Status:    engine.ACCEPTED_I,
+				//})
+				//if err != nil {
+				//	return ctx, errors.Wrap(err, "Failed json marshal for publish to pubsub.")
+				//}
+				//if _, err := pb.Topic(strategies.UPDATE_INVOICE_SUBJECT).Publish(ctx, &pubsub.Message{
+				//	Data: b,
+				//}).Get(ctx); err != nil {
+				//	return ctx, errors.Wrap(err, "Failed publish to pubsub.")
+				//}
 				return ctx, nil
 			},
 			"hold>accepted",

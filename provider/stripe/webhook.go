@@ -1,10 +1,12 @@
 package stripe
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/labstack/echo"
 	"github.com/stripe/stripe-go/webhook"
@@ -89,14 +91,24 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				return nil
 			}
 			// Отправляем сообщение на переход транзакции в ACCEPTED
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
-				ClientID:      tr.ClientID,
-				TransactionID: tr.TransactionID,
-				Strategy:      tr.Strategy,
-				Status:        engine.ACCEPTED_TX,
+			if _, err := p.fs.Collection("messages").NewDoc().Create(context.Background(), struct {
+				Type      string `firestore:"type"`
+				StatusMsg string `firestore:"status_msg"`
+				CreatedAt int64  `firestore:"created_at"`
+				strategies.MessageUpdateTransaction
+			}{
+				Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+				StatusMsg: "new",
+				CreatedAt: time.Now().UnixNano(),
+				MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+					ClientID:      tr.ClientID,
+					TransactionID: tr.TransactionID,
+					Strategy:      tr.Strategy,
+					Status:        engine.ACCEPTED_TX,
+				},
 			}); err != nil {
 				p.l.Error(
-					"failed send accept transaction",
+					"failed create message for accept transaction",
 					zap.Int64("tx_id", tr.TransactionID),
 					zap.String("extOrderID", event.GetObjectValue("id")),
 					zap.String("status", status),
@@ -105,7 +117,6 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-
 		case PaymentIntentAmountCapturableUpdated:
 			var tr engine.Transaction
 			err := p.db.SelectOneTo(&tr, "WHERE provider = $1 AND provider_oper_id = $2", STRIPE, event.GetObjectValue("id"))
@@ -146,14 +157,24 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
-				ClientID:      tr.ClientID,
-				TransactionID: tr.TransactionID,
-				Strategy:      tr.Strategy,
-				Status:        engine.HOLD_TX,
+			if _, err := p.fs.Collection("messages").NewDoc().Create(context.Background(), struct {
+				Type      string `firestore:"type"`
+				StatusMsg string `firestore:"status_msg"`
+				CreatedAt int64  `firestore:"created_at"`
+				strategies.MessageUpdateTransaction
+			}{
+				Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+				StatusMsg: "new",
+				CreatedAt: time.Now().UnixNano(),
+				MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+					ClientID:      tr.ClientID,
+					TransactionID: tr.TransactionID,
+					Strategy:      tr.Strategy,
+					Status:        engine.HOLD_TX,
+				},
 			}); err != nil {
 				p.l.Error(
-					"Failed publish received funds by order",
+					"failed create message for accept transaction",
 					zap.Int64("tx_id", tr.TransactionID),
 					zap.String("extOrderID", event.GetObjectValue("id")),
 					zap.String("status", status),
@@ -193,14 +214,24 @@ func (p *Provider) WebhookHandler() echo.HandlerFunc {
 				c.Response().WriteHeader(http.StatusOK)
 				return nil
 			}
-			if err := p.nc.Publish(strategies.UPDATE_TRANSACTION_SUBJECT, strategies.MessageUpdateTransaction{
-				ClientID:      tr.ClientID,
-				TransactionID: tr.TransactionID,
-				Strategy:      tr.Strategy,
-				Status:        engine.REJECTED_TX,
+			if _, err := p.fs.Collection("messages").NewDoc().Create(context.Background(), struct {
+				Type      string `firestore:"type"`
+				StatusMsg string `firestore:"status_msg"`
+				CreatedAt int64  `firestore:"created_at"`
+				strategies.MessageUpdateTransaction
+			}{
+				Type:      strategies.UPDATE_TRANSACTION_SUBJECT,
+				StatusMsg: "new",
+				CreatedAt: time.Now().UnixNano(),
+				MessageUpdateTransaction: strategies.MessageUpdateTransaction{
+					ClientID:      tr.ClientID,
+					TransactionID: tr.TransactionID,
+					Strategy:      tr.Strategy,
+					Status:        engine.REJECTED_TX,
+				},
 			}); err != nil {
 				p.l.Error(
-					"failed accept invoice",
+					"failed create message for accept transaction",
 					zap.String("provider_intent_id", event.GetObjectValue("id")),
 					zap.String("status", status),
 					zap.Error(err),
